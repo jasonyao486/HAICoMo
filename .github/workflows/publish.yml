@@ -36,7 +36,7 @@ jobs:
           for (const name of ['desktop (macos-15, mac, arm64)', 'desktop (windows-2025, windows, x64)'])
             if (!jobs.some(job => job.name === name && job.conclusion === 'success')) throw new Error(`Missing success: ${name}`);
           execFileSync('git', ['fetch', 'origin', run.head_sha]);
-          execFileSync('git', ['diff', '--exit-code', run.head_sha, 'HEAD', '--', '.', ':!docs', ':!README.md', ':!README.zh-CN.md', ':!.github/workflows/publish.yml', ':!.github/workflows/notarization-status.yml']);
+          execFileSync('git', ['diff', '--exit-code', run.head_sha, 'HEAD', '--', '.', ':!docs', ':!README.md', ':!README.zh-CN.md', ':!.github/workflows/publish.yml', ':!.github/workflows/notarization-status.yml', ':!.github/workflows/publish-windows.yml']);
           fs.appendFileSync(process.env.GITHUB_ENV, `SOURCE_SHA=${run.head_sha}\n`);
           NODE
       - name: Download verified installers and check their hashes
@@ -55,12 +55,18 @@ jobs:
         shell: bash
         run: |
           if gh release view v$HAICOMO_VERSION >/dev/null 2>&1; then
-            echo 'The release already exists; inspect it before retrying.' >&2
-            exit 1
+            # Supplement the Windows-first preview; never overwrite existing assets.
+            test "$(gh api repos/$GH_REPO/git/ref/tags/v$HAICOMO_VERSION --jq .object.sha)" = "$SOURCE_SHA"
+            gh release download v$HAICOMO_VERSION -p '*windows-x64*' -p 'windows-user-verification.json' -p 'SHA256SUMS-win32-x64.txt' -D existing
+            (cd existing && sha256sum -c SHA256SUMS-win32-x64.txt)
+            cmp existing/SHA256SUMS-win32-x64.txt verified/haicomo-$HAICOMO_VERSION-windows-x64/SHA256SUMS-win32-x64.txt
+            gh release upload v$HAICOMO_VERSION verified/*/*.dmg verified/*/*.zip verified/*/mac-release-verification.json verified/*/SHA256SUMS-darwin-arm64.txt
+            gh release edit v$HAICOMO_VERSION --notes-file docs/RELEASE-NOTES-$HAICOMO_VERSION.md
+          else
+            gh release create v$HAICOMO_VERSION --draft --prerelease --target "$SOURCE_SHA" --title "HAICoMo $HAICOMO_VERSION preview" --notes-file docs/RELEASE-NOTES-$HAICOMO_VERSION.md
+            gh release upload v$HAICOMO_VERSION verified/*/*.dmg verified/*/*.zip verified/*/*.exe verified/*/*.blockmap verified/*/*-verification.json verified/*/SHA256SUMS*.txt
+            gh release edit v$HAICOMO_VERSION --draft=false --prerelease
           fi
-          gh release create v$HAICOMO_VERSION --draft --prerelease --target "$SOURCE_SHA" --title "HAICoMo $HAICOMO_VERSION preview" --notes-file docs/RELEASE-NOTES-$HAICOMO_VERSION.md
-          gh release upload v$HAICOMO_VERSION verified/*/*.dmg verified/*/*.zip verified/*/*.exe verified/*/*.blockmap verified/*/*-verification.json verified/*/SHA256SUMS*.txt
-          gh release edit v$HAICOMO_VERSION --draft=false --prerelease
       - name: Verify anonymous public downloads
         shell: bash
         run: |
