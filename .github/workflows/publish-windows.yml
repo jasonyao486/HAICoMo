@@ -50,11 +50,12 @@ jobs:
           NODE
       - name: Publish Windows first without overwriting a release
         run: |
-          if gh release view v$HAICOMO_VERSION >/dev/null 2>&1; then
-            echo 'Release already exists; inspect before retrying.' >&2
-            exit 1
+          if gh release view v$HAICOMO_VERSION --json isDraft,assets > existing-release.json 2>/dev/null; then
+            node --input-type=module -e "import fs from 'node:fs'; const r=JSON.parse(fs.readFileSync('existing-release.json')); if (!r.isDraft || r.assets.length) throw new Error('Only an empty draft can be resumed');"
+            test "$(gh api repos/$GH_REPO/git/ref/tags/v$HAICOMO_VERSION --jq .object.sha)" = "$SOURCE_SHA"
+          else
+            gh release create v$HAICOMO_VERSION --draft --prerelease --target "$SOURCE_SHA" --title "HAICoMo $HAICOMO_VERSION preview" --notes-file docs/RELEASE-NOTES-$HAICOMO_VERSION.md
           fi
-          gh release create v$HAICOMO_VERSION --draft --prerelease --target "$SOURCE_SHA" --title "HAICoMo $HAICOMO_VERSION preview" --notes-file docs/RELEASE-NOTES-$HAICOMO_VERSION.md
           gh release upload v$HAICOMO_VERSION verified/*.exe verified/*.blockmap verified/*-verification.json verified/SHA256SUMS*.txt
           gh release edit v$HAICOMO_VERSION --draft=false --prerelease
       - name: Verify anonymous downloads
