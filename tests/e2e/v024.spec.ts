@@ -77,9 +77,27 @@ test("update journal restores reserved scheduled pages onto the relay page witho
   fs.writeFileSync(path.join(root, "profile/pending-update.json"), JSON.stringify({ from: "0.2.3", target: version, at: new Date().toISOString(), windows: [{ tabs }] }));
   const app = await launch(root), page = await app.firstWindow(), current = page.locator(".workspace-frame:not([hidden])");
   try {
+    // Keep the pre-restoration keyboard callback so the render/effect race is
+    // reproducible without timing sleeps or dependence on machine speed.
+    await page.addInitScript(() => {
+      const register = window.addEventListener.bind(window);
+      window.addEventListener = ((...args: any[]) => {
+        if (args[0] === "keydown" && !(window as any).__initialTabKey) (window as any).__initialTabKey = args[1];
+        (register as any)(...args);
+      }) as typeof window.addEventListener;
+    });
+    await page.reload();
     await expect(current.locator(".page-heading h1")).toHaveText("接力任务（实验）");
     await page.keyboard.press("Control+Tab");
     await expect(current.locator(".page-heading h1")).toHaveText("接力任务（实验）");
+    await expect(current.locator(".workspace-switch span")).toHaveText("relay");
+    await expect(current).toHaveCount(1);
+    await page.evaluate(() => (window as any).__initialTabKey(new KeyboardEvent("keydown", { key: "Tab", ctrlKey: true })));
+    await expect(current.locator(".page-heading h1")).toHaveText("接力任务（实验）");
+    await expect(current.locator(".workspace-switch span")).toHaveText("scheduled");
+    await page.keyboard.press("Control+Shift+Tab");
+    await expect(current.locator(".workspace-switch span")).toHaveText("relay");
+    await expect(current).toHaveCount(1);
     expect((await page.evaluate(() => window.haicomo.request("bootstrap"))).projects).toHaveLength(2);
     for (const tab of tabs) expect(readSnapshot(path.dirname(tab.entryPath)).tasks).toEqual([]);
     expect(fs.existsSync(path.join(root, "profile/pending-update.json"))).toBe(false);
