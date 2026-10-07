@@ -1349,6 +1349,7 @@ else {
   app.on("before-quit", (e) => {
     if (shutdownComplete) return;
     e.preventDefault();
+    if (stopping) return;
     if (!BrowserWindow.getAllWindows().every((w) => closeAllowed.has(w.id))) {
       quitRequested = true;
       for (const w of BrowserWindow.getAllWindows())
@@ -1385,10 +1386,10 @@ else {
     tray?.destroy();
     tray = null;
     runners.dispose();
-    void Promise.race([
-      request("shutdown", ""),
-      new Promise((r) => setTimeout(r, 1500)),
-    ])
+    // The worker acknowledges only after flushing and releasing its locks.
+    // Killing it on a short wall-clock deadline can interrupt that cleanup.
+    // request already has bounded timeout/worker-exit handling.
+    void request("shutdown", "")
       .catch(() => {})
       .finally(() => {
         shutdownComplete = true;

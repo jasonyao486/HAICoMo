@@ -108,6 +108,15 @@ test("real desktop: create, edit, accept, concurrent proposal review, windows, v
     await second.getByRole("button", { name: "保存修改", exact: true }).click();
     await expect(second.getByText(/该记录已在别处修改|changed elsewhere/)).toBeVisible();
     await second.close();
+    // The recovered worker deliberately needs longer than the old 1.5s quit
+    // deadline. A clean quit must await its acknowledgement, not kill it early.
+    const originalWorker = path.join(await app.evaluate(({ app }) => app.getAppPath()), "dist-electron", "worker.cjs");
+    const delayedWorker = path.join(root, "delayed-worker.cjs");
+    fs.writeFileSync(delayedWorker, `process.parentPort.on("message", ({ data }) => { if (data.type === "shutdown") Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000); }); require(${JSON.stringify(originalWorker)});`);
+    await app.evaluate(({ utilityProcess }, file) => {
+      const fork = utilityProcess.fork.bind(utilityProcess);
+      utilityProcess.fork = (modulePath, args, options) => fork(modulePath.endsWith("worker.cjs") ? file : modulePath, args, options);
+    }, delayedWorker);
     const workerPid = await app.evaluate(({ app }) => {
       const worker = app
         .getAppMetrics()
