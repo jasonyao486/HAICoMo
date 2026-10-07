@@ -8,7 +8,7 @@ The `.github/workflows/verify.yml` matrix builds on native macOS ARM64 and Windo
 
 The workflow also scans each packaged `app.asar` against the asset manifest and checks the bundled licences. Windows CI performs a silent NSIS install into a temporary directory and runs the public-demo and 0.3.2 navigation scenarios against that installed executable. This does not replace the human Windows checklist.
 
-After reviewing the completed native run and local acceptance, dispatch `publish.yml` with its `verification_run` ID. It requires both jobs to have succeeded and refuses changes to the tested application, tests or build configuration (documentation and the publication workflow itself may be updated). It downloads that run's installers, verifies their SHA-256 values, uploads to a draft, then publishes the pre-release. It then downloads every published installer and checksum-listed metadata file without authentication and verifies the hashes again. An existing release requires inspection instead of automatic overwriting.
+After reviewing the completed native run and local acceptance, dispatch `publish.yml` with its `verification_run` ID. It requires both jobs to have succeeded and refuses changes to the tested application, tests or build configuration (documentation and the publication workflow itself may be updated). It downloads that run's installers, verifies their SHA-256 values, uploads to a draft, then publishes the pre-release. It then downloads every published installer and checksum-listed metadata file without authentication and verifies the hashes again. An existing Windows-first release can receive the verified Mac assets only when its tag and Windows manifest match the accepted source; existing attachments are never overwritten.
 
 ```sh
 npm ci
@@ -54,3 +54,7 @@ Publication requires matching Mac signature/notarization evidence and Windows no
 4. Calculate SHA-256 of final files, publish the `v0.3.3` GitHub pre-release, and attach both native platform packages plus checksums.
 5. Verify anonymous public links, downloaded hashes, extracted contents and a fresh-profile launch.
 6. Preserve old local recovery material. Do not include private historical repositories or databases in the release.
+
+## Windows-first publication
+
+At the owner’s request, `publish-windows.yml` can publish a successful native Windows job while Mac notarization is pending. It verifies identical application source, the actual standard-user acceptance report, installer hashes, and anonymous downloads. An inspected empty draft may be resumed, but a populated release cannot be overwritten. Mac interim artifacts, if offered, must have `unnotarized` in the filename and explicitly state that Open Anyway may be required; they do not satisfy MAC-033. The normal notarized publication gate remains unchanged.

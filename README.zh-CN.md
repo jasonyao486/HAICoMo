@@ -1,6 +1,6 @@
 # HAICoMo
 
-> 0.3.3 安装包改进：Mac 正式签名与公证、Windows 仅当前用户安装。验证与发布尚在进行，见 [发布说明](docs/RELEASE-NOTES-0.3.3.md)。
+> [0.3.3 Windows 预览版](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.3) 已发布：仅当前用户安装，无需提权。Mac 0.3.3 公证仍在处理中，见[发布说明](docs/RELEASE-NOTES-0.3.3.md)。
 
 [English](README.md) · **简体中文**
 
@@ -12,19 +12,19 @@
 
 使用任务管理功能不需要安装 Node.js、Git，也不需要购买模型订阅。
 
-1. 打开[下载与版本发布](https://github.com/jasonyao486/HAICoMo/releases)，选择 **v0.3.2**，展开 **Assets**。
+1. 打开[下载与版本发布](https://github.com/jasonyao486/HAICoMo/releases)，Windows 选择 **v0.3.3**，Mac 暂选 **v0.3.2**，展开 **Assets**。
 2. 按电脑类型下载。页面上的 “Source code” 是开发者源码，不是安装包。
 
 | 你的电脑 | 下载文件 |
 |---|---|
 | 搭载 Apple M 系列芯片的 Mac | `HAICoMo-0.3.2-arm64.dmg` |
-| 系统类型为“基于 x64 的处理器”的 Windows PC | `HAICoMo-0.3.2-windows-x64-setup.exe` |
+| 系统类型为“基于 x64 的处理器”的 Windows PC | `HAICoMo-0.3.3-windows-x64-setup.exe` |
 | Intel Mac、Windows ARM64、Linux | 本版暂不提供已验证安装包 |
 
 Mac 在“苹果菜单 → 关于本机”查看芯片；Windows 在“设置 → 系统 → 系统信息”查看系统类型。
 
 3. **Mac：**打开 DMG，将 HAICoMo 拖到 Applications（应用程序），推出磁盘映像，再从应用程序启动。首发包仅为 ad-hoc 签名，尚未公证。如果系统阻止打开，先确认下载来源，再到“系统设置 → 隐私与安全性”对本应用选择“仍要打开”。不要全局关闭 Gatekeeper。
-4. **Windows：**打开 setup `.exe`，按安装向导完成安装并启动。本版没有发布者签名，可能出现 SmartScreen 或未知发布者提示；确认来源并核对 SHA-256 后再决定继续。单位管理的电脑可能需要管理员协助。
+4. **Windows：**打开 setup `.exe`，自动安装到当前用户目录并启动；安装、升级和卸载不主动请求管理员权限。本版没有发布者签名，可能出现 SmartScreen 或未知发布者提示；确认来源并核对 SHA-256 后再决定继续。单位管理的电脑可能需要管理员协助。
 5. 点击“新建项目”，选择一个空的本地文件夹，保存 `.haicomo` 入口文件。创建一个任务，再添加子任务。此过程不需要 AI 账号。
 6. 交付后，从任务中打开交付物，检查内容，再点击“通过验收”。智能体运行完成不会自动替你验收。
 
@@ -42,7 +42,7 @@ shasum -a 256 ~/Downloads/HAICoMo-0.3.2-arm64.dmg
 Windows：打开 PowerShell 运行：
 
 ```powershell
-Get-FileHash "$HOME\Downloads\HAICoMo-0.3.2-windows-x64-setup.exe" -Algorithm SHA256
+Get-FileHash "$HOME\Downloads\HAICoMo-0.3.3-windows-x64-setup.exe" -Algorithm SHA256
 ```
 
 校验值用于确认下载完整性，不等同于发布者签名。

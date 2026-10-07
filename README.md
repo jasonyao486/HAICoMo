@@ -1,6 +1,6 @@
 # HAICoMo
 
-> 0.3.3 packaging work: signed/notarized Mac releases and Windows current-user installation. Validation and publication are pending; see [release notes](docs/RELEASE-NOTES-0.3.3.md).
+> [0.3.3 Windows preview](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.3) is available: current-user installation without elevation. Mac 0.3.3 notarization is pending; see [release notes](docs/RELEASE-NOTES-0.3.3.md).
 
 **English** · [简体中文](README.zh-CN.md)
 
@@ -12,19 +12,19 @@ Version **0.3.2** is a pre-release for Apple Silicon Mac and Windows x64. See th
 
 You do not need Node.js, Git or a model subscription to use the task manager.
 
-1. Open [Downloads and releases](https://github.com/jasonyao486/HAICoMo/releases). Select **v0.3.2** and expand **Assets**.
+1. Open [Downloads and releases](https://github.com/jasonyao486/HAICoMo/releases). Select **v0.3.3 for Windows** or **v0.3.2 for Mac**, then expand **Assets**.
 2. Choose the installer below. The “Source code” archives are for developers, not installers.
 
 | Your computer | Download |
 |---|---|
 | Mac with an Apple M-series chip | `HAICoMo-0.3.2-arm64.dmg` |
-| Windows PC, System type “x64-based processor” | `HAICoMo-0.3.2-windows-x64-setup.exe` |
+| Windows PC, System type “x64-based processor” | `HAICoMo-0.3.3-windows-x64-setup.exe` |
 | Intel Mac, Windows ARM64 or Linux | No verified installer in this release |
 
 On a Mac, find the chip under **Apple menu → About This Mac**. On Windows, open **Settings → System → About → System type**.
 
 3. **Mac:** open the DMG, drag HAICoMo into Applications, eject the disk image, then open HAICoMo from Applications. The first release is ad-hoc signed and not notarised. If macOS blocks it, confirm you downloaded this release, then use the app-specific **Open Anyway** option in **System Settings → Privacy & Security**. Do not disable Gatekeeper globally.
-4. **Windows:** open the setup `.exe`, follow the installer and launch HAICoMo. This release is unsigned and Windows may show a publisher/SmartScreen warning. Check the source and supplied SHA-256 before choosing to continue; managed computers may require administrator approval.
+4. **Windows:** open the setup `.exe`, installation is automatic for your current user, then launch HAICoMo. Installation, upgrade and uninstall do not request elevation. This release is unsigned and Windows may show a publisher/SmartScreen warning. Check the source and supplied SHA-256 before choosing to continue; managed computers may require administrator approval.
 5. If the app opens in Chinese, first choose **设置 (Settings) → 语言 (Language) → English (UK) → 保存修改 (Save changes)**. Select **New project**, choose an empty local folder and save the `.haicomo` entry. Add a task and a subtask. No AI account is required for this step.
 6. When a delivery is ready, open its file from the task, inspect it, then choose **Accept delivery**. Agent completion alone does not accept work.
 
@@ -42,7 +42,7 @@ shasum -a 256 ~/Downloads/HAICoMo-0.3.2-arm64.dmg
 Windows — open PowerShell:
 
 ```powershell
-Get-FileHash "$HOME\Downloads\HAICoMo-0.3.2-windows-x64-setup.exe" -Algorithm SHA256
+Get-FileHash "$HOME\Downloads\HAICoMo-0.3.3-windows-x64-setup.exe" -Algorithm SHA256
 ```
 
 The hash checks the download's integrity; it is not a publisher signature.
