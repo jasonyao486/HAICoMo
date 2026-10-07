@@ -193,6 +193,7 @@ type Run = {
   id: string;
   threadId?: string;
   turnId?: string;
+  turnStarted: boolean;
   status: RunEvent["status"];
   heartbeat: ReturnType<typeof setInterval>;
   pending: Map<
@@ -481,6 +482,7 @@ export class LocalRunners {
       options,
       id: randomUUID(),
       threadId: options.threadId,
+      turnStarted: false,
       status: "unknown",
       heartbeat: (() => {
         const timer = setInterval(() => {
@@ -575,8 +577,6 @@ export class LocalRunners {
           ...(options.effort ? { effort: options.effort } : {}),
         });
         run.turnId = turnResult.turn?.id ?? run.turnId;
-        if (!run.finished && !run.serverRequests.size)
-          this.emit(run, "running");
       } else {
         await new Promise<void>((resolve, reject) => {
           proc.once("spawn", resolve);
@@ -658,6 +658,7 @@ export class LocalRunners {
         this.emit(run, "running", run.output);
       } else if (m.method === "turn/started") {
         run.turnId = m.params?.turn?.id;
+        run.turnStarted = true;
         if (!run.serverRequests.size) this.emit(run, "running");
       } else if (m.method === "item/started" && !run.serverRequests.size)
         this.emit(run, "running");
@@ -743,12 +744,24 @@ export class LocalRunners {
     if (!run || run.finished) return;
     if (run.options.provider === "codex" && run.threadId && run.turnId) {
       try {
+        // turn/start can acknowledge a queued turn before it becomes active.
+        // Sending interrupt in that interval returns "no active turn" on Codex.
+        const readyDeadline = Date.now() + 3000;
+        while (!run.finished && !run.turnStarted && Date.now() < readyDeadline)
+          await new Promise(resolve => setTimeout(resolve, 20));
+        if (run.finished) return;
+        if (!run.turnStarted) throw new Error("TURN_START_NOT_CONFIRMED");
         await this.request(
           run,
           "turn/interrupt",
           { threadId: run.threadId, turnId: run.turnId },
           3000,
         );
+        // The RPC reply acknowledges the request, not the end of the turn.
+        // Let turn/completed certify cancellation before falling back to a kill.
+        const deadline = Date.now() + 3000;
+        while (!run.finished && Date.now() < deadline)
+          await new Promise(resolve => setTimeout(resolve, 20));
       } catch {}
     }
     if (run.finished) return;

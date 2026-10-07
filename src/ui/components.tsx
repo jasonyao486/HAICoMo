@@ -1298,7 +1298,8 @@ export function HandoffDialog({
           </div>
         )}
         <p className="muted full">
-          {t("sendHint")} {cap ? `${cap.version || t("unavailable")}` : ""}
+          {cap?.background ? t("sendHint") : t("manualCapability")}{" "}
+          {cap ? `${cap.version || t(cap.installed ? "available" : "unavailable")}` : ""}
           {cap?.reason && <span>{cap.reason}</span>}
         </p>
         {error && <div className="error-box full">{error}</div>}
@@ -1310,7 +1311,7 @@ export function HandoffDialog({
           disabled={busy || !cap}
           onClick={() => void act("foreground")}
         >
-          {t("foreground")}
+          {t(provider !== "codex" && provider !== "claude" && cap?.appPath ? "openClientCopyPrompt" : "foreground")}
         </button>
         <button
           className="button primary"

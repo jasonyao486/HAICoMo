@@ -19,7 +19,8 @@ const log = (value) =>
 log({ args });
 if (args[0] === "app-server") {
   let mode = "",
-    responses = 0;
+    responses = 0,
+    turnStarted = false;
   readline.createInterface({ input: process.stdin }).on("line", (line) => {
     const m = JSON.parse(line);
     log(m);
@@ -48,10 +49,12 @@ if (args[0] === "app-server") {
         return send({ id: m.id, error: { message: "missing text_elements" } });
       mode = m.params.input[0].text;
       send({ id: m.id, result: { turn: { id: "turn-fixture" } } });
-      send({
+      const started = () => { turnStarted = true; send({
         method: "turn/started",
         params: { turn: { id: "turn-fixture" } },
-      });
+      }); };
+      if (mode === "cancelQueued") setTimeout(started, 150);
+      else started();
       if (mode === "approve") {
         for (const id of [9001, 9002])
           send({
@@ -75,7 +78,7 @@ if (args[0] === "app-server") {
           },
         });
       else if (mode === "exitEarly") process.exit(0);
-      else if (mode !== "cancel")
+      else if (!["cancel", "cancelWithoutCompletion", "cancelQueued"].includes(mode))
         setTimeout(
           () =>
             send({
@@ -94,9 +97,11 @@ if (args[0] === "app-server") {
         });
     }
     if (m.method === "turn/interrupt") {
+      if (!turnStarted) return send({ id: m.id, error: { message: "no active turn to interrupt" } });
       if (m.params.turnId !== "turn-fixture")
         return send({ id: m.id, error: { message: "wrong turn id" } });
       send({ id: m.id, result: {} });
+      if (mode === "cancelWithoutCompletion") return;
       setTimeout(
         () =>
           send({

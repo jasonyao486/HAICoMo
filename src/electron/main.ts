@@ -15,6 +15,7 @@ import {
   powerMonitor,
   type UtilityProcess,
 } from "electron";
+import { launchWindowsTerminal } from "./windows-terminal";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -26,7 +27,7 @@ import {
   resolveEntry,
   type ProjectEntry,
 } from "../core/files";
-import { LocalRunners, detect, findExecutable, supportedEfforts } from "../providers/local";
+import { LocalRunners, findExecutable, supportedEfforts } from "../providers/local";
 import type { Settings, Recent, Workspace, Capabilities } from "../shared/domain";
 import { assertTaskRunnable, inferFamily } from "../shared/domain";
 import { z } from "zod";
@@ -484,7 +485,7 @@ async function capability(provider: "codex" | "claude", fresh = false): Promise<
   const key = capabilityKey(provider, findExecutable(provider, configured));
   const hit = capabilityCache.get(provider);
   if (!fresh && hit && hit.key === key && Date.now() - hit.at < 600000) return hit.value;
-  const value = await detect(provider, configured);
+  const value = await detectClient(provider, configured);
   capabilityCache.set(provider, { key, at: Date.now(), value });
   return value;
 }
@@ -1257,13 +1258,11 @@ else {
                 "/System/Applications/Utilities/Terminal.app",
               );
             else if (process.platform === "win32") {
-              const { spawn } = await import("node:child_process");
-              spawn("powershell.exe", [], {
-                cwd: dir,
-                detached: true,
-                stdio: "ignore",
-                windowsHide: false,
-              }).unref();
+              const launcher = launchWindowsTerminal(dir);
+              await new Promise<void>((resolve, reject) => {
+                launcher.once("error", reject);
+                launcher.once("exit", code => code === 0 ? resolve() : reject(new Error(`TERMINAL_LAUNCH_FAILED (${code})`)));
+              });
             } else
               throw new Error("Use your terminal to run the copied command");
             result = true;

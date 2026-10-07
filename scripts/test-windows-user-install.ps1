@@ -8,8 +8,8 @@ if (!$Child) {
   $NodePath = (Get-Command node).Source
   $TestRoot = Join-Path $env:RUNNER_TEMP 'haicomo-standard-user'
   New-Item -ItemType Directory -Path $TestRoot | Out-Null
-  $baseline = 'HAICoMo-0.3.2-windows-x64-setup.exe'
-  $baseUrl = 'https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.2'
+  $baseline = 'HAICoMo-0.3.3-windows-x64-setup.exe'
+  $baseUrl = 'https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.3'
   Invoke-WebRequest "$baseUrl/$baseline" -OutFile "$TestRoot/previous-setup.exe"
   $manifest = (Invoke-WebRequest "$baseUrl/SHA256SUMS-win32-x64.txt").Content
   if ($manifest -is [byte[]]) { $manifest = [Text.Encoding]::UTF8.GetString($manifest) }
@@ -127,4 +127,4 @@ if ($entry.UninstallString -notmatch '^"([^"\r\n]+)" /currentuser$') { throw 'Un
 Invoke-Installer $Matches[1] @('/S', "_?=$($entry.InstallLocation)")
 if (Test-Path (Join-Path $entry.InstallLocation 'HAICoMo.exe')) { throw 'Upgraded application uninstall failed' }
 $hash = (Get-FileHash -Algorithm SHA256 $Installer).Hash.ToLowerInvariant()
-@{ version = $version; result = 'passed'; admin = $false; protectedWriteDenied = $true; install = $true; launch = $true; reinstall = $true; previousVersionUpgrade = '0.3.2'; uninstall = $true; retainedData = $true; installerSha256 = $hash } | ConvertTo-Json | Set-Content "$TestRoot/result.json"
+@{ version = $version; result = 'passed'; admin = $false; protectedWriteDenied = $true; install = $true; launch = $true; reinstall = $true; previousVersionUpgrade = '0.3.3'; uninstall = $true; retainedData = $true; installerSha256 = $hash } | ConvertTo-Json | Set-Content "$TestRoot/result.json"
