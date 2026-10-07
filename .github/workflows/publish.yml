@@ -19,6 +19,7 @@ jobs:
       VERIFY_RUN_ID: ${{ inputs.verification_run }}
     steps:
       - uses: actions/checkout@v4
+      - run: node scripts/ci-version.mjs
       - name: Require both native platforms from this source
         shell: bash
         run: |
@@ -41,29 +42,29 @@ jobs:
       - name: Download verified installers and check their hashes
         shell: bash
         run: |
-          gh run download "$VERIFY_RUN_ID" -p 'haicomo-0.3.1-*' -D verified
+          gh run download "$VERIFY_RUN_ID" -p "haicomo-$HAICOMO_VERSION-*" -D verified
           for checksum in verified/*/SHA256SUMS*.txt; do
             (cd "$(dirname "$checksum")" && sha256sum -c "$(basename "$checksum")")
           done
-          test -f verified/haicomo-0.3.1-mac-arm64/HAICoMo-0.3.1-arm64.dmg
-          test -f verified/haicomo-0.3.1-mac-arm64/HAICoMo-0.3.1-arm64-mac.zip
-          test -f verified/haicomo-0.3.1-windows-x64/HAICoMo-0.3.1-windows-x64-setup.exe
-      - name: Publish 0.3.1 as a pre-release
+          test -f verified/haicomo-$HAICOMO_VERSION-mac-arm64/HAICoMo-$HAICOMO_VERSION-arm64.dmg
+          test -f verified/haicomo-$HAICOMO_VERSION-mac-arm64/HAICoMo-$HAICOMO_VERSION-arm64-mac.zip
+          test -f verified/haicomo-$HAICOMO_VERSION-windows-x64/HAICoMo-$HAICOMO_VERSION-windows-x64-setup.exe
+      - name: Publish verified version as a pre-release
         shell: bash
         run: |
-          if gh release view v0.3.1 >/dev/null 2>&1; then
+          if gh release view v$HAICOMO_VERSION >/dev/null 2>&1; then
             echo 'The release already exists; inspect it before retrying.' >&2
             exit 1
           fi
-          gh release create v0.3.1 --draft --prerelease --target "$SOURCE_SHA" --title 'HAICoMo 0.3.1 preview' --notes-file docs/RELEASE-NOTES-0.3.1.md
-          gh release upload v0.3.1 verified/*/*.dmg verified/*/*.zip verified/*/*.exe verified/*/*.blockmap verified/*/SHA256SUMS*.txt
-          gh release edit v0.3.1 --draft=false --prerelease
+          gh release create v$HAICOMO_VERSION --draft --prerelease --target "$SOURCE_SHA" --title "HAICoMo $HAICOMO_VERSION preview" --notes-file docs/RELEASE-NOTES-$HAICOMO_VERSION.md
+          gh release upload v$HAICOMO_VERSION verified/*/*.dmg verified/*/*.zip verified/*/*.exe verified/*/*.blockmap verified/*/SHA256SUMS*.txt
+          gh release edit v$HAICOMO_VERSION --draft=false --prerelease
       - name: Verify anonymous public downloads
         shell: bash
         run: |
           mkdir public-downloads
           cd public-downloads
-          base="https://github.com/$GH_REPO/releases/download/v0.3.1"
+          base="https://github.com/$GH_REPO/releases/download/v$HAICOMO_VERSION"
           for manifest in SHA256SUMS-darwin-arm64.txt SHA256SUMS-win32-x64.txt; do
             curl --fail --location --retry 5 --retry-all-errors --retry-delay 3 "$base/$manifest" -o "$manifest"
             while read -r hash name; do

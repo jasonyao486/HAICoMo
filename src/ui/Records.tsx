@@ -1,4 +1,4 @@
-import { ActivitySummary, ActivityTasks } from "./Activity";
+import { ActivitySummary, ActivityTasks, ActivityPeople } from "./Activity";
 import { useEffect, useState } from "react";
 import { CLIENTS, clientName } from "../shared/clients";
 import type { Audit, ProposalRecord, Workspace } from "../shared/domain";
@@ -176,6 +176,7 @@ export function Records({
               <summary>
                 <ActivitySummary entry={a} state={workspace.state} t={t} locale={document.documentElement.lang} onDelete={() => setDeleting(a)} />
               </summary>
+              <ActivityPeople entry={a} state={workspace.state} t={t} />
               <ActivityTasks entry={a} state={workspace.state} t={t} />
               {a.reason && <p>{a.reason}</p>}
               <div className="audit-diff">

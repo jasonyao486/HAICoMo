@@ -17,7 +17,7 @@ test("0.2.4 sidebar order, reserved pages and retained tabs in four locales and 
   const dir = path.join(root, "审查示例 Project"); fs.mkdirSync(dir); new ProjectStore(dir, "审查示例").close();
   const before = readSnapshot(dir);
   fs.mkdirSync(screens, { recursive: true });
-  const app = await launch(root), page = await app.firstWindow(), current = page.locator(".tab-frame:not([hidden])");
+  const app = await launch(root), page = await app.firstWindow(), current = page.locator(".workspace-frame:not([hidden])");
   const errors: string[] = []; page.on("pageerror", e => errors.push(String(e)));
   try {
     await expect(current.locator(".sidebar nav button")).toHaveCount(12);
@@ -75,7 +75,7 @@ test("update journal restores reserved scheduled pages onto the relay page witho
     return { entryPath: path.join(dir, "HAICoMo.haicomo"), id, epoch, page, active: page === "scheduled" };
   });
   fs.writeFileSync(path.join(root, "profile/pending-update.json"), JSON.stringify({ from: "0.2.3", target: version, at: new Date().toISOString(), windows: [{ tabs }] }));
-  const app = await launch(root), page = await app.firstWindow(), current = page.locator(".tab-frame:not([hidden])");
+  const app = await launch(root), page = await app.firstWindow(), current = page.locator(".workspace-frame:not([hidden])");
   try {
     await expect(current.locator(".page-heading h1")).toHaveText("接力任务（实验）");
     await page.keyboard.press("Control+Tab");

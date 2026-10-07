@@ -1,6 +1,6 @@
 {
   "name": "haicomo",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "description": "A local workspace for human–AI collaboration",
   "author": "HAICoMo",
@@ -53,7 +53,7 @@
     "appId": "app.haicomo.desktop",
     "productName": "HAICoMo",
     "directories": {
-      "output": "release/0.3.1"
+      "output": "release/${version}"
     },
     "files": [
       "dist/**",

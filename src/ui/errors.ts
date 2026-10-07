@@ -1,6 +1,7 @@
 import { errorData } from "../shared/errors";
 import type { Translate, Key } from "./i18n";
 const keys: Record<string, Key> = {
+  SAVE_CANCELLED: "draftSaveCancelled",
   AUDIT_NOT_FOUND: "errAuditNotFound",
   ARTIFACT_FOREIGN_ABSOLUTE_PATH: "errExternalArtifact",
   LEGAL_LINK_NOT_ALLOWED: "legalInvalidLink",

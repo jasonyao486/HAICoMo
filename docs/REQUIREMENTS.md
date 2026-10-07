@@ -1,6 +1,6 @@
-# 0.3.1 requirement and evidence register
+# 0.3.2 requirement and evidence register
 
-Implementation and verification are separate. Platform acceptance is recorded in [COMPATIBILITY-0.3.1.md](COMPATIBILITY-0.3.1.md); current commands/results are in [TESTING-0.3.1.md](TESTING-0.3.1.md). Earlier private handoffs are retained locally, not published as current evidence.
+Implementation and verification are separate. Platform acceptance is recorded in [COMPATIBILITY-0.3.2.md](COMPATIBILITY-0.3.2.md); current commands/results are in [TESTING-0.3.2.md](TESTING-0.3.2.md). Earlier private handoffs are retained locally, not published as current evidence.
 
 | ID | Requirement | Implementation / evidence |
 |---|---|---|
@@ -19,8 +19,8 @@ Implementation and verification are separate. Platform acceptance is recorded in
 | ART-02 | Only release-cleared runtime materials packaged | `check-assets.mjs`, Vite publicDir, clean-clone and package content checks |
 | LEGAL-01 | MIT source, separate characters/marks, dependency notices | Root LICENSE, ASSET-LICENSES, THIRD-PARTY-NOTICES, four-language Settings |
 | LINK-01 | GitHub Releases/Issues and separate diagnostics | Fixed shared allowlist, unit and offline Electron external-link tests |
-| DOC-01 | UK/US English, simplified/traditional Chinese full manuals | Four USER-MANUAL-0.3.1 files; aligned locale key test |
-| DOC-02 | Bilingual README, installation SOP, at least seven actual screenshots | README pair, synthetic demo and `docs/images/0.3.1` |
+| DOC-01 | UK/US English, simplified/traditional Chinese full manuals | Four USER-MANUAL-0.3.2 files; aligned locale key test |
+| DOC-02 | Bilingual README, installation SOP, at least seven actual screenshots | README pair, synthetic demo and `docs/images/0.3.2` |
 | PUBLIC-01 | Clean public repository, no private history/data/keys | .gitignore, index/file scan, curated initial commit, clean clone |
 | RELEASE-01 | Native Mac ARM64 and Windows x64 package/automation | GitHub matrix; complete NSIS and DMG/ZIP; per-platform evidence |
 | RELEASE-02 | Manual pre-release, correct download choices and SHA-256 | Releases page, checksum script, compatibility report |
@@ -29,3 +29,14 @@ Implementation and verification are separate. Platform acceptance is recorded in
 Pending external evidence remains explicit: Windows human desktop acceptance; Apple Developer ID/notarisation and Windows publisher signing; real signed automatic replacement; unsupported architectures/OS versions. The original local brief remains immutable.
 
 The final user addition also requires an unoccupied relay preview when no relays exist, with the original empty text below it. The default/enhanced preview screenshots and no-side-effect assertions are in the public-demo Electron case.
+
+## 0.3.2 additions
+
+| ID | Requirement | Evidence |
+|---|---|---|
+| UI-02 | Centred 19px folder/terminal, no collapsed labels or arrow | v032 Electron: actual bounding boxes, keyboard menus, both themes/four locales |
+| UI-03 | Revised home text, 13px descriptor, original title size | v032 Electron: four languages, expanded/collapsed at 1000×720; captured screens |
+| NAV-01 | Home outside tab list; repeated logo clicks preserve pages/drafts | v032 Electron: 20 clicks, menu/recent return, task/settings drafts, shortcuts |
+| NAV-02 | Hidden drafts guarded on close/update; compatible home restore | v032 unit/Electron and update-safety two-window test |
+| AUDIT-03 | Short roles, explicit identity only, full details unchanged | v032 unit/Electron: legacy snapshots, long names, unknown models, record equality |
+| RELEASE-03 | Version-derived build, CI, scan and publishing paths | package output macro and ci-version; native verification required before publish |

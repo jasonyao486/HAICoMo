@@ -1,12 +1,12 @@
-# Release process — 0.3.1
+# Release process — 0.3.2
 
-The first public channel is a GitHub pre-release with manual downloads. No independent website is required. An installer being built does not prove that it works on a user's desktop; consult [COMPATIBILITY-0.3.1.md](COMPATIBILITY-0.3.1.md) for the evidence and outstanding checks.
+The first public channel is a GitHub pre-release with manual downloads. No independent website is required. An installer being built does not prove that it works on a user's desktop; consult [COMPATIBILITY-0.3.2.md](COMPATIBILITY-0.3.2.md) for the evidence and outstanding checks.
 
 ## Targets and workflow
 
 The `.github/workflows/verify.yml` matrix builds on native macOS ARM64 and Windows x64. Node 24.21.0 runs `npm ci`, type checking, unit tests, build, Electron tests, packaging and packaged Electron tests. Release files and test evidence are retained as workflow artifacts for 14 days. Packaging always uses `--publish never`; publication is a separate reviewed action.
 
-The workflow also scans each packaged `app.asar` against the asset manifest and checks the bundled licences. Windows CI performs a silent NSIS install into a temporary directory and runs the 0.3.1 scenario against that installed executable. This does not replace the human Windows checklist.
+The workflow also scans each packaged `app.asar` against the asset manifest and checks the bundled licences. Windows CI performs a silent NSIS install into a temporary directory and runs the public-demo and 0.3.2 navigation scenarios against that installed executable. This does not replace the human Windows checklist.
 
 After reviewing the completed native run and local acceptance, dispatch `publish.yml` with its `verification_run` ID. It requires both jobs to have succeeded and refuses changes to the tested application, tests or build configuration (documentation and the publication workflow itself may be updated). It downloads that run's installers, verifies their SHA-256 values, uploads to a draft, then publishes the pre-release. It then downloads every published installer and checksum-listed metadata file without authentication and verifies the hashes again. An existing release requires inspection instead of automatic overwriting.
 
@@ -22,7 +22,7 @@ npx electron-builder --win --x64 --publish never
 node scripts/package-checksums.mjs
 ```
 
-Output is `release/0.3.1/`. macOS offers DMG and ZIP; Windows offers a complete NSIS `.exe`. An unpacked directory or `.nsis.7z` is not the Windows download. Only Apple Silicon and Windows x64 are first-release targets. `minimumSystemVersion: 13.0` is a packaging declaration, not evidence that macOS 13 was tested. Intel Mac, Windows ARM64 and Linux have no release acceptance claim.
+The current version is read from `package.json` by electron-builder and CI (`scripts/ci-version.mjs`). Output is `release/<version>/`. macOS offers DMG and ZIP; Windows offers a complete NSIS `.exe`. An unpacked directory or `.nsis.7z` is not the Windows download. Only Apple Silicon and Windows x64 are first-release targets. `minimumSystemVersion: 13.0` is a packaging declaration, not evidence that macOS 13 was tested. Intel Mac, Windows ARM64 and Linux have no release acceptance claim.
 
 ## Material and privacy gate
 
@@ -45,6 +45,6 @@ The Mac package uses ad-hoc signing; Windows has no publisher certificate. Users
 1. Verify source version, four manuals, release notes and manifest.
 2. Complete native matrix checks and local Mac acceptance; record Windows human checks honestly as pending until performed.
 3. Inspect clean-clone outputs and packaged content for private information.
-4. Calculate SHA-256 of final files, publish the `v0.3.1` GitHub pre-release, and attach both native platform packages plus checksums.
+4. Calculate SHA-256 of final files, publish the `v0.3.2` GitHub pre-release, and attach both native platform packages plus checksums.
 5. Verify anonymous public links, downloaded hashes, extracted contents and a fresh-profile launch.
 6. Preserve old local recovery material. Do not include private historical repositories or databases in the release.

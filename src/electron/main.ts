@@ -257,12 +257,12 @@ async function restoreUpdateWindow(win: BrowserWindow, saved: ResumeWindow) {
       tabs.push({ page, active: tab.active, workspace: await openProject(win, tab.entryPath) });
     } catch { failed++; }
   }
-  return { tabs, failed };
+  return { tabs, failed, home: saved.home ?? false };
 }
 function restoreAfterUpdate(first: BrowserWindow) {
   if (!fs.existsSync(updateJournal())) return;
   try {
-    const parsed = z.object({ from: z.string(), target: z.string(), at: z.string(), windows: z.array(z.object({ tabs: z.array(resumeTabSchema).max(100) })).max(20) }).parse(readJson(updateJournal()));
+    const parsed = z.object({ from: z.string(), target: z.string(), at: z.string(), windows: z.array(z.object({ tabs: z.array(resumeTabSchema).max(100), home: z.boolean().optional() })).max(20) }).parse(readJson(updateJournal()));
     if (parsed.target !== app.getVersion()) {
       updates.restored(app.getVersion(), 1);
       fs.renameSync(updateJournal(), configFile("last-update-failed.json"));
@@ -1299,9 +1299,9 @@ else {
           case "updates.cancel":
             installGate.cancel(payload.ticket); break;
           case "updates.ready": {
-            const input = z.object({ ticket: z.string(), tabs: z.array(resumeTabSchema).max(100) }).strict().parse(payload);
+            const input = z.object({ ticket: z.string(), tabs: z.array(resumeTabSchema).max(100), home: z.boolean().optional() }).strict().parse(payload);
             for (const tab of input.tabs) if (tab.entryPath && ![...projectBindings(win).values()].some((p) => p.entryPath === tab.entryPath && p.id === tab.id && p.epoch === tab.epoch)) throw new Error("PROJECT_BINDING_EXPIRED");
-            installGate.ready(win.id, input.ticket, input.tabs); result = true; break;
+            installGate.ready(win.id, input.ticket, input.tabs, input.home); result = true; break;
           }
           case "updates.state":
             result = updates.state;

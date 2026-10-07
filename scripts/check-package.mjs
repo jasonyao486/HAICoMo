@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { listPackage, statFile, extractFile } from '@electron/asar';
 
+const version = JSON.parse(fs.readFileSync("package.json", "utf8")).version;
 const resources = process.argv[2];
 if (!resources) throw new Error('Usage: node scripts/check-package.mjs <packaged Resources directory>');
 const archive = path.join(resources, 'app.asar');
@@ -45,11 +46,11 @@ for (const file of ['LICENSE', 'ASSET-LICENSES.md', 'THIRD-PARTY-NOTICES.md']) {
 }
 if (errors.length) throw new Error(errors.join('\n'));
 const report = {
-  version: '0.3.1', sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+  version, sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
   platform: process.platform, arch: process.arch, checkedFiles, runtimeAssets,
   archiveSha256: sha256(fs.readFileSync(archive)), manifestSha256: sha256(fs.readFileSync('assets/manifest.json')),
   result: 'passed', scope: 'Application paths, runtime allowlist and hashes, recognised credential patterns, application personal paths, packaged licences.'
 };
-fs.mkdirSync('validation/0.3.1', { recursive: true });
-fs.writeFileSync(`validation/0.3.1/package-scan-${process.platform}-${process.arch}.json`, JSON.stringify(report, null, 2) + '\n');
+fs.mkdirSync(`validation/${version}`, { recursive: true });
+fs.writeFileSync(`validation/${version}/package-scan-${process.platform}-${process.arch}.json`, JSON.stringify(report, null, 2) + '\n');
 console.log(JSON.stringify(report, null, 2));

@@ -95,7 +95,7 @@ export function Overview({
         <div>
           <div className="eyebrow">{t("localFirst")}</div>
           <h1>{workspace.state.title}</h1>
-          <p>{workspace.state.description || t("welcomeSub")}</p>
+          <p>{workspace.state.description || t("localFirst")}</p>
         </div>
         <button className="button primary" onClick={onNew}>
           <Plus size={17} />

@@ -33,7 +33,7 @@ import {
   MapPin,
   ListX,
 } from "lucide-react";
-import { useApi, useTab } from "./api";
+import { useApi, useTab, useDirty } from "./api";
 import { errorText, lockDetails } from "./errors";
 import { RelayPage } from "./Relay";
 import { RelayEditor } from "./RelayEditor";
@@ -119,7 +119,6 @@ export function App() {
     [workspace, setWorkspace] = useState<Workspace | null>(tab.workspace),
     [view, setView] = useState(tab.initialPage),
     [editor, setEditor] = useState<Editor>(null),
-    [collapsed, setCollapsed] = useState(false),
     [search, setSearch] = useState(""),
     [filter, setFilter] = useState("all"),
     [toast, setToast] = useState<{ message: string; error: boolean } | null>(
@@ -252,8 +251,11 @@ export function App() {
         .catch(() => {});
   }, [workspace?.directory]);
   useEffect(() => { tab.reportPage(view); }, [view]);
-  const goHome = tab.newTab;
+  const { collapsed, goHome } = tab;
+  const [settingsVisited, setSettingsVisited] = useState(tab.initialPage === "settings");
+  useEffect(() => { if (tab.homeNavigation) setView("overview"); }, [tab.homeNavigation]);
   const navigate = (next: string) => {
+    if (next === "settings") setSettingsVisited(true);
     setView(next);
     setSearch("");
     setFilter("all");
@@ -270,6 +272,14 @@ export function App() {
       tab.attach(value);
     }
   };
+  const createProject = async () => {
+    const value = await api("project.create", { title: projectTitle });
+    if (!value) throw new Error("SAVE_CANCELLED");
+    tab.attach(value);
+    setEditor(null); setProjectTitle(""); navigate("overview");
+    const bootstrap = await api("bootstrap"); setRecents(bootstrap.recents);
+  };
+  useDirty(editor?.kind === "project" && !!projectTitle.trim(), createProject);
   const active = workspace?.state.tasks.filter((t) => !t.archived) ?? [];
   const filtered =
     workspace?.state.tasks.filter(
@@ -288,7 +298,7 @@ export function App() {
   return (
     <div className={`app-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
       <aside className="sidebar">
-        <button className="brand" onClick={goHome}>
+        <button className="brand" onClick={goHome} aria-label="HAICoMo">
           <span className="brand-symbol">
             H<span>·</span>
           </span>
@@ -299,7 +309,7 @@ export function App() {
           )}
         </button>
         <div className="sidebar-version">
-          <button onClick={() => setCollapsed((v) => !v)} aria-label={t("toggleSidebar")} title={t("toggleSidebar")}>
+          <button onClick={tab.toggleSidebar} aria-label={t("toggleSidebar")} title={t("toggleSidebar")}>
             {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
             {!collapsed && <small>version {version}</small>}
           </button>
@@ -386,8 +396,8 @@ export function App() {
               {w}
             </div>
           ))}
-          {view === "settings" ? (
-            <>
+          {(view === "settings" || (tab.homeNavigation > 0 && settingsVisited)) && (
+            <div hidden={view !== "settings"}>
               <div className="page-heading">
                 <h1>{t("settings")}</h1>
               </div>
@@ -399,13 +409,13 @@ export function App() {
                 workspace={workspace}
                 notify={notify}
               />
-            </>
-          ) : !workspace ? (
+            </div>
+          )}
+          {view === "settings" ? null : !workspace ? (
             <div className="home">
               <div className="home-hero">
-                <div className="eyebrow">{t("localFirst")}</div>
+                <div className="home-description">{t("localFirst")}</div>
                 <h1>{t("welcome")}</h1>
-                <p>{t("welcomeSub")}</p>
                 <div className="button-row">
                   <button
                     className="button primary"
@@ -797,17 +807,7 @@ export function App() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              void run(async () => {
-                const v = await api("project.create", { title: projectTitle });
-                if (v) {
-                  tab.attach(v);
-                  setEditor(null);
-                  setProjectTitle("");
-                  navigate("overview");
-                  const b = await api("bootstrap");
-                  setRecents(b.recents);
-                }
-              });
+              void run(createProject);
             }}
           >
             <div className="modal-body">

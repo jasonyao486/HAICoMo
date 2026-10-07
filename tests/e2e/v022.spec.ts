@@ -5,7 +5,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { ProjectStore } from "../../src/core/store";
 import { dictionaries } from "../../src/ui/i18n";
-const current = (page: Page) => page.locator(".tab-frame:not([hidden])");
+const current = (page: Page) => page.locator(".workspace-frame:not([hidden])");
 const screenDir = path.resolve(process.env.HAICOMO_EVIDENCE_DIR ?? "validation/0.2.2/screens");
 async function prefs(page: Page, next: any) { await page.evaluate(async (next) => { const b = await window.haicomo.request("bootstrap"); await window.haicomo.request("settings.patch", { base: b.settings, next: { ...b.settings, ...next } }); }, next); }
 async function launch(root: string) { return electron.launch({ ...(process.env.HAICOMO_PACKAGED_EXECUTABLE ? { executablePath: process.env.HAICOMO_PACKAGED_EXECUTABLE, args: [] } : { args: ["."] }), env: { ...process.env, HAICOMO_TEST: "1", HAICOMO_USER_DATA: path.join(root, "profile") } }); }
@@ -93,7 +93,10 @@ test("0.2.2 model-only statistics, audit context, filled mode control and recent
     await app.evaluate(({ app }, file) => app.emit("open-file", { preventDefault() {} }, file), path.join(directory, "HAICoMo.haicomo"));
     await current(page).getByRole("button", { name: "活动记录", exact: true }).click();
     const history = current(page).locator(".history-panel");
-    await expect(history).toContainText("Ada Lovelace"); await expect(history).toContainText("Nested milestone 子任务");
+    await expect(history.locator("summary").first()).toContainText("人类");
+    await expect(history.locator("summary").first()).not.toContainText("Ada Lovelace");
+    await history.locator("summary").first().click();
+    await expect(history.locator(".audit-people").first()).toContainText("Ada Lovelace"); await expect(history).toContainText("Nested milestone 子任务");
     await history.screenshot({ path: path.join(screenDir, "activity.png") });
     await current(page).getByRole("button", { name: "协作统计", exact: true }).click();
     await expect(current(page).locator(".model-card")).toHaveCount(14);

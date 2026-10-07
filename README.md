@@ -4,19 +4,19 @@
 
 A local desktop workspace for tasks, human review and AI collaboration. Agents propose changes; you decide what to approve and when a delivery is accepted. Project data stays in your chosen working directory.
 
-Version **0.3.1** is a pre-release for Apple Silicon Mac and Windows x64. See the [compatibility report](docs/COMPATIBILITY-0.3.1.md) for what has actually been tested.
+Version **0.3.2** is a pre-release for Apple Silicon Mac and Windows x64. See the [compatibility report](docs/COMPATIBILITY-0.3.2.md) for what has actually been tested.
 
 ## Install and start
 
 You do not need Node.js, Git or a model subscription to use the task manager.
 
-1. Open [Downloads and releases](https://github.com/jasonyao486/HAICoMo/releases). Select **v0.3.1** and expand **Assets**.
+1. Open [Downloads and releases](https://github.com/jasonyao486/HAICoMo/releases). Select **v0.3.2** and expand **Assets**.
 2. Choose the installer below. The “Source code” archives are for developers, not installers.
 
 | Your computer | Download |
 |---|---|
-| Mac with an Apple M-series chip | `HAICoMo-0.3.1-arm64.dmg` |
-| Windows PC, System type “x64-based processor” | `HAICoMo-0.3.1-windows-x64-setup.exe` |
+| Mac with an Apple M-series chip | `HAICoMo-0.3.2-arm64.dmg` |
+| Windows PC, System type “x64-based processor” | `HAICoMo-0.3.2-windows-x64-setup.exe` |
 | Intel Mac, Windows ARM64 or Linux | No verified installer in this release |
 
 On a Mac, find the chip under **Apple menu → About This Mac**. On Windows, open **Settings → System → About → System type**.
@@ -34,13 +34,13 @@ Download the matching `SHA256SUMS-darwin-arm64.txt` or `SHA256SUMS-win32-x64.txt
 Mac — open Terminal:
 
 ```sh
-shasum -a 256 ~/Downloads/HAICoMo-0.3.1-arm64.dmg
+shasum -a 256 ~/Downloads/HAICoMo-0.3.2-arm64.dmg
 ```
 
 Windows — open PowerShell:
 
 ```powershell
-Get-FileHash "$HOME\Downloads\HAICoMo-0.3.1-windows-x64-setup.exe" -Algorithm SHA256
+Get-FileHash "$HOME\Downloads\HAICoMo-0.3.2-windows-x64-setup.exe" -Algorithm SHA256
 ```
 
 The hash checks the download's integrity; it is not a publisher signature.
@@ -51,59 +51,71 @@ For AI collaboration, install and sign into a supported client yourself. **Setti
 
 Updates are manual: quit HAICoMo, keep your project folders, download the next release and replace/reinstall the application. Opening a pre-0.3.1 project migrates it to schema v5 after creating a backup. Older apps cannot reopen the migrated project; restore the pre-migration backup to an empty folder if you need to go back.
 
-Full manuals: [UK English](docs/USER-MANUAL-0.3.1.en-GB.md) · [US English](docs/USER-MANUAL-0.3.1.en-US.md) · [简体中文](docs/USER-MANUAL-0.3.1.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.3.1.zh-TW.md).
+Clicking the logo returns home without adding a tab. Project pages and drafts stay open. The collapsed sidebar keeps folder and terminal controls at their normal size. Activity summaries show short roles; expanded details retain full attribution. Version 0.3.2 uses the same v5 project format as 0.3.1.
+
+Full manuals: [UK English](docs/USER-MANUAL-0.3.2.en-GB.md) · [US English](docs/USER-MANUAL-0.3.2.en-US.md) · [简体中文](docs/USER-MANUAL-0.3.2.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.3.2.zh-TW.md).
 
 ## Features
 
 All screenshots use an isolated, synthetic “HAICoMo Demo” project with 10 tasks and 50 subtasks. They contain no real user work or account conversations.
 
+### Home and project tabs
+
+Return home from the logo while retaining each open project’s page and drafts. The compact sidebar keeps its folder and terminal controls.
+
+![Home](docs/images/0.3.2/home.png)
+
 ### Tasks and subtasks
 
 Assign models or clients, record dates and deliverables, and track prerequisites. Human acceptance unlocks dependent work.
 
-![Tasks and subtasks](docs/images/0.3.1/tasks.png)
+![Tasks and subtasks](docs/images/0.3.2/tasks.png)
 
 ### Revision proposals
 
 Review proposed changes, adjust them before approval, or reject them. Revisions and transactions prevent partial approval and stale overwrites.
 
-![Revision proposals](docs/images/0.3.1/proposals.png)
+![Revision proposals](docs/images/0.3.2/proposals.png)
 
 ### Timeline, dependencies and mind map
 
 Schedule work on the timeline. Explore dependencies or task hierarchy with zoom, fit and pan controls. Explicit model assignments display company marks.
 
-![Timeline](docs/images/0.3.1/timeline.png)
+![Timeline](docs/images/0.3.2/timeline.png)
 
 ### Collaboration studio
 
 The default studio uses simple figures. Enhanced mode uses separately licensed character artwork and painted furniture. Animation illustrates observed state; it is not proof that an agent is working or a task is complete.
 
-![Default studio](docs/images/0.3.1/studio-default.png)
+![Default studio](docs/images/0.3.2/studio-default.png)
 
-![Enhanced studio](docs/images/0.3.1/studio-enhanced.png)
+![Enhanced studio](docs/images/0.3.2/studio-enhanced.png)
 
 ### Collaboration statistics
 
 Inspect task participation, proposals, handoffs and observable execution time. Default and enhanced views use the same data.
 
-![Default statistics](docs/images/0.3.1/analytics-default.png)
+![Default statistics](docs/images/0.3.2/analytics-default.png)
 
-![Enhanced statistics](docs/images/0.3.1/analytics-enhanced.png)
+![Enhanced statistics](docs/images/0.3.2/analytics-enhanced.png)
 
 ### Relay preview
 
 The visual view shows the workstation and sofa even before you create a relay. Choose default or enhanced artwork; an empty scene has no agent characters and does not start work.
 
-![Default relay preview](docs/images/0.3.1/relay-preview-default.png)
+![Default relay preview](docs/images/0.3.2/relay-preview-default.png)
 
-![Enhanced relay preview](docs/images/0.3.1/relay-preview-enhanced.png)
+![Enhanced relay preview](docs/images/0.3.2/relay-preview-enhanced.png)
 
 ### Relay, notes, activity and recovery
 
 Experimental relay starts one background handoff after a run or time condition. It requires the app to remain running with the project loaded. Notes and meeting records stay with the project. Individual activity records can be permanently deleted after confirmation without undoing work or changing historical return counts. Backups and independent copies support recovery; backup ZIPs contain management data, not your deliverable files.
 
-![Enhanced relay furniture](docs/images/0.3.1/relay-enhanced.png)
+![Enhanced relay furniture](docs/images/0.3.2/relay-enhanced.png)
+
+Activity summaries show short roles; expanded records keep the original identity information.
+
+![Activity details](docs/images/0.3.2/activity-roles.png)
 
 The `.haicomo` entry and hidden `.haicomo/` folder belong together. For cloud drives or Git, work locally, stop runs and relays, quit the app and complete synchronisation before changing computers. Live NAS databases and simultaneous writers are not supported. Never put private project databases or prompts in a public source repository.
 
@@ -126,4 +138,4 @@ npm run dev
 
 `npm test` runs unit tests; `npm run test:e2e` runs Electron tests with disposable data. `npm run dist` builds the current platform; `npm run dist:win` builds Windows x64. `npm run demo -- /absolute/empty/directory` creates synthetic demonstration data. See [contributing](CONTRIBUTING.md), [architecture](docs/ARCHITECTURE.md) and [file/CLI/MCP protocol](docs/PROTOCOL.md).
 
-[Report an issue](https://github.com/jasonyao486/HAICoMo/issues/new/choose). Remove personal paths, prompts and credentials before attaching diagnostics or screenshots. Current evidence: [tests](docs/TESTING-0.3.1.md), [review](docs/REVIEW-0.3.1.md), [first-use report](docs/FIRST-RUN-0.3.1.md), [remaining gaps](docs/GAP-ANALYSIS.md).
+[Report an issue](https://github.com/jasonyao486/HAICoMo/issues/new/choose). Remove personal paths, prompts and credentials before attaching diagnostics or screenshots. Current evidence: [tests](docs/TESTING-0.3.2.md), [review](docs/REVIEW-0.3.2.md), [first-use report](docs/FIRST-RUN-0.3.2.md), [remaining gaps](docs/GAP-ANALYSIS.md).

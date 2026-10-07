@@ -4,19 +4,19 @@
 
 一个管理任务、人工审阅与 AI 协作的本地桌面应用。智能体提交修改提案，由你决定是否批准及何时通过交付验收。项目数据保存在你选择的工作目录中。
 
-**0.3.1** 为 Apple Silicon Mac 与 Windows x64 预发布版本。实际验证范围见[兼容性报告](docs/COMPATIBILITY-0.3.1.md)。
+**0.3.2** 为 Apple Silicon Mac 与 Windows x64 预发布版本。实际验证范围见[兼容性报告](docs/COMPATIBILITY-0.3.2.md)。
 
 ## 安装与开始使用
 
 使用任务管理功能不需要安装 Node.js、Git，也不需要购买模型订阅。
 
-1. 打开[下载与版本发布](https://github.com/jasonyao486/HAICoMo/releases)，选择 **v0.3.1**，展开 **Assets**。
+1. 打开[下载与版本发布](https://github.com/jasonyao486/HAICoMo/releases)，选择 **v0.3.2**，展开 **Assets**。
 2. 按电脑类型下载。页面上的 “Source code” 是开发者源码，不是安装包。
 
 | 你的电脑 | 下载文件 |
 |---|---|
-| 搭载 Apple M 系列芯片的 Mac | `HAICoMo-0.3.1-arm64.dmg` |
-| 系统类型为“基于 x64 的处理器”的 Windows PC | `HAICoMo-0.3.1-windows-x64-setup.exe` |
+| 搭载 Apple M 系列芯片的 Mac | `HAICoMo-0.3.2-arm64.dmg` |
+| 系统类型为“基于 x64 的处理器”的 Windows PC | `HAICoMo-0.3.2-windows-x64-setup.exe` |
 | Intel Mac、Windows ARM64、Linux | 本版暂不提供已验证安装包 |
 
 Mac 在“苹果菜单 → 关于本机”查看芯片；Windows 在“设置 → 系统 → 系统信息”查看系统类型。
@@ -34,13 +34,13 @@ Mac 在“苹果菜单 → 关于本机”查看芯片；Windows 在“设置 �
 Mac：打开“终端”运行：
 
 ```sh
-shasum -a 256 ~/Downloads/HAICoMo-0.3.1-arm64.dmg
+shasum -a 256 ~/Downloads/HAICoMo-0.3.2-arm64.dmg
 ```
 
 Windows：打开 PowerShell 运行：
 
 ```powershell
-Get-FileHash "$HOME\Downloads\HAICoMo-0.3.1-windows-x64-setup.exe" -Algorithm SHA256
+Get-FileHash "$HOME\Downloads\HAICoMo-0.3.2-windows-x64-setup.exe" -Algorithm SHA256
 ```
 
 校验值用于确认下载完整性，不等同于发布者签名。
@@ -49,53 +49,61 @@ Get-FileHash "$HOME\Downloads\HAICoMo-0.3.1-windows-x64-setup.exe" -Algorithm SH
 
 需要 AI 协作时，自行安装并登录相应客户端，然后在“设置 → 本地智能体 → 检测”查看能力。Codex、Claude Code 支持后台交接；其他列出的客户端使用前台或文件协作。HAICoMo 不提供订阅，也不会自动转用另行收费的 API。
 
-更新采用手动下载安装：退出应用，保留项目文件夹，下载新版并替换或重新安装应用。旧项目首次在 0.3.1 中打开时，会先备份再迁移到 v5；旧版应用不能打开已迁移项目。需要回退时，将迁移前备份恢复到空目录。
+更新采用手动下载安装：退出应用，保留项目文件夹，下载新版并替换或重新安装应用。0.3.1 之前的项目首次在新版中打开时，会先备份再迁移到 v5；早于 0.3.1 的应用不能打开已迁移项目。需要回退时，将迁移前备份恢复到空目录。
 
-完整手册：[简体中文](docs/USER-MANUAL-0.3.1.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.3.1.zh-TW.md) · [UK English](docs/USER-MANUAL-0.3.1.en-GB.md) · [US English](docs/USER-MANUAL-0.3.1.en-US.md)。
+完整手册：[简体中文](docs/USER-MANUAL-0.3.2.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.3.2.zh-TW.md) · [UK English](docs/USER-MANUAL-0.3.2.en-GB.md) · [US English](docs/USER-MANUAL-0.3.2.en-US.md)。
+
+点击 logo 返回首页，不增加标签；原项目页面与草稿保留。收起侧栏后保留正常尺寸的文件夹与终端按钮。活动摘要使用简短角色，展开详情保留完整身份。0.3.2 沿用 0.3.1 的项目格式 v5。
 
 ## 功能
 
 以下图片来自独立的合成 “HAICoMo Demo” 项目，包含 10 个任务、50 个子任务，不含真实工作内容或账号对话。截图界面使用英文。
 
+### 首页与项目标签
+
+点击 logo 返回首页，保留各项目的页面与草稿。收起侧栏后仍可使用文件夹与终端入口。
+
+![首页](docs/images/0.3.2/home.png)
+
 ### 任务与子任务
 
 分配模型或客户端，记录日期、交付物及前置关系。人工验收通过后，后续任务才能解除前置限制。
 
-![任务与子任务](docs/images/0.3.1/tasks.png)
+![任务与子任务](docs/images/0.3.2/tasks.png)
 
 ### 修订提案
 
 审阅智能体提出的修改，可调整后批准，也可拒绝。修订号与事务检查避免旧修改覆盖新内容、避免只批准一部分。
 
-![修订提案](docs/images/0.3.1/proposals.png)
+![修订提案](docs/images/0.3.2/proposals.png)
 
 ### 时间线、前置关系与思维导图
 
 在时间线中安排任务日期，在关系图中检查前置条件或任务层级。图表支持缩放、适应画布和平移；明确指定模型的节点显示对应公司标志。
 
-![时间线](docs/images/0.3.1/timeline.png)
+![时间线](docs/images/0.3.2/timeline.png)
 
 ### 协作实验室
 
 默认模式使用简洁人物；增强模式使用单独授权的拟人角色及手绘家具。动画展示可观测状态，不代表智能体一定正在工作，也不等于任务已完成。
 
-![默认协作实验室](docs/images/0.3.1/studio-default.png)
+![默认协作实验室](docs/images/0.3.2/studio-default.png)
 
-![增强协作实验室](docs/images/0.3.1/studio-enhanced.png)
+![增强协作实验室](docs/images/0.3.2/studio-enhanced.png)
 
 ### 协作统计
 
 查看任务参与、提案、交接及可观测运行时长。默认与增强模式使用同一份数据。
 
-![默认协作统计](docs/images/0.3.1/analytics-default.png)
+![默认协作统计](docs/images/0.3.2/analytics-default.png)
 
-![增强协作统计](docs/images/0.3.1/analytics-enhanced.png)
+![增强协作统计](docs/images/0.3.2/analytics-enhanced.png)
 
 ### 接力、笔记、活动记录与恢复
 
 实验性接力在前置运行或时间条件满足后，启动一次后台交接，要求应用运行且项目保持加载。笔记与会议记录跟随项目保存。活动记录可在确认后逐条永久删除，不撤销任务操作，也不改变历史返工统计。备份及独立副本用于恢复；备份 ZIP 只包含管理数据，不包含实际交付物文件。
 
-![增强接力家具](docs/images/0.3.1/relay-enhanced.png)
+![增强接力家具](docs/images/0.3.2/relay-enhanced.png)
 
 `.haicomo` 入口与隐藏的 `.haicomo/` 数据目录必须一起保留。云盘或 Git 应采用本地编辑，停止运行及接力、退出应用、同步完成后再换电脑。活动 NAS 数据库与多机同时写入不受支持。不要把私人项目数据库或提示词提交到公开源码仓库。
 
@@ -103,9 +111,9 @@ Get-FileHash "$HOME\Downloads\HAICoMo-0.3.1-windows-x64-setup.exe" -Algorithm SH
 
 即使没有接力任务，可视化模式仍显示工位和沙发，并保留无任务提示。默认与增强两种画风均可预览；空场景不放置模型角色，也不会启动工作。
 
-![默认接力预览](docs/images/0.3.1/relay-preview-default.png)
+![默认接力预览](docs/images/0.3.2/relay-preview-default.png)
 
-![增强接力预览](docs/images/0.3.1/relay-preview-enhanced.png)
+![增强接力预览](docs/images/0.3.2/relay-preview-enhanced.png)
 
 ## 协议与授权
 
@@ -126,4 +134,4 @@ npm run dev
 
 `npm test` 执行单元测试；`npm run test:e2e` 使用临时数据执行 Electron 测试；`npm run dist` 构建当前平台安装包，`npm run dist:win` 构建 Windows x64；`npm run demo -- /绝对路径/空目录` 生成演示项目。维护说明见[贡献指南](CONTRIBUTING.md)、[架构](docs/ARCHITECTURE.md)及[文件、CLI、MCP 协议](docs/PROTOCOL.md)。
 
-[前往 GitHub 反馈](https://github.com/jasonyao486/HAICoMo/issues/new/choose)。附加诊断或截图前，请删除私人路径、提示词及凭据。当前证据见[测试记录](docs/TESTING-0.3.1.md)、[应用审查](docs/REVIEW-0.3.1.md)、[首次使用报告](docs/FIRST-RUN-0.3.1.md)和[差距分析](docs/GAP-ANALYSIS.md)。
+[前往 GitHub 反馈](https://github.com/jasonyao486/HAICoMo/issues/new/choose)。附加诊断或截图前，请删除私人路径、提示词及凭据。当前证据见[测试记录](docs/TESTING-0.3.2.md)、[应用审查](docs/REVIEW-0.3.2.md)、[首次使用报告](docs/FIRST-RUN-0.3.2.md)和[差距分析](docs/GAP-ANALYSIS.md)。

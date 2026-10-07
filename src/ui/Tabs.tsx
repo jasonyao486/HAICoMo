@@ -5,7 +5,7 @@ import {
   Plus,
   X,
   MoreHorizontal,
-  Activity,
+  Terminal,
 } from "lucide-react";
 import { UpdateNotice } from "./UpdatePanel";
 import { App } from "./App";
@@ -19,9 +19,20 @@ const blank = (): Tab => ({
   workspace: null,
   title: "",
 });
+const HOME_ID = "window-home";
+const homeTab: Tab = { id: HOME_ID, workspace: null, title: "" };
 export function Tabs() {
   const [tabs, setTabs] = useState<Tab[]>(() => [blank()]);
   const [active, setActive] = useState("");
+  const [home, setHome] = useState(false);
+  const [homeVisited, setHomeVisited] = useState(false);
+  const [homeNavigation, setHomeNavigation] = useState(0);
+  const [collapsed, setCollapsed] = useState(false);
+  const homeRef = useRef(home); homeRef.current = home;
+  const goHome = useCallback(() => {
+    setHomeVisited(true); setHome(true); setMenu(false);
+    setHomeNavigation((value) => value + 1);
+  }, []);
   const [locale, setLocale] = useState<Settings["locale"]>("zh-CN");
   const [menu, setMenu] = useState(false),
     [more, setMore] = useState(false);
@@ -51,9 +62,11 @@ export function Tabs() {
     const tab = blank();
     setTabs((old) => [...old, tab]);
     setActive(tab.id);
+    setHome(false);
     setMenu(false);
   }, []);
   const attach = useCallback((workspace: Workspace, sourceId?: string) => {
+    setHome(false);
     setTabs((old) => {
       const existing = old.find(
         (tab) => tab.workspace?.binding === workspace.binding,
@@ -82,6 +95,7 @@ export function Tabs() {
         restored.forEach((tab) => pages.current.set(tab.id, tab.page ?? "overview"));
         setTabs(restored); setActive(restored[Math.max(0, b.restore.tabs.findIndex((item: any) => item.active))].id);
       } else for (const p of b.projects ?? []) attach(await api("project.view", { binding: p.binding }));
+      if (b.restore?.home) goHome();
     });
     const poll = () => {
       if (document.hidden) return;
@@ -96,7 +110,7 @@ export function Tabs() {
       if (e.event === "updates.prepare") void requestClose(latest.current.map((tab) => tab.id), false, e.ticket).catch((error) => { setError(errorText(error, liveT.current)); void api("updates.cancel", { ticket: e.ticket }); });
       if (e.event === "updates.cancelled") { setUpdateLocked(false); setClosing(null); if (e.error) setError(errorText(e.error, liveT.current)); }
       if (e.event === "tab.new") newTab();
-      if (e.event === "tab.close") void requestClose([activeRef.current]);
+      if (e.event === "tab.close") void closeCurrent();
       if (e.event === "opened") attach(e.view);
       if (e.event === "relocated")
         setTabs((old) =>
@@ -125,7 +139,7 @@ export function Tabs() {
       if (!(e.target as Element).closest(".tab-picker")) setMenu(false);
     };
     const first = document.querySelector<HTMLButtonElement>(
-      ".tab-frame:not([hidden]) .tab-menu button",
+      ".workspace-frame:not([hidden]) .tab-menu button",
     );
     first?.focus();
     document.addEventListener("pointerdown", outside);
@@ -135,7 +149,7 @@ export function Tabs() {
     if (ticket) {
       setUpdateLocked(true);
       try {
-        await api("updates.ready", { ticket, tabs: latest.current.map((tab) => ({ ...(tab.workspace ? { entryPath: tab.workspace.entryPath, id: tab.workspace.state.id, epoch: tab.workspace.state.epoch } : {}), page: pages.current.get(tab.id) ?? tab.page ?? "overview", active: tab.id === activeRef.current })) });
+        await api("updates.ready", { ticket, home: homeRef.current, tabs: latest.current.map((tab) => ({ ...(tab.workspace ? { entryPath: tab.workspace.entryPath, id: tab.workspace.state.id, epoch: tab.workspace.state.epoch } : {}), page: pages.current.get(tab.id) ?? tab.page ?? "overview", active: tab.id === activeRef.current })) });
         setClosing(null);
       } catch (error) { setUpdateLocked(false); await api("updates.cancel", { ticket }); throw error; }
       return;
@@ -144,6 +158,7 @@ export function Tabs() {
       await api("window.confirmClose");
       return;
     }
+    if (ids.includes(HOME_ID)) { setHome(false); setMenu(false); return; }
     for (const id of ids) {
       const tab = latest.current.find((t) => t.id === id);
       if (tab?.workspace?.binding)
@@ -161,6 +176,7 @@ export function Tabs() {
   };
   const requestClose = async (ids: string[], window = false, ticket?: string) => {
     setMenu(false);
+    if (window || ticket) ids = [...ids, HOME_ID];
     if (
       ids.some((id) =>
         [...(guards.current.get(id)?.values() ?? [])].some((g) => g.dirty),
@@ -168,6 +184,10 @@ export function Tabs() {
     )
       setClosing({ ids, window, ticket });
     else await finishClose(ids, window, ticket);
+  };
+  const closeCurrent = async () => {
+    if (homeRef.current) { setHome(false); setMenu(false); }
+    else await requestClose([activeRef.current]);
   };
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -178,10 +198,11 @@ export function Tabs() {
       }
       if (e.key.toLowerCase() === "w") {
         e.preventDefault();
-        void requestClose([activeRef.current]);
+        void closeCurrent();
       }
       if (e.key === "Tab") {
         e.preventDefault();
+        setHome(false);
         const i = tabs.findIndex((t) => t.id === activeRef.current);
         setActive(
           tabs[(i + (e.shiftKey ? tabs.length - 1 : 1)) % tabs.length].id,
@@ -194,11 +215,15 @@ export function Tabs() {
   return (
     <>
       <div inert={updateLocked}>
-      {tabs.map((tab) => (
+      {[...tabs, ...(homeVisited ? [homeTab] : [])].map((tab) => (
         <TabFrame
           key={tab.id}
           tab={tab}
-          active={tab.id === (active || tabs[0].id)}
+          active={tab.id === HOME_ID ? home : !home && tab.id === (active || tabs[0].id)}
+          goHome={goHome}
+          homeNavigation={tab.id === HOME_ID ? homeNavigation : 0}
+          collapsed={collapsed}
+          toggleSidebar={() => setCollapsed((value) => !value)}
           reportPage={(page) => pages.current.set(tab.id, page)}
           attach={(w) => attach(w, tab.id)}
           newTab={newTab}
@@ -223,6 +248,7 @@ export function Tabs() {
               <button
                 className="workspace-switch"
                 aria-label={t("switchProject")}
+                title={t("switchProject")}
                 aria-haspopup="menu"
                 aria-expanded={menu}
                 onClick={() => {
@@ -230,9 +256,8 @@ export function Tabs() {
                   setMore(false);
                 }}
               >
-                <FolderOpen size={18} />
-                <span>{tab.title || t("newTab")}</span>
-                <ChevronDown size={14} />
+                <FolderOpen size={19} />
+                {!collapsed && <><span>{tab.id === HOME_ID ? t("home") : tab.title || t("newTab")}</span><ChevronDown size={14} /></>}
               </button>
               {menu && (
                 <div
@@ -278,6 +303,7 @@ export function Tabs() {
                       aria-current={item.id === tab.id}
                       onClick={() => {
                         setActive(item.id);
+                        setHome(false);
                         setMenu(false);
                       }}
                     >
@@ -294,7 +320,7 @@ export function Tabs() {
                   </button>
                   <button
                     role="menuitem"
-                    onClick={() => void requestClose([tab.id])}
+                    onClick={() => void (tab.id === HOME_ID ? closeCurrent() : requestClose([tab.id]))}
                   >
                     <X size={15} />
                     {t("closeTab")}
@@ -324,14 +350,16 @@ export function Tabs() {
               )}
               <button
                 className="background-entry"
+                title={t("backgroundTasks")}
+                aria-label={t("backgroundTasks")}
                 onClick={() => setShowBackground(true)}
               >
-                <Activity size={15} />
-                {t("backgroundTasks")} · {background.runs.length}
+                <Terminal size={19} />
+                {!collapsed && <span>{t("backgroundTasks")} · {background.runs.length}
                 {background.permissions.length > 0 &&
                   ` · ${t("permission")} ${background.permissions.length}`}
                 {(background.relays?.length ?? 0) > 0 &&
-                  ` · ${t("backgroundRelays")} ${background.relays.length}`}
+                  ` · ${t("backgroundRelays")} ${background.relays.length}`}</span>}
               </button>
             </div>
           }
@@ -467,6 +495,10 @@ function TabFrame({
   active,
   attach,
   newTab,
+  goHome,
+  homeNavigation,
+  collapsed,
+  toggleSidebar,
   switcher,
   reportTitle,
   reportPage,
@@ -476,6 +508,10 @@ function TabFrame({
   active: boolean;
   attach: (w: Workspace) => void;
   newTab: () => void;
+  goHome: () => void;
+  homeNavigation: number;
+  collapsed: boolean;
+  toggleSidebar: () => void;
   switcher: React.ReactNode;
   reportTitle: (title: string) => void;
   reportPage: (page: string) => void;
@@ -497,15 +533,19 @@ function TabFrame({
         workspace: tab.workspace,
         attach,
         newTab,
+        goHome,
+        homeNavigation,
+        collapsed,
+        toggleSidebar,
         switcher,
         reportTitle,
         register: stableRegister,
       }}
     >
       <div
-        className="tab-frame"
+        className={`workspace-frame ${tab.id === HOME_ID ? "home-frame" : "tab-frame"}`}
         hidden={!active}
-        data-tab-id={tab.id}
+        data-tab-id={tab.id === HOME_ID ? undefined : tab.id}
         data-project-id={tab.workspace?.state.id}
       >
         <App />

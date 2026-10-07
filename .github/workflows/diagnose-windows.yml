@@ -11,14 +11,13 @@ jobs:
       fail-fast: false
       matrix:
         node: ['24.12.0', '24.21.0']
-    env:
-      HAICOMO_EVIDENCE_DIR: validation/0.3.1/regression
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           cache: npm
+      - run: node scripts/ci-version.mjs
       - run: npm ci
       - run: npm run build
       - run: npx playwright test tests/e2e/desktop.spec.ts
@@ -26,15 +25,15 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force validation/0.3.1 | Out-Null
-          Get-ChildItem validation/0.3.1/regression -Filter '*.jsonl' | Get-Content
-          Get-WinEvent -FilterHashtable @{LogName='Application'; Id=1000,1001} -MaxEvents 6 -ErrorAction SilentlyContinue | Select-Object TimeCreated,Message | Out-File validation/0.3.1/native-events.txt
+          New-Item -ItemType Directory -Force validation/${{ env.HAICOMO_VERSION }} | Out-Null
+          Get-ChildItem validation/${{ env.HAICOMO_VERSION }}/regression -Filter '*.jsonl' | Get-Content
+          Get-WinEvent -FilterHashtable @{LogName='Application'; Id=1000,1001} -MaxEvents 6 -ErrorAction SilentlyContinue | Select-Object TimeCreated,Message | Out-File validation/${{ env.HAICOMO_VERSION }}/native-events.txt
           exit 0
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: windows-runtime-${{ matrix.node }}
           path: |
-            validation/0.3.1/
+            validation/${{ env.HAICOMO_VERSION }}/
             test-results/
           retention-days: 14

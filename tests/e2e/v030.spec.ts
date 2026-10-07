@@ -8,7 +8,7 @@ import { ProjectStore } from "../../src/core/store";
 import { readSnapshot } from "../../src/core/files";
 import { defaultSettings } from "../../src/shared/settings";
 const screens = path.resolve(process.env.HAICOMO_EVIDENCE_DIR ?? "validation/0.3.0/screens");
-const current = (page: Page) => page.locator(".tab-frame:not([hidden])");
+const current = (page: Page) => page.locator(".workspace-frame:not([hidden])");
 function fixture(root: string) {
   const fake = fixtureAgent(root);
   fs.mkdirSync(path.join(root, "profile"), { recursive: true });

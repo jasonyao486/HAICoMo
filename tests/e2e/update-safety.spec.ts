@@ -10,7 +10,7 @@ import http from "node:http";
 import { createHash, randomUUID } from "node:crypto";
 import { ProjectStore } from "../../src/core/store";
 import { readSnapshot } from "../../src/core/files";
-const current = (page: Page) => page.locator(".tab-frame:not([hidden])");
+const current = (page: Page) => page.locator(".workspace-frame:not([hidden])");
 async function launch(root: string) { return electron.launch({ ...(process.env.HAICOMO_PACKAGED_EXECUTABLE ? { executablePath: process.env.HAICOMO_PACKAGED_EXECUTABLE, args: [] } : { args: ["."] }), env: { ...process.env, HAICOMO_TEST: "1", HAICOMO_UPDATE_PREFLIGHT_TEST: "1", HAICOMO_USER_DATA: path.join(root, "profile") } }); }
 function project(root: string, title: string) {
   const dir = path.join(root, title); fs.mkdirSync(dir);
@@ -44,6 +44,10 @@ test("install preflight coordinates two dirty windows, cancels globally and free
     const other = await created;
     await expect(current(other).getByRole("button", { name: "Alpha task", exact: true })).toBeVisible();
     for (const [p, title] of [[page, "Beta"], [other, "Alpha"]] as const) { await current(p).getByRole("button", { name: `${title} task`, exact: true }).click(); await current(p).getByLabel("标题", { exact: true }).fill(`${title} saved before install`); }
+    await current(page).locator(".brand").click();
+    await current(page).locator(".sidebar-bottom button").click();
+    await current(page).getByLabel("用户名", { exact: true }).fill("Home preflight draft");
+    await current(page).locator(".brand").click();
     await page.evaluate(() => window.haicomo.request("updates.install"));
     for (const p of [page, other]) await expect(p.getByRole("alertdialog")).toBeVisible();
     await page.getByRole("alertdialog").getByRole("button", { name: "取消", exact: true }).click();
@@ -59,6 +63,7 @@ test("install preflight coordinates two dirty windows, cancels globally and free
     await page.getByRole("alertdialog").getByRole("button", { name: "保存修改", exact: true }).click();
     await expect.poll(() => page.evaluate(() => (window as any).__verified)).toBe(true);
     expect(readSnapshot(dirs[1]).tasks[0].title).toBe("Beta saved before install");
+    expect((await page.evaluate(() => window.haicomo.request("bootstrap"))).settings.userName).toBe("Home preflight draft");
     await expect(other.locator("[inert]")).toHaveCount(0);
     expect(fs.existsSync(path.join(root, "profile/pending-update.json"))).toBe(false);
   } finally { await closeTestApp(app); await new Promise<void>((r) => server.close(() => r())); await removeTestDirectory(root); }

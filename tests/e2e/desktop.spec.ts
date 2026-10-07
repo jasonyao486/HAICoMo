@@ -30,7 +30,7 @@ test("real desktop: create, edit, accept, concurrent proposal review, windows, v
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   try {
-    await expect(page.getByText("好工作，从一点清晰开始。")).toBeVisible();
+    await expect(page.getByText("好工作，从条理清晰开始")).toBeVisible();
     await page.screenshot({ path: "test-results/home.png" });
     await page.getByRole("button", { name: "新建项目", exact: true }).click();
     await page

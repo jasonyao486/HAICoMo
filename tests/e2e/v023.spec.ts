@@ -11,7 +11,7 @@ test("0.2.3 settings popovers preserve drafts, dismiss accessibly and stay below
   const directory = path.join(root, "中文 Project"); fs.mkdirSync(directory); new ProjectStore(directory, "UI project").close();
   fs.mkdirSync(screens, { recursive: true });
   const app = await electron.launch({ ...(process.env.HAICOMO_PACKAGED_EXECUTABLE ? { executablePath: process.env.HAICOMO_PACKAGED_EXECUTABLE, args: ["--force-device-scale-factor=2"] } : { args: [".", "--force-device-scale-factor=2"] }), env: { ...process.env, HAICOMO_TEST: "1", HAICOMO_USER_DATA: path.join(root, "profile") } });
-  const page = await app.firstWindow(), current = page.locator(".tab-frame:not([hidden])");
+  const page = await app.firstWindow(), current = page.locator(".workspace-frame:not([hidden])");
   const errors: string[] = []; page.on("pageerror", (e) => errors.push(String(e)));
   const boot = () => page.evaluate(() => window.haicomo.request("bootstrap"));
   try {

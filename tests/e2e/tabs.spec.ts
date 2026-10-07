@@ -20,7 +20,7 @@ import {
 } from "../../src/core/files";
 
 test.use({ actionTimeout: 10000 });
-const current = (page: Page) => page.locator(".tab-frame:not([hidden])");
+const current = (page: Page) => page.locator(".workspace-frame:not([hidden])");
 async function emitOpen(app: ElectronApplication, file: string) {
   await app.evaluate(
     ({ app }, file) => app.emit("open-file", { preventDefault() {} }, file),
@@ -250,6 +250,7 @@ test("single window tabs retain drafts, route background permissions and keep cl
           ).runs.length,
       )
       .toBe(1);
+    await current(page).locator(".brand").click();
     await current(page)
       .getByRole("button", { name: /后台任务/ })
       .click();

@@ -3,7 +3,7 @@ import { z } from "zod";
 export const resumePageSchema = z.enum(["overview", "tasks", "scheduled", "relay", "timeline", "dependencies", "mindmap", "office", "proposals", "notes", "analytics", "archive", "history", "settings"]);
 export const resumeTabSchema = z.object({ entryPath: z.string().max(4000).optional(), id: z.string().optional(), epoch: z.string().optional(), page: resumePageSchema, active: z.boolean() }).strict();
 export type ResumeTab = z.infer<typeof resumeTabSchema>;
-export type ResumeWindow = { tabs: ResumeTab[] };
+export type ResumeWindow = { tabs: ResumeTab[]; home?: boolean };
 // All renderer windows acknowledge their own dirty forms before any native
 // installation call. Agents and in-flight launches are rechecked at commit.
 export class InstallGate {
@@ -27,11 +27,11 @@ export class InstallGate {
     for (const window of windows) this.hooks.prepare(window, ticket);
     return ticket;
   }
-  ready(window: number, ticket: string, tabs: ResumeTab[]) {
+  ready(window: number, ticket: string, tabs: ResumeTab[], home?: boolean) {
     const job = this.job;
     if (!job || job.ticket !== ticket || !job.windows.has(window)) throw new Error("UPDATE_PREPARATION_FAILED");
     if (job.committing) return;
-    job.ready.set(window, { tabs });
+    job.ready.set(window, { tabs, ...(home !== undefined ? { home } : {}) });
     if (job.ready.size !== job.windows.size) return;
     job.committing = true;
     void (async () => {

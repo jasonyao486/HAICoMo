@@ -23,14 +23,13 @@ jobs:
     timeout-minutes: 35
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      HAICOMO_EVIDENCE_DIR: validation/0.3.1/regression
-      HAICOMO_SCREENSHOT_DIR: validation/0.3.1/screens
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24.21.0'
           cache: npm
+      - run: node scripts/ci-version.mjs
       - run: npm ci
       - run: npm run check:public
       - run: npm run typecheck
@@ -49,15 +48,15 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          export HAICOMO_PACKAGED_EXECUTABLE="$PWD/release/0.3.1/mac-arm64/HAICoMo.app/Contents/MacOS/HAICoMo"
-          node scripts/check-package.mjs release/0.3.1/mac-arm64/HAICoMo.app/Contents/Resources
+          export HAICOMO_PACKAGED_EXECUTABLE="$PWD/release/${{ env.HAICOMO_VERSION }}/mac-arm64/HAICoMo.app/Contents/MacOS/HAICoMo"
+          node scripts/check-package.mjs release/${{ env.HAICOMO_VERSION }}/mac-arm64/HAICoMo.app/Contents/Resources
           npx playwright test
       - name: Test packaged Windows application
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $env:HAICOMO_PACKAGED_EXECUTABLE = (Resolve-Path release/0.3.1/win-unpacked/HAICoMo.exe).Path
-          node scripts/check-package.mjs release/0.3.1/win-unpacked/resources
+          $env:HAICOMO_PACKAGED_EXECUTABLE = (Resolve-Path release/${{ env.HAICOMO_VERSION }}/win-unpacked/HAICoMo.exe).Path
+          node scripts/check-package.mjs release/${{ env.HAICOMO_VERSION }}/win-unpacked/resources
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npx playwright test
           exit $LASTEXITCODE
@@ -65,7 +64,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $installer = (Get-Item release/0.3.1/*-setup.exe).FullName
+          $installer = (Get-Item release/${{ env.HAICOMO_VERSION }}/*-setup.exe).FullName
           $installDirectory = Join-Path $env:RUNNER_TEMP 'HAICoMo-install-check'
           $process = Start-Process -FilePath $installer -ArgumentList @('/S', "/D=$installDirectory") -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "Installer exit code: $($process.ExitCode)" }
@@ -73,20 +72,20 @@ jobs:
           if (!(Test-Path $env:HAICOMO_PACKAGED_EXECUTABLE)) { throw 'Installed executable is missing' }
           node scripts/check-package.mjs (Join-Path $installDirectory 'resources')
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npx playwright test tests/e2e/v031.spec.ts
+          npx playwright test tests/e2e/v031.spec.ts tests/e2e/v032.spec.ts
           exit $LASTEXITCODE
       - name: Package checksums
         run: node scripts/package-checksums.mjs
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: haicomo-0.3.1-${{ matrix.platform }}-${{ matrix.arch }}
+          name: haicomo-${{ env.HAICOMO_VERSION }}-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
-            release/0.3.1/*.dmg
-            release/0.3.1/*.zip
-            release/0.3.1/*.exe
-            release/0.3.1/*.blockmap
-            release/0.3.1/SHA256SUMS*.txt
+            release/${{ env.HAICOMO_VERSION }}/*.dmg
+            release/${{ env.HAICOMO_VERSION }}/*.zip
+            release/${{ env.HAICOMO_VERSION }}/*.exe
+            release/${{ env.HAICOMO_VERSION }}/*.blockmap
+            release/${{ env.HAICOMO_VERSION }}/SHA256SUMS*.txt
           if-no-files-found: error
           retention-days: 14
       - uses: actions/upload-artifact@v4
@@ -95,5 +94,5 @@ jobs:
           name: evidence-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
             test-results/
-            validation/0.3.1/
+            validation/${{ env.HAICOMO_VERSION }}/
           retention-days: 14
