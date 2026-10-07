@@ -203,9 +203,13 @@ export function Tabs() {
       if (e.key === "Tab") {
         e.preventDefault();
         setHome(false);
-        const i = tabs.findIndex((t) => t.id === activeRef.current);
+        // Restored tabs render before this effect's listener is replaced.
+        // Use the same current snapshot as activeRef, never the old closure.
+        const currentTabs = latest.current;
+        if (!currentTabs.length) return;
+        const i = currentTabs.findIndex((t) => t.id === activeRef.current);
         setActive(
-          tabs[(i + (e.shiftKey ? tabs.length - 1 : 1)) % tabs.length].id,
+          currentTabs[(i + (e.shiftKey ? currentTabs.length - 1 : 1)) % currentTabs.length].id,
         );
       }
     };

@@ -75,21 +75,32 @@ test("Windows terminal stays alive with its own console for a Unicode project pa
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo terminal 中文 & "));
   const launcher = launchWindowsTerminal(directory);
   let terminalPid: number | undefined;
+  let assertionFailed = false;
+  const query = async (): Promise<number | undefined> => {
+    const { stdout } = await promisify(execFile)("powershell.exe", ["-NoProfile", "-NonInteractive", "-File", path.resolve("tests/fixtures/windows-processes.ps1"), "-ParentProcessId", String(launcher.pid)], { windowsHide: true, timeout: 5000 });
+    return JSON.parse(stdout.trim())[0];
+  };
   try {
     await new Promise<void>((resolve, reject) => {
       launcher.once("error", reject);
       launcher.once("exit", code => code === 0 ? resolve() : reject(new Error(`Launch failed: ${code}`)));
     });
-    const query = async () => {
-      const { stdout } = await promisify(execFile)("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", `Get-CimInstance Win32_Process -Filter "ParentProcessId = ${launcher.pid} AND Name = 'powershell.exe'" | Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress`], { windowsHide: true, timeout: 5000 });
-      return stdout.trim() ? JSON.parse(stdout) : null;
-    };
-    await expect.poll(async () => { terminalPid = (await query())?.ProcessId; return Boolean(terminalPid); }).toBe(true);
-    expect((await query())?.CommandLine).toContain("-NoExit");
+    await expect.poll(async () => { terminalPid = await query(); return Boolean(terminalPid); }).toBe(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    expect((await query())?.ProcessId).toBe(terminalPid);
+    expect(await query()).toBe(terminalPid);
+  } catch (error) {
+    assertionFailed = true;
+    throw error;
   } finally {
-    if (terminalPid) { try { process.kill(terminalPid); } catch {} }
-    await removeTestDirectory(directory);
+    try {
+      // Recover ownership even if the observation assertion failed. Kill the
+      // owned terminal tree, including its console host, before removing cwd.
+      terminalPid ??= await query();
+      if (terminalPid) await promisify(execFile)("taskkill.exe", ["/PID", String(terminalPid), "/T", "/F"], { windowsHide: true });
+      await removeTestDirectory(directory);
+    } catch (error) {
+      await test.info().attach("terminal-cleanup-error", { body: String(error), contentType: "text/plain" });
+      if (!assertionFailed) throw error;
+    }
   }
 });

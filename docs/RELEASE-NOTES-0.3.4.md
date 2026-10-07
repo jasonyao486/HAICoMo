@@ -6,6 +6,8 @@
 - Manual handoff shows accurate availability, opens the selected desktop client and copies the prompt. It does not claim that the client received or completed a task.
 - Opening a project terminal on Windows now keeps an interactive PowerShell console alive, including projects with Unicode, spaces and shell metacharacters in their directory names.
 - Codex cancellation waits for the turn to start and for its completion notification. Acknowledgement alone does not certify cancellation; missing confirmation remains unknown.
+- Application exit waits for the database service to flush and acknowledge shutdown, preventing a short forced-exit deadline from leaving a writer lock behind on a busy system.
+- Switching restored project tabs with Ctrl+Tab uses the current tab list, avoiding a stale startup keyboard handler hiding every workspace.
 - The application, installer and installed version information are 0.3.4. Installation remains per user, with the same application identity and project schema v5. The Windows release gate verifies upgrade from 0.3.3, reinstall, uninstall and retained data using a disposable standard-user account.
 
 Download **HAICoMo-0.3.4-windows-x64-setup.exe** and verify it using **SHA256SUMS-win32-x64.txt**. Windows remains unsigned; automatic updates are not configured. The installer published here is the same CI-verified artifact installed and checked on the maintainer's Windows machine before publication.
@@ -20,6 +22,8 @@ This release distributes Windows only. Apple Silicon Mac users should continue u
 - 手动交接准确显示安装状态、打开指定客户端并复制提示词，不把这些操作当作发送或任务完成。
 - 修复打开项目终端后 PowerShell 立即退出的问题，支持中文、空格及 shell 特殊字符目录。
 - Codex 取消等待任务真正开始及结束通知；请求收到确认不等于任务已取消，缺少结束确认仍显示未知。
+- 应用退出等待数据库服务完成写入并确认关闭，避免繁忙系统中因过短的强制退出期限而残留写入锁。
+- 修复恢复项目标签后立即按 Ctrl+Tab 时，旧快捷键处理器引用过期列表、使所有项目页隐藏的时序问题。
 - 程序内版本、安装包和安装记录同步升级到 0.3.4。继续仅为当前用户安装，保持应用标识及 v5 项目格式。Windows 发布门禁使用一次性普通账户验证 0.3.3 升级、重装、卸载及数据保留。
 
 Windows x64 请下载 **HAICoMo-0.3.4-windows-x64-setup.exe**，使用 **SHA256SUMS-win32-x64.txt** 校验。Windows 仍未签名，自动更新未配置；公开安装包与发布前在维护者 Windows 机器上安装验收的 CI 产物为同一份文件。
