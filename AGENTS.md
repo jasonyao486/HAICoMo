@@ -27,7 +27,7 @@
 
 ## Development
 
-Node 24.12+ and npm. `npm ci`; `npm run dev`; `npm test`; `npm run typecheck`; `npm run test:e2e`; `npm run pack`.
+Node 24.21+ and npm. `npm ci`; `npm run dev`; `npm test`; `npm run typecheck`; `npm run test:e2e`; `npm run pack`.
 SQLite uses the runtime's built-in `node:sqlite` with a single writer, FULL synchronous rollback-journal transactions. Do not enable WAL without reviewing runtime SQLite support and backup guarantees.
 
 Use disposable test directories and isolated Electron userData. Never run tests against the user's actual projects or agent conversations. Live provider smoke tests must use a dedicated temporary directory/session and no destructive tool requests.

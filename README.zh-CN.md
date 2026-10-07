@@ -26,6 +26,27 @@ Mac 在“苹果菜单 → 关于本机”查看芯片；Windows 在“设置 �
 5. 点击“新建项目”，选择一个空的本地文件夹，保存 `.haicomo` 入口文件。创建一个任务，再添加子任务。此过程不需要 AI 账号。
 6. 交付后，从任务中打开交付物，检查内容，再点击“通过验收”。智能体运行完成不会自动替你验收。
 
+<details>
+<summary>如何核对下载文件的 SHA-256</summary>
+
+从同一发布页下载对应的 `SHA256SUMS-darwin-arm64.txt` 或 `SHA256SUMS-win32-x64.txt`。保留安装包原文件名；如果文件位于“下载”文件夹，运行下面的对应命令，将结果与文本文件中该安装包那一行的完整校验值比较，大小写不影响结果。如不一致，请重新下载后再安装。
+
+Mac：打开“终端”运行：
+
+```sh
+shasum -a 256 ~/Downloads/HAICoMo-0.3.1-arm64.dmg
+```
+
+Windows：打开 PowerShell 运行：
+
+```powershell
+Get-FileHash "$HOME\Downloads\HAICoMo-0.3.1-windows-x64-setup.exe" -Algorithm SHA256
+```
+
+校验值用于确认下载完整性，不等同于发布者签名。
+
+</details>
+
 需要 AI 协作时，自行安装并登录相应客户端，然后在“设置 → 本地智能体 → 检测”查看能力。Codex、Claude Code 支持后台交接；其他列出的客户端使用前台或文件协作。HAICoMo 不提供订阅，也不会自动转用另行收费的 API。
 
 更新采用手动下载安装：退出应用，保留项目文件夹，下载新版并替换或重新安装应用。旧项目首次在 0.3.1 中打开时，会先备份再迁移到 v5；旧版应用不能打开已迁移项目。需要回退时，将迁移前备份恢复到空目录。
@@ -94,7 +115,7 @@ Mac 在“苹果菜单 → 关于本机”查看芯片；Windows 在“设置 �
 
 ## 开发与反馈
 
-安装 Node **24.12+** 与 npm 后：
+安装 Node **24.21+** 与 npm 后：
 
 ```sh
 git clone https://github.com/jasonyao486/HAICoMo.git

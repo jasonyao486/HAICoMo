@@ -26,6 +26,27 @@ On a Mac, find the chip under **Apple menu → About This Mac**. On Windows, ope
 5. If the app opens in Chinese, first choose **设置 (Settings) → 语言 (Language) → English (UK) → 保存修改 (Save changes)**. Select **New project**, choose an empty local folder and save the `.haicomo` entry. Add a task and a subtask. No AI account is required for this step.
 6. When a delivery is ready, open its file from the task, inspect it, then choose **Accept delivery**. Agent completion alone does not accept work.
 
+<details>
+<summary>Check a download's SHA-256</summary>
+
+Download the matching `SHA256SUMS-darwin-arm64.txt` or `SHA256SUMS-win32-x64.txt` from the same release. Keep the installer's filename unchanged. If it is in Downloads, run the corresponding command below and compare the full hash with the line naming that installer in the text file. Letter case does not matter. If the values differ, download again before installing.
+
+Mac — open Terminal:
+
+```sh
+shasum -a 256 ~/Downloads/HAICoMo-0.3.1-arm64.dmg
+```
+
+Windows — open PowerShell:
+
+```powershell
+Get-FileHash "$HOME\Downloads\HAICoMo-0.3.1-windows-x64-setup.exe" -Algorithm SHA256
+```
+
+The hash checks the download's integrity; it is not a publisher signature.
+
+</details>
+
 For AI collaboration, install and sign into a supported client yourself. **Settings → Local agents → Detect** checks what is available. Codex and Claude Code support background handoff; other listed clients use foreground/file collaboration. HAICoMo does not provide subscriptions or switch you to paid APIs.
 
 Updates are manual: quit HAICoMo, keep your project folders, download the next release and replace/reinstall the application. Opening a pre-0.3.1 project migrates it to schema v5 after creating a backup. Older apps cannot reopen the migrated project; restore the pre-migration backup to an empty folder if you need to go back.
@@ -94,7 +115,7 @@ Read [asset permissions](ASSET-LICENSES.md), [file-level provenance](assets/mani
 
 ## Development and feedback
 
-With Node **24.12+** and npm:
+With Node **24.21+** and npm:
 
 ```sh
 git clone https://github.com/jasonyao486/HAICoMo.git

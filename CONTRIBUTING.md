@@ -1,6 +1,6 @@
 # Contributing
 
-Use Node 24.12 or later. Clone this repository, run `npm ci`, then `npm run dev`. Packaged application users do not need Node.
+Use Node 24.21 or later. Clone this repository, run `npm ci`, then `npm run dev`. Packaged application users do not need Node.
 
 Before submitting changes, run `npm run typecheck`, `npm test`, `npm run test:e2e` and `npm run check:assets`. Use temporary projects and isolated Electron user data; never test against personal projects or conversations. Tests launch a deterministic local fixture, not paid model accounts. Platform-specific skipped tests are not evidence for that platform.
 

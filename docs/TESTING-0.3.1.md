@@ -25,6 +25,8 @@ The private raw evidence directory is `validation/0.3.1/`. The source test harne
 
 ## Behaviour covered
 
+The Windows test host initially crashed with exit code `3221226505` while copying a disposable Unicode project directory under Node 24.12.0. A controlled [two-runtime diagnostic run](https://github.com/jasonyao486/HAICoMo/actions/runs/37600672114) ran the same two desktop cases against the same source: Node 24.12.0 crashed after one pass; Node 24.21.0 passed both. CI and development requirements now use 24.21.0, matching the Node version already embedded in Electron. This records the observed test-host failure and does not claim an upstream root cause.
+
 - Single writer, project identity/epoch, stale edits, atomic proposal review, parallel and offline inbox submissions, receipt reconstruction and crash recovery.
 - Parent/dependency cycle rejection, delivered versus accepted, task returns, metadata/date changes and retained project tabs.
 - v4→v5 pre-migration archive; backup failure and in-transaction failure leave old state intact; migration resumes safely. Historic return count initialises once and survives audit deletion.

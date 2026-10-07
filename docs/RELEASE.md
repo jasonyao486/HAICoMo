@@ -4,7 +4,7 @@ The first public channel is a GitHub pre-release with manual downloads. No indep
 
 ## Targets and workflow
 
-The `.github/workflows/verify.yml` matrix builds on native macOS ARM64 and Windows x64. Node 24.12.0 runs `npm ci`, type checking, unit tests, build, Electron tests, packaging and packaged Electron tests. Release files and test evidence are retained as workflow artifacts. Packaging always uses `--publish never`; publication is a separate reviewed action.
+The `.github/workflows/verify.yml` matrix builds on native macOS ARM64 and Windows x64. Node 24.21.0 runs `npm ci`, type checking, unit tests, build, Electron tests, packaging and packaged Electron tests. Release files and test evidence are retained as workflow artifacts for 14 days. Packaging always uses `--publish never`; publication is a separate reviewed action.
 
 The workflow also scans each packaged `app.asar` against the asset manifest and checks the bundled licences. Windows CI performs a silent NSIS install into a temporary directory and runs the 0.3.1 scenario against that installed executable. This does not replace the human Windows checklist.
 

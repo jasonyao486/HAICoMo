@@ -7,7 +7,7 @@
   "main": "dist-electron/main.cjs",
   "type": "module",
   "engines": {
-    "node": ">=24.12"
+    "node": ">=24.21"
   },
   "scripts": {
     "dev": "node scripts/check-assets.mjs && node scripts/dev.mjs",

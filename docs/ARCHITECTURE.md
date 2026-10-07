@@ -23,7 +23,7 @@ flowchart LR
   M --> W
 ```
 
-SQLite's built-in Node binding avoids an Electron-specific native add-on rebuild. The database uses FULL synchronous rollback journalling and short BEGIN IMMEDIATE transactions. It does not rely on WAL or copying an open database file. The development Node 24.12 runtime currently includes SQLite 3.50.4; Electron ships its own runtime. This distinction must be retained in diagnostics.
+SQLite's built-in Node binding avoids an Electron-specific native add-on rebuild. The database uses FULL synchronous rollback journalling and short BEGIN IMMEDIATE transactions. It does not rely on WAL or copying an open database file. Development and CI require Node 24.21 or later; Electron 44.5.1 independently bundles Node 24.21.0 and SQLite 3.53.4. Record both host and embedded runtime versions in diagnostics instead of assuming they always match.
 
 Tables: one versioned project state document, durable proposal records, append-only audit, event deduplication, command idempotency. UI operation: validate → revision guard → candidate mutation → graph validation → audit/proposal update → commit → publish snapshots/receipts → broadcast. Snapshot publishing failure does not roll back a successful database commit; a warning is shown and publication can be reconstructed on open.
 
