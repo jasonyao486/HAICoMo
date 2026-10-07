@@ -21,9 +21,9 @@ import type { RunEvent } from "../src/shared/domain";
 function setup(t: any) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-relay 测试 "));
   const store = new ProjectStore(dir, "Relay project");
-  t.after(() => {
+  t.after(async () => {
     try { store.close(); } catch {}
-    fs.rmSync(dir, { recursive: true, force: true });
+    await fs.promises.rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
   const task = (title: string, extra: Record<string, unknown> = {}) => {
     const id = randomUUID();
@@ -139,7 +139,10 @@ test("scheduler claims first, fires once after delivery, records the handoff and
   const executable = fixtureAgent(fixtureDir);
   const events: RunEvent[] = [];
   const runners = new LocalRunners((_d, e) => { events.push(e); try { store.recordEvent(e); } catch {} }, () => {});
-  t.after(() => { runners.dispose(); fs.rmSync(fixtureDir, { recursive: true, force: true }); });
+  t.after(async () => {
+    runners.dispose();
+    await fs.promises.rm(fixtureDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  });
   let clock = Date.now();
   let starts = 0, failNext = false;
   const hooks = {

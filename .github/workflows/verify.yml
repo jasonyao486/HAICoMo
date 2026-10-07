@@ -34,7 +34,7 @@ jobs:
       - run: npm ci
       - run: npm run check:public
       - run: npm run typecheck
-      - run: npm test
+      - run: npx tsx --test --test-reporter=tap tests/*.test.ts
         timeout-minutes: 5
       - run: npm run build
       - run: npx playwright test

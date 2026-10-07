@@ -31,9 +31,9 @@ function fixture(t: any) {
     (_dir, e) => events.push(e),
     (p) => permissions.push(p),
   );
-  t.after(() => {
+  t.after(async () => {
     runners.dispose();
-    fs.rmSync(directory, { recursive: true, force: true });
+    await fs.promises.rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
   return {
     directory,
