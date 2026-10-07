@@ -82,10 +82,14 @@ function Invoke-Installer([string]$File, [string[]]$Arguments) {
   $p = Start-Process -FilePath $File -ArgumentList $Arguments -PassThru -Wait
   if ($p.ExitCode -ne 0) { throw "Installer process failed: $($p.ExitCode)" }
 }
+$guid = (& $NodePath -e "const {UUID}=require('builder-util-runtime');console.log(UUID.v5(require('./package.json').build.appId,UUID.parse('50e065bc-3134-11e6-9bab-38c9862bdaf3')))").Trim()
 function Find-Install {
-  $entries = @(Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq 'HAICoMo' })
-  if ($entries.Count -ne 1) { throw 'Expected exactly one current-user uninstall registration' }
-  return $entries[0]
+  # electron-builder includes the version in DisplayName and keeps the location in a separate key.
+  $entry = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$guid"
+  if ($entry.DisplayName -notlike 'HAICoMo *') { throw 'Unexpected current-user uninstall registration' }
+  $location = (Get-ItemProperty "HKCU:\Software\$guid").InstallLocation
+  $entry | Add-Member -NotePropertyName InstallLocation -NotePropertyValue $location -Force
+  return $entry
 }
 Invoke-Installer $Installer @('/S')
 $entry = Find-Install
@@ -94,8 +98,7 @@ if (!$directory.StartsWith($env:LOCALAPPDATA, [StringComparison]::OrdinalIgnoreC
 $executable = Join-Path $directory 'HAICoMo.exe'
 if (!(Test-Path $executable)) { throw 'Installed application is missing' }
 if (Test-Path (Join-Path $directory 'resources/elevate.exe')) { throw 'Elevation helper must not be shipped' }
-$machine = @(Get-ItemProperty 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq 'HAICoMo' })
-if ($machine.Count) { throw 'Unexpected machine installation' }
+if (Test-Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$guid") { throw 'Unexpected machine installation' }
 if (!(Test-Path 'HKCU:\Software\Classes\.haicomo')) { throw 'Missing user-level project association' }
 if (!(Test-Path (Join-Path $env:APPDATA 'Microsoft/Windows/Start Menu/Programs/HAICoMo.lnk'))) { throw 'Missing current-user shortcut' }
 $sentinel = Join-Path $env:APPDATA 'haicomo/retain-on-uninstall.txt'
