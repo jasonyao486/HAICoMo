@@ -1,4 +1,5 @@
 import { test, expect, _electron as electron } from "@playwright/test";
+import { removeTestDirectory } from "./cleanup";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -205,7 +206,7 @@ test("real desktop: create, edit, accept, concurrent proposal review, windows, v
     expect(fs.existsSync(path.join(project, ".haicomo", "writer.lock"))).toBe(
       false,
     );
-    fs.rmSync(root, { recursive: true, force: true });
+    await removeTestDirectory(root);
   }
 });
 test("project entries reopen persisted data and distinct projects remain isolated", async () => {
@@ -263,6 +264,6 @@ test("project entries reopen persisted data and distinct projects remain isolate
     expect(firstAgain.state.id).not.toBe(view.state.id);
   } finally {
     await app.close();
-    fs.rmSync(root, { recursive: true, force: true });
+    await removeTestDirectory(root);
   }
 });

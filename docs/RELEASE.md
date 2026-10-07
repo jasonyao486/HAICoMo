@@ -8,7 +8,7 @@ The `.github/workflows/verify.yml` matrix builds on native macOS ARM64 and Windo
 
 The workflow also scans each packaged `app.asar` against the asset manifest and checks the bundled licences. Windows CI performs a silent NSIS install into a temporary directory and runs the 0.3.1 scenario against that installed executable. This does not replace the human Windows checklist.
 
-After reviewing the completed native run and local acceptance, dispatch `publish.yml` with its `verification_run` ID. It requires both jobs to have succeeded and refuses a changed non-documentation source tree. It downloads that run's installers, verifies their SHA-256 values, uploads to a draft, then publishes the pre-release. An existing release requires inspection instead of automatic overwriting.
+After reviewing the completed native run and local acceptance, dispatch `publish.yml` with its `verification_run` ID. It requires both jobs to have succeeded and refuses changes to the tested application, tests or build configuration (documentation and the publication workflow itself may be updated). It downloads that run's installers, verifies their SHA-256 values, uploads to a draft, then publishes the pre-release. It then downloads every published installer and checksum-listed metadata file without authentication and verifies the hashes again. An existing release requires inspection instead of automatic overwriting.
 
 ```sh
 npm ci
