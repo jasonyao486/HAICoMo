@@ -35,7 +35,8 @@ if (hasRelease) {
   for (const name of names) gh(['release','download',tag,'-p',name,'-D',windows]);
   fs.writeFileSync('windows-before.json',JSON.stringify(Object.fromEntries(names.map(name=>[name,fileHash(path.join(windows,name))]))));
   if (version === '0.3.3') {
-    const baseline = path.resolve('verified/published-mac-baseline');
+    // Keep historical evidence outside the directory glob used for publication.
+    const baseline = path.resolve('published-mac-baseline');
     fs.mkdirSync(baseline, {recursive:true});
     for (const name of ['mac-release-verification.json','SHA256SUMS-darwin-arm64.txt']) gh(['release','download',tag,'-p',name,'-D',baseline]);
     const prior = verifyPublishedMacBaseline(baseline, report, version, reference);
