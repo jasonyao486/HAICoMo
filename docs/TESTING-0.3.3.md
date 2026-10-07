@@ -1,6 +1,6 @@
 # 0.3.3 verification
 
-Status: Windows native acceptance and formal Mac native verification passed. The owner confirmed fresh-account browser download, first launch and project reopening without Open Anyway on 2026-10-07. Formal Mac publication/download verification is in progress; earlier intermediate results below are retained as history.
+Status: Windows native acceptance and formal Mac acceptance passed. The owner confirmed fresh-account browser download, first launch and project reopening without Open Anyway on 2026-10-07. Formal Mac files are public in v0.3.3, with anonymous download hashes verified; earlier intermediate results below are retained as history.
 
 - Local type checking and 79 unit tests passed on Node 24.12.0; native CI uses the required Node 24.21.0.
 - Developer ID identity creation and encrypted GitHub signing-secret setup completed. Account-specific values are intentionally omitted.
@@ -46,3 +46,18 @@ Native formal verification [37648181888](https://github.com/jasonyao486/HAICoMo/
 The earlier timeout's trace records zero permissions at the five-second deadline but contains no CLI protocol diagnostic, so the precise historical missing event cannot be reconstructed. Inspection confirmed the test could begin its permission deadline before asynchronous capability discovery and process handshake completed. It now waits for the fixture model and actual `turn/start` request before the unchanged permission assertion, with bounded startup waits and sanitized failure diagnostics. This passed in source, signed candidate and final package without retries or application changes.
 
 On 2026-10-07, the owner explicitly confirmed completion and passage of the fresh-account browser-download, first-open and test-project reopening procedure for artifact `11496636283` from run `37648181888`, without using Open Anyway or removing the download quarantine marker. This is owner-observed acceptance, separate from automated CI checks. The publication report binds that acceptance to the final DMG hash. Existing Windows attachments and interim Mac attachments have not been replaced.
+
+## Formal Mac publication
+
+[Publication run 37651600519](https://github.com/jasonyao486/HAICoMo/actions/runs/37651600519) supplemented [v0.3.3](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.3) with the same accepted DMG/ZIP, the acceptance report and a new Mac checksum manifest. Anonymous downloads of every file listed in both platform manifests passed SHA-256 verification. All four original Windows attachments retained their exact hashes; the four interim Mac attachments also retain their original hashes. The original tag remains `3c475f244629cb3f286a54454b814b0bcc3c8ea4`.
+
+| Formal Mac file | SHA-256 |
+| --- | --- |
+| HAICoMo-0.3.3-arm64.dmg | `1ef889f7a7e95a97504ef48e9e68e35201b275d0614262ce116bef616d57adce` |
+| HAICoMo-0.3.3-arm64-mac.zip | `be3c0c76d4f290f83a20a89b6c21c4938f9d7562fe767a029139fc7ceaf184d9` |
+| mac-release-verification.json | `f32d1a4fa315cb146edb19f560e30080555f2b3b4e98d28c38550efabae9d930` |
+| SHA256SUMS-darwin-arm64.txt | `2a05037b112d017f1275973bf3be090cc05796adae55e9cf112df271328ca7bb` |
+
+The report was also downloaded anonymously on the local host and matched its published SHA-256. The publication log scan found no recognized credential patterns. Local source validation used macOS 27.0 ARM64; native release validation used macOS 15 ARM64 and Node 24.21.0. Automated CLI coverage uses isolated synthetic providers; personal CLI accounts and unsupported architectures are not implied to be certified.
+
+[Recovery verification 37652293297](https://github.com/jasonyao486/HAICoMo/actions/runs/37652293297) then passed using `resume_run_id=37648181888`. It restored the saved candidate, rechecked source and file hashes, and reused both original accepted submission IDs without uploading a new notarization request. The source, signed-candidate and final-package suites each passed all 22 desktop cases; all 86 unit tests passed. The resumed finalization also explicitly ran Gatekeeper on the extracted ZIP App. That ZIP hash is the same `be3c0c76d4f290f83a20a89b6c21c4938f9d7562fe767a029139fc7ceaf184d9` as the published download. This was additional acceptance evidence; it did not replace any public attachment.
