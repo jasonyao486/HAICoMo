@@ -7,3 +7,5 @@ Implemented the four approved UI changes: collapsed entry icons, home copy, inde
 Added version-derived package/CI/release paths, role and update-gate unit tests, navigation/layout/activity Electron checks, and updated existing regression cases. Four full manuals and current synthetic screenshots replace the current documentation links; 0.3.1 reports and release remain historical evidence.
 
 Local verification and native release status are recorded in [TESTING-0.3.2.md](TESTING-0.3.2.md). Windows human checks and signing remain separate, unfinished work; see [COMPATIBILITY-0.3.2.md](COMPATIBILITY-0.3.2.md).
+
+Verification passed: local Mac 77 unit and 22 source/22 packaged Electron cases; clean clone 77 unit plus four demo/navigation cases; DMG installation six cases. Native CI passed on Mac ARM64 (77 unit; 22 source/22 packaged) and Windows x64 (75 unit; two Mac-only skipped; 22 source/22 packaged; four NSIS-installed cases). Local canonical Mac 0.3.1 has been archived and replaced with 0.3.2. Publication and anonymous download evidence will be recorded in the test report.

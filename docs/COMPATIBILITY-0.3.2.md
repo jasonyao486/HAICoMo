@@ -19,11 +19,13 @@ The Mac package's minimum version metadata is 13.0. This is not evidence of runn
 <!-- PLATFORM_EVIDENCE_START -->
 | Environment | Type/unit tests | Electron automation | Native package | Human desktop acceptance |
 |---|---|---|---|---|
-| Local macOS 27.0 ARM64 | Build passed; 77 unit tests passed | Source 22/22 passed | Pending | Agent-assisted screenshots checked; no independent human tester |
-| GitHub macOS ARM64 | Pending | Pending | Pending DMG/ZIP | Not performed by a person |
-| GitHub Windows Server 2025 x64 | Pending | Pending | Pending NSIS install | Not performed by a person |
+| Local macOS 27.0 ARM64 | Build passed; 77 unit tests passed | Source 22/22 passed | DMG/ZIP and signature passed; packaged 22/22 | Agent-assisted screenshots checked; no independent human tester |
+| GitHub macOS 15.7.9 ARM64 | Passed, 77 unit tests | Source 22/22; packaged 22/22 | DMG/ZIP built, content and hashes verified | Not performed by a person |
+| GitHub Windows Server 2025 x64 | Passed, 75 unit tests; 2 Mac-only skipped | Source 22/22; packaged 22/22; installed 4/4 | NSIS built and silently installed; contents verified | Not performed by a person |
 | Windows 10/11 consumer desktop | Not performed | Not performed here | Awaiting human install check | Pending owner checklist below |
 <!-- PLATFORM_EVIDENCE_END -->
+
+Both native jobs passed in [run 37616743573](https://github.com/jasonyao486/HAICoMo/actions/runs/37616743573) from source `926255a58003723691796c2fbf1d2c7e59cfdcb2`. Local Mac DMG installation passed six scenarios and its ASAR matches the CI build. The canonical Mac application is now 0.3.2; 0.3.1 was archived before replacement. See [test provenance](TESTING-0.3.2.md).
 
 ## Shared behaviour and specific paths
 
