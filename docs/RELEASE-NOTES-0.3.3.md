@@ -7,7 +7,7 @@
 - User settings and project data are retained on reinstall and uninstall. Project schema remains v5; there is no data migration in this release.
 - Signing files, private keys, local keychains and notarization credentials are excluded from Git and checked before publication. Signing credentials are held in GitHub Actions Secrets and a temporary CI keychain, never in download attachments.
 
-Windows x64 is published first after native standard-user acceptance, with a SHA-256 manifest and verification report. Apple Silicon downloads are pending; Apple notarization is still processing. Any interim Mac download will be explicitly named `unnotarized` and may require System Settings → Privacy & Security → Open Anyway. It does not meet the notarized Mac acceptance criteria. Consult [0.3.3 test evidence](https://github.com/jasonyao486/HAICoMo/blob/main/docs/TESTING-0.3.3.md). Windows remains unsigned and SmartScreen can still display a warning. Mac's normal first-download confirmation may still appear. Existing 0.3.2 releases remain available. Automatic updates remain unconfigured.
+Windows x64 is published first after native standard-user acceptance, with a SHA-256 manifest and verification report. Apple Silicon DMG/ZIP are offered as Developer ID-signed interim downloads, explicitly named `unnotarized`; they passed 22 packaged desktop tests but may require System Settings → Privacy & Security → Open Anyway. It does not meet the notarized Mac acceptance criteria. Consult [0.3.3 test evidence](https://github.com/jasonyao486/HAICoMo/blob/main/docs/TESTING-0.3.3.md). Windows remains unsigned and SmartScreen can still display a warning. The interim Mac build is not notarized; the fully notarized channel has not passed final acceptance. Existing 0.3.2 releases remain available. Automatic updates remain unconfigured.
 
 ## 简体中文
 
@@ -16,4 +16,4 @@ Windows x64 is published first after native standard-user acceptance, with a SHA
 - 不自动卸载已有整机安装。重新安装和卸载保留用户设置与项目数据。本次不改变 v5 项目结构。
 - 私钥、证书导出文件、公证凭据和本地钥匙串不进入 Git、日志或下载附件；GitHub Actions 使用 Secrets 和临时钥匙串。
 
-Windows x64 已通过真实非管理员用户验收，先行发布，并附 SHA-256 和验收报告。Mac 下载尚待补充，Apple 公证仍在处理中；如提供临时 Mac 包，文件名会明确包含 `unnotarized`，首次启动可能需要“系统设置 → 隐私与安全性 → 仍要打开（Open Anyway）”，不能视为正式 Mac 公证验收通过。详见[验证记录](https://github.com/jasonyao486/HAICoMo/blob/main/docs/TESTING-0.3.3.md)。Windows 未签名，仍可能出现 SmartScreen 提示。Mac 首次打开的普通下载确认仍可能出现。自动更新保持未配置。
+Windows x64 已通过真实非管理员用户验收，先行发布，并附 SHA-256 和验收报告。Mac 提供 Developer ID 正式签名的临时 DMG/ZIP，已通过 22 项打包后桌面测试，文件名明确包含 `unnotarized`；首次启动可能需要“系统设置 → 隐私与安全性 → 仍要打开（Open Anyway）”，不能视为正式 Mac 公证验收通过。详见[验证记录](https://github.com/jasonyao486/HAICoMo/blob/main/docs/TESTING-0.3.3.md)。Windows 未签名，仍可能出现 SmartScreen 提示。完整公证版尚未通过最终验收。自动更新保持未配置。
