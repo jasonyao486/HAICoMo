@@ -19,6 +19,7 @@ const password = randomBytes(32).toString('hex');
 const run = (cmd, args) => execFileSync(cmd, args, { encoding: 'utf8', stdio: 'pipe' });
 const oldKeychains = run('security', ['list-keychains', '-d', 'user']).match(/"([^"\n]+)"/g)?.map(value => value.slice(1, -1)) ?? [];
 let stage = 'importing signing identity';
+let failed = false;
 try {
   fs.writeFileSync(certificate, Buffer.from(process.env.CSC_LINK, 'base64'), { mode: 0o600 });
   run('security', ['create-keychain', '-p', password, keychain]);
@@ -49,7 +50,9 @@ try {
   const dmg = path.join(root, `HAICoMo-${pkg.version}-arm64.dmg`);
   run('codesign', ['--verify', '--strict', dmg]);
   await notarize({ appPath: dmg, appleId: process.env.APPLE_ID, appleIdPassword: process.env.APPLE_APP_SPECIFIC_PASSWORD, teamId: process.env.APPLE_TEAM_ID });
+  stage = 'validating the disk-image ticket';
   run('xcrun', ['stapler', 'validate', dmg]);
+  stage = 'checking disk-image Gatekeeper acceptance';
   run('spctl', ['--assess', '--type', 'open', '--context', 'context:primary-signature', '--verbose=2', dmg]);
   stage = 'checking the distributed ZIP';
   const zip = path.join(root, `HAICoMo-${pkg.version}-arm64-mac.zip`);
@@ -66,9 +69,12 @@ try {
 } catch {
   // Underlying tools may include command arguments with credentials in errors.
   console.error(`Mac release failed while ${stage}. No unsigned release is permitted.`);
-  process.exitCode = 1;
+  failed = true;
 } finally {
   spawnSync('security', ['list-keychains', '-d', 'user', '-s', ...oldKeychains], { stdio: 'ignore' });
   spawnSync('security', ['delete-keychain', keychain], { stdio: 'ignore' });
   fs.rmSync(temp, { recursive: true, force: true });
 }
+
+// Builder dependencies install exit hooks; do not let them mask a failed gate.
+process.exit(failed ? 1 : 0);
