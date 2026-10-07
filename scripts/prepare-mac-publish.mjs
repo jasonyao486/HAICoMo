@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { fileHash } from './mac-release-state.mjs';
+import { fileHash, verifyPublishedMacBaseline } from './mac-release-state.mjs';
 import { assertApplicationSource } from './check-release-source.mjs';
 const { version } = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const gh = args => execFileSync('gh', args, { encoding: 'utf8' }).trim();
@@ -35,9 +35,11 @@ if (hasRelease) {
   for (const name of names) gh(['release','download',tag,'-p',name,'-D',windows]);
   fs.writeFileSync('windows-before.json',JSON.stringify(Object.fromEntries(names.map(name=>[name,fileHash(path.join(windows,name))]))));
   if (version === '0.3.3') {
-    gh(['release','download',tag,'-p','mac-interim-verification.json','-D','verified']);
-    const prior=JSON.parse(fs.readFileSync('verified/mac-interim-verification.json','utf8'));
-    if (report.archiveSha256 !== prior.archiveSha256) throw new Error('Application archive changed; publish a new patch version');
+    const baseline = path.resolve('verified/published-mac-baseline');
+    fs.mkdirSync(baseline, {recursive:true});
+    for (const name of ['mac-release-verification.json','SHA256SUMS-darwin-arm64.txt']) gh(['release','download',tag,'-p',name,'-D',baseline]);
+    const prior = verifyPublishedMacBaseline(baseline, report, version, reference);
+    assertApplicationSource(reference, prior.buildCommit);
   }
 } else {
   if (!jobs.some(j=>j.name==='desktop (windows-2025, windows, x64)' && j.conclusion==='success')) throw new Error('A new version requires native Windows verification');

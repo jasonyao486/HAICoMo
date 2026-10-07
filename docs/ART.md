@@ -36,6 +36,6 @@ Environment artwork is offered under CC BY 4.0 to the extent rights are held; cr
 
 ## Public screenshots
 
-`scripts/create-demo.ts` creates an isolated synthetic project with 10 parent tasks, 50 subtasks, multiple model assignments, dependencies, proposals and a paused relay. No real conversations, credentials, deliverables or private project records are included. `tests/e2e/v031.spec.ts` captures the running Electron application in both presentation modes; it waits for the office renderer and images before capture. Screenshots are stored in `docs/images/0.3.1/` after review.
+`scripts/create-demo.ts` creates an isolated synthetic project with 10 parent tasks, 50 subtasks, multiple model assignments, dependencies, proposals and a paused relay. No real conversations, credentials, deliverables or private project records are included. `tests/e2e/v031.spec.ts` captures the running Electron application in both presentation modes; it waits for the office renderer and images before capture. Retained UI screenshots are in `docs/images/0.3.2/`. The 0.3.3 relay scene is captured by `tests/e2e/readme-relay.spec.ts` using a held synthetic Claude CLI run and a paused ChatGPT relay, then reviewed before copying into `docs/images/0.3.3/`. No real model account is used.
 
 Company and product marks are MIT-licensed LobeHub SVGs with retained attribution. The WorkBuddy W is a generic authored badge. Neither these marks nor the characters imply provider endorsement.

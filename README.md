@@ -4,27 +4,27 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-A local desktop workspace for tasks, human review and AI collaboration. Agents propose changes; you decide what to approve and when a delivery is accepted. Project data stays in your chosen working directory.
+A local desktop app for project management, human review, and collaboration with multiple AI agents. Agents propose changes; human users approve proposals and accept deliveries. Project data stays in the selected working directory.
 
 Version **0.3.3** is a pre-release for Apple Silicon Mac and Windows x64. See the [verification report](docs/TESTING-0.3.3.md) for the native tests and fresh-account Mac first-open acceptance.
 
 ## Install and start
 
-You do not need Node.js, Git or a model subscription to use the task manager.
+Task management requires no Node.js, Git or model subscription.
 
 1. Open [Downloads and releases](https://github.com/jasonyao486/HAICoMo/releases). Select **v0.3.3**, then expand **Assets**.
 2. Choose the installer below. The “Source code” archives are for developers, not installers.
 
-| Your computer | Download |
+| Computer system | Download |
 |---|---|
-| Mac with an Apple M-series chip | `HAICoMo-0.3.3-arm64.dmg` |
-| Windows PC, System type “x64-based processor” | `HAICoMo-0.3.3-windows-x64-setup.exe` |
+| Mac with an Apple M-series chip | [HAICoMo-0.3.3-arm64.dmg](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.3/HAICoMo-0.3.3-arm64.dmg) |
+| Windows PC, System type “x64-based processor” | [HAICoMo-0.3.3-windows-x64-setup.exe](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.3/HAICoMo-0.3.3-windows-x64-setup.exe) |
 | Intel Mac, Windows ARM64 or Linux | No verified installer in this release |
 
 On a Mac, find the chip under **Apple menu → About This Mac**. On Windows, open **Settings → System → About → System type**.
 
-3. **Mac:** open the DMG, drag HAICoMo into Applications, eject the disk image, then open HAICoMo from Applications. The formal package has Developer ID signing, Apple notarisation and stapled tickets. A normal downloaded-app **Open** confirmation may appear; **Open Anyway** is not required in the verified fresh-account test. The older `unnotarized` files remain historical attachments; choose the filename above.
-4. **Windows:** open the setup `.exe`, installation is automatic for your current user, then launch HAICoMo. Installation, upgrade and uninstall do not request elevation. This release is unsigned and Windows may show a publisher/SmartScreen warning. Check the source and supplied SHA-256 before choosing to continue; managed computers may require administrator approval.
+3. **Mac:** open the DMG, drag HAICoMo into Applications, eject the disk image, then open HAICoMo from Applications. The formal package has Developer ID signing, Apple notarisation and stapled tickets. A normal downloaded-app **Open** confirmation may appear; **Open Anyway** is not required in the verified fresh-account test.
+4. **Windows:** open the setup `.exe`, installation is automatic for the current user, then launch HAICoMo. Installation, upgrade and uninstall do not request elevation. This release is unsigned and Windows may show a publisher/SmartScreen warning; that warning is separate from administrator permissions. Check the source and supplied SHA-256 before choosing to continue; managed computers may require administrator approval.
 5. If the app opens in Chinese, first choose **设置 (Settings) → 语言 (Language) → English (UK) → 保存修改 (Save changes)**. Select **New project**, choose an empty local folder and save the `.haicomo` entry. Add a task and a subtask. No AI account is required for this step.
 6. When a delivery is ready, open its file from the task, inspect it, then choose **Accept delivery**. Agent completion alone does not accept work.
 
@@ -49,13 +49,13 @@ The hash checks the download's integrity; it is not a publisher signature.
 
 </details>
 
-For AI collaboration, install and sign into a supported client yourself. **Settings → Local agents → Detect** checks what is available. Codex and Claude Code support background handoff; other listed clients use foreground/file collaboration. HAICoMo does not provide subscriptions or switch you to paid APIs.
+For AI collaboration, install and sign into a supported client. **Settings → Local agents → Detect** checks what is available. Codex and Claude Code support background handoff; other listed clients use foreground/file collaboration. HAICoMo does not provide subscriptions or switch to paid APIs.
 
-Updates are manual: quit HAICoMo, keep your project folders, download the next release and replace/reinstall the application. Opening a pre-0.3.1 project migrates it to schema v5 after creating a backup. Older apps cannot reopen the migrated project; restore the pre-migration backup to an empty folder if you need to go back.
+Updates are manual: quit HAICoMo, keep project folders, download the next release and replace/reinstall the application. Opening a pre-0.3.1 project migrates it to schema v5 after creating a backup. Older apps cannot reopen the migrated project; restore the pre-migration backup to an empty folder when reverting.
 
-Clicking the logo returns home without adding a tab. Project pages and drafts stay open. The collapsed sidebar keeps folder and terminal controls at their normal size. Activity summaries show short roles; expanded details retain full attribution. Version 0.3.2 uses the same v5 project format as 0.3.1.
+Clicking the logo returns home without adding a tab. Project pages and drafts stay open. The collapsed sidebar keeps folder and terminal controls at their normal size. Activity summaries show short roles; expanded details retain full attribution. Version 0.3.3 uses the same v5 project format as 0.3.1.
 
-Full manuals: [UK English](docs/USER-MANUAL-0.3.2.en-GB.md) · [US English](docs/USER-MANUAL-0.3.2.en-US.md) · [简体中文](docs/USER-MANUAL-0.3.2.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.3.2.zh-TW.md).
+Full manuals: [UK English](docs/USER-MANUAL-0.3.3.en-GB.md) · [US English](docs/USER-MANUAL-0.3.3.en-US.md) · [简体中文](docs/USER-MANUAL-0.3.3.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.3.3.zh-TW.md).
 
 ## Features
 
@@ -101,19 +101,21 @@ Inspect task participation, proposals, handoffs and observable execution time. D
 
 ![Enhanced statistics](docs/images/0.3.2/analytics-enhanced.png)
 
+### Relay, notes, activity and recovery
+
+Experimental relay starts one background handoff after a run or time condition. It requires the app to remain running with the project loaded. Notes and meeting records stay with the project. Individual activity records can be permanently deleted after confirmation without undoing work or changing historical return counts. Backups and independent copies support recovery; backup ZIPs contain management data, not deliverable files.
+
+![Claude working at the workstation; ChatGPT seated on the sofa](docs/images/0.3.3/relay-claude-chatgpt.png)
+
+Synthetic demonstration: the test CLI holds a Claude run at the workstation while ChatGPT waits on the sofa. The relay is paused, so no model account is invoked.
+
 ### Relay preview
 
-The visual view shows the workstation and sofa even before you create a relay. Choose default or enhanced artwork; an empty scene has no agent characters and does not start work.
+The visual view shows the workstation and sofa even before a relay is created. Choose default or enhanced artwork; an empty scene has no agent characters and does not start work.
 
 ![Default relay preview](docs/images/0.3.2/relay-preview-default.png)
 
 ![Enhanced relay preview](docs/images/0.3.2/relay-preview-enhanced.png)
-
-### Relay, notes, activity and recovery
-
-Experimental relay starts one background handoff after a run or time condition. It requires the app to remain running with the project loaded. Notes and meeting records stay with the project. Individual activity records can be permanently deleted after confirmation without undoing work or changing historical return counts. Backups and independent copies support recovery; backup ZIPs contain management data, not your deliverable files.
-
-![Enhanced relay furniture](docs/images/0.3.2/relay-enhanced.png)
 
 Activity summaries show short roles; expanded records keep the original identity information.
 
@@ -125,7 +127,7 @@ The `.haicomo` entry and hidden `.haicomo/` folder belong together. For cloud dr
 
 Source code and original documentation: [MIT](LICENSE). Character artwork: separate **non-commercial** permission from ZipZipPipe; whale/DeepSeek adaptations retain the original attribution chain and **CC BY-NC-SA 4.0**. Environment artwork: CC BY 4.0. Company marks are identification only, without endorsement. The complete application bundle is not wholly MIT-licensed.
 
-Read [asset permissions](ASSET-LICENSES.md), [file-level provenance](assets/manifest.json) and [third-party notices](THIRD-PARTY-NOTICES.md) before redistributing assets. User-created content remains yours.
+Read [asset permissions](ASSET-LICENSES.md), [file-level provenance](assets/manifest.json) and [third-party notices](THIRD-PARTY-NOTICES.md) before redistributing assets. User-created content remains owned by its creators.
 
 ## Development and feedback
 
@@ -140,4 +142,4 @@ npm run dev
 
 `npm test` runs unit tests; `npm run test:e2e` runs Electron tests with disposable data. `npm run dist` builds the current platform; `npm run dist:win` builds Windows x64. `npm run demo -- /absolute/empty/directory` creates synthetic demonstration data. See [contributing](CONTRIBUTING.md), [architecture](docs/ARCHITECTURE.md) and [file/CLI/MCP protocol](docs/PROTOCOL.md).
 
-[Report an issue](https://github.com/jasonyao486/HAICoMo/issues/new/choose). Remove personal paths, prompts and credentials before attaching diagnostics or screenshots. Current evidence: [tests](docs/TESTING-0.3.2.md), [review](docs/REVIEW-0.3.2.md), [first-use report](docs/FIRST-RUN-0.3.2.md), [remaining gaps](docs/GAP-ANALYSIS.md).
+[Report an issue](https://github.com/jasonyao486/HAICoMo/issues/new/choose). Remove personal paths, prompts and credentials before attaching diagnostics or screenshots. Current evidence: [0.3.3 verification](docs/TESTING-0.3.3.md), [remaining gaps](docs/GAP-ANALYSIS.md).

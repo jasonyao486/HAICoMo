@@ -1,15 +1,15 @@
 # 0.3.3 verification
 
-Status: Windows native acceptance and formal Mac acceptance passed. The owner confirmed fresh-account browser download, first launch and project reopening without Open Anyway on 2026-10-07. Formal Mac files are public in v0.3.3, with anonymous download hashes verified; earlier intermediate results below are retained as history.
+Status: Windows native acceptance and formal Mac acceptance passed. The owner confirmed fresh-account browser download, first launch and project reopening without Open Anyway on 2026-10-07. Formal Mac files are public in v0.3.3, with anonymous download hashes verified; earlier intermediate results below are retained as history. The four temporary Mac attachments were subsequently retired; current cleanup and download checks are recorded in [repository cleanup](REPOSITORY-CLEANUP-0.3.3.md).
 
 - Local type checking and 79 unit tests passed on Node 24.12.0; native CI uses the required Node 24.21.0.
 - Developer ID identity creation and encrypted GitHub signing-secret setup completed. Account-specific values are intentionally omitted.
 - All five required GitHub signing/notarization secrets are configured. No values are recorded here.
-- Native Mac final-package, Gatekeeper and browser-download acceptance pending. Initial native run: [37625139021](https://github.com/jasonyao486/HAICoMo/actions/runs/37625139021).
+- Initially, native Mac final-package, Gatekeeper and browser-download acceptance were pending. Initial native run: [37625139021](https://github.com/jasonyao486/HAICoMo/actions/runs/37625139021).
 - Windows native job [112811555839](https://github.com/jasonyao486/HAICoMo/actions/runs/37627098656/job/112811555839) passed: source and packaged desktop suites, package privacy/license scan, real non-admin installation and desktop tests, reinstall, upgrade from 0.3.2, uninstall, retained settings, and unchanged simulated machine-wide installation. The test rejects an administrator token and demonstrates denial of a protected registry write.
 - Apple status inspection [37628766459](https://github.com/jasonyao486/HAICoMo/actions/runs/37628766459) initially reported HAICoMo submissions as `In Progress`; later acceptance is recorded below. Signing identity selection and notarization authentication succeeded.
 - First Windows verification failed because its test assumed an unversioned uninstall display name; the test now reads the stable installer GUID keys. No privilege escalation was added.
-- Public source scan passed (285 files); historical scan passed (360 Git blobs); all commit emails use the GitHub noreply address. Windows package scans and anonymous downloads passed. Interim Mac package scans passed; formal notarized Mac acceptance remains pending.
+- Public source scan passed (285 files); historical scan passed (360 Git blobs); all commit emails use the GitHub noreply address. Windows package scans and anonymous downloads passed. Interim Mac package scans passed; formal notarized Mac acceptance was still pending at that stage.
 - Local build and all 22 desktop scenarios passed; synthetic desktop screenshots were inspected.
 - Release gate fixture checks passed: valid evidence accepted; administrator-token evidence and tampered installer rejected.
 - Source brief checksum matches the contributor-instruction baseline.
@@ -39,17 +39,17 @@ Native formal verification [37648181888](https://github.com/jasonyao486/HAICoMo/
 - Source type checking, 84 native unit tests and 22 source desktop tests passed.
 - All 22 signed-candidate tests and all 22 final packaged tests passed, including database/project reopening and synthetic CLI permission routing. Package privacy, resources and license scans passed.
 - Apple accepted App submission `efde642f-61e0-4e49-b635-1a9657fb3140` and DMG submission `37c0ea61-9b40-4a60-ba22-6b56b2ec5e9a`. Final signatures, stapled tickets and Gatekeeper checks passed; keychain cleanup succeeded.
-- The final artifact is [haicomo-0.3.3-mac-arm64](https://github.com/jasonyao486/HAICoMo/actions/runs/37648181888/artifacts/11496636283). It is a candidate for first-open acceptance, not yet the public formal release.
+- The final artifact is [haicomo-0.3.3-mac-arm64](https://github.com/jasonyao486/HAICoMo/actions/runs/37648181888/artifacts/11496636283). At that stage it was a first-open candidate; the same accepted files were later published as recorded below.
 - A subsequent local infrastructure update passed type checking and all 86 unit tests, including seven recovery/publication scenarios. A lost submission response now records an unknown upload outcome; recovery must match Apple's job log SHA-256 before reusing an ID and never silently duplicates the upload. Publication rejects missing or mismatched first-open acceptance, an altered DMG, unsigned/unnotarized evidence and Windows administrator-token evidence.
 - Synthetic desktop captures were inspected. The original brief still matches SHA-256 `da6a5edbdbe69b600080d9e76d40e4795e2938d7226267c69cf6c13cc0af41c8`. No recognized credential pattern was found in the formal CI log.
 
 The earlier timeout's trace records zero permissions at the five-second deadline but contains no CLI protocol diagnostic, so the precise historical missing event cannot be reconstructed. Inspection confirmed the test could begin its permission deadline before asynchronous capability discovery and process handshake completed. It now waits for the fixture model and actual `turn/start` request before the unchanged permission assertion, with bounded startup waits and sanitized failure diagnostics. This passed in source, signed candidate and final package without retries or application changes.
 
-On 2026-10-07, the owner explicitly confirmed completion and passage of the fresh-account browser-download, first-open and test-project reopening procedure for artifact `11496636283` from run `37648181888`, without using Open Anyway or removing the download quarantine marker. This is owner-observed acceptance, separate from automated CI checks. The publication report binds that acceptance to the final DMG hash. Existing Windows attachments and interim Mac attachments have not been replaced.
+On 2026-10-07, the owner explicitly confirmed completion and passage of the fresh-account browser-download, first-open and test-project reopening procedure for artifact `11496636283` from run `37648181888`, without using Open Anyway or removing the download quarantine marker. This is owner-observed acceptance, separate from automated CI checks. The publication report binds that acceptance to the final DMG hash. At acceptance, Windows and interim Mac attachments had not been replaced.
 
 ## Formal Mac publication
 
-[Publication run 37651600519](https://github.com/jasonyao486/HAICoMo/actions/runs/37651600519) supplemented [v0.3.3](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.3) with the same accepted DMG/ZIP, the acceptance report and a new Mac checksum manifest. Anonymous downloads of every file listed in both platform manifests passed SHA-256 verification. All four original Windows attachments retained their exact hashes; the four interim Mac attachments also retain their original hashes. The original tag remains `3c475f244629cb3f286a54454b814b0bcc3c8ea4`.
+[Publication run 37651600519](https://github.com/jasonyao486/HAICoMo/actions/runs/37651600519) supplemented [v0.3.3](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.3) with the same accepted DMG/ZIP, the acceptance report and a new Mac checksum manifest. Anonymous downloads of every file listed in both platform manifests passed SHA-256 verification. All four original Windows attachments retained their exact hashes; the four interim Mac attachments also retained their original hashes at publication (later retired during repository cleanup). The original tag remains `3c475f244629cb3f286a54454b814b0bcc3c8ea4`.
 
 | Formal Mac file | SHA-256 |
 | --- | --- |

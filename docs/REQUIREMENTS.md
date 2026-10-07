@@ -1,6 +1,6 @@
-# 0.3.2 requirement and evidence register
+# 0.3.3 requirement and evidence register
 
-Implementation and verification are separate. Platform acceptance is recorded in [COMPATIBILITY-0.3.2.md](COMPATIBILITY-0.3.2.md); current commands/results are in [TESTING-0.3.2.md](TESTING-0.3.2.md). Earlier private handoffs are retained locally, not published as current evidence.
+Implementation and verification are separate. Current platform acceptance and test results are recorded in [TESTING-0.3.3.md](TESTING-0.3.3.md). Earlier private handoffs are retained locally, not published as current evidence.
 
 | ID | Requirement | Implementation / evidence |
 |---|---|---|
@@ -19,14 +19,14 @@ Implementation and verification are separate. Platform acceptance is recorded in
 | ART-02 | Only release-cleared runtime materials packaged | `check-assets.mjs`, Vite publicDir, clean-clone and package content checks |
 | LEGAL-01 | MIT source, separate characters/marks, dependency notices | Root LICENSE, ASSET-LICENSES, THIRD-PARTY-NOTICES, four-language Settings |
 | LINK-01 | GitHub Releases/Issues and separate diagnostics | Fixed shared allowlist, unit and offline Electron external-link tests |
-| DOC-01 | UK/US English, simplified/traditional Chinese full manuals | Four USER-MANUAL-0.3.2 files; aligned locale key test |
+| DOC-01 | UK/US English, simplified/traditional Chinese full manuals | Four USER-MANUAL-0.3.3 files; aligned locale key test |
 | DOC-02 | Bilingual README, installation SOP, at least seven actual screenshots | README pair, synthetic demo and `docs/images/0.3.2` |
 | PUBLIC-01 | Clean public repository, no private history/data/keys | .gitignore, index/file scan, curated initial commit, clean clone |
 | RELEASE-01 | Native Mac ARM64 and Windows x64 package/automation | GitHub matrix; complete NSIS and DMG/ZIP; per-platform evidence |
 | RELEASE-02 | Manual pre-release, correct download choices and SHA-256 | Releases page, checksum script, compatibility report |
-| REVIEW-01 | Scenario review, stranger simulation, gap/platform reports | REVIEW, FIRST-RUN, GAP-ANALYSIS, COMPATIBILITY documents |
+| REVIEW-01 | Scenario review, stranger simulation, gap/platform reports | Current TESTING-0.3.3 and GAP-ANALYSIS; earlier review and first-run records remain available at their version tags |
 
-Pending external evidence remains explicit: Windows human desktop acceptance; Apple Developer ID/notarisation and Windows publisher signing; real signed automatic replacement; unsupported architectures/OS versions. The original local brief remains immutable.
+Remaining evidence and scope limits are explicit: broader Windows consumer-device and real CLI coverage, Windows publisher signing, signed automatic replacement, and unsupported architectures/OS versions. Mac signing/notarisation and fresh-account acceptance, plus Windows standard-user-token acceptance, are complete. The original local brief remains immutable.
 
 The final user addition also requires an unoccupied relay preview when no relays exist, with the original empty text below it. The default/enhanced preview screenshots and no-side-effect assertions are in the public-demo Electron case.
 
@@ -52,3 +52,5 @@ The final user addition also requires an unoccupied relay preview when no relays
 | PUB-033 | Supplement existing release only with matching application inputs and platform acceptance | Publication 37651600519 passed fixed-tag/build/archive comparisons and the first-open DMG hash gate; anonymous downloads passed and all original Windows hashes were retained |
 
 See [0.3.3 verification](TESTING-0.3.3.md). Existing acceptance evidence is not retroactively changed.
+
+Repository cleanup, the synthetic Claude/ChatGPT relay capture, formal-baseline regression and retained-download verification are recorded in [0.3.3 repository cleanup](REPOSITORY-CLEANUP-0.3.3.md).

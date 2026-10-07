@@ -117,6 +117,11 @@ if (args[0] === "app-server") {
       type: "assistant",
       message: { content: [{ type: "text", text: "Fixture output" }] },
     });
+    // Hold an observable run for the synthetic README scene; never call a model.
+    if (prompt === "readme-relay-hold") {
+      setInterval(() => {}, 1000);
+      return;
+    }
     send({
       type: "result",
       session_id: "claude-session",
