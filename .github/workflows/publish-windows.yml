@@ -1,0 +1,69 @@
+name: Publish verified Windows preview
+on:
+  workflow_dispatch:
+    inputs:
+      verification_run:
+        description: Main-branch verification run with a successful Windows job
+        type: string
+        required: true
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERIFY_RUN_ID: ${{ inputs.verification_run }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/ci-version.mjs
+      - name: Require successful native Windows verification from matching source
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          const id = process.env.VERIFY_RUN_ID;
+          if (!/^\d+$/.test(id)) throw new Error('Invalid run ID');
+          const api = route => JSON.parse(execFileSync('gh', ['api', `repos/${process.env.GH_REPO}/${route}`], { encoding: 'utf8' }));
+          const run = api(`actions/runs/${id}`);
+          if (run.head_branch !== 'main' || run.path !== '.github/workflows/verify.yml' || run.event === 'pull_request') throw new Error('Main verification required');
+          if (!api(`actions/runs/${id}/jobs`).jobs.some(j => j.name === 'desktop (windows-2025, windows, x64)' && j.conclusion === 'success')) throw new Error('Windows acceptance has not passed');
+          execFileSync('git', ['fetch', 'origin', run.head_sha]);
+          execFileSync('git', ['diff', '--exit-code', run.head_sha, 'HEAD', '--', '.', ':!docs', ':!README.md', ':!README.zh-CN.md', ':!.github/workflows/publish.yml', ':!.github/workflows/publish-windows.yml', ':!.github/workflows/notarization-status.yml']);
+          fs.appendFileSync(process.env.GITHUB_ENV, `SOURCE_SHA=${run.head_sha}\n`);
+          NODE
+      - name: Download and verify accepted Windows installer
+        run: |
+          gh run download "$VERIFY_RUN_ID" -n "haicomo-$HAICOMO_VERSION-windows-x64" -D verified
+          (cd verified && sha256sum -c SHA256SUMS-win32-x64.txt)
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { createHash } from 'node:crypto';
+          const version = process.env.HAICOMO_VERSION;
+          const w = JSON.parse(fs.readFileSync('verified/windows-user-verification.json', 'utf8'));
+          if (w.version !== version || w.result !== 'passed' || w.admin !== false || !['protectedWriteDenied', 'install', 'launch', 'reinstall', 'uninstall', 'retainedData'].every(key => w[key] === true) || w.previousVersionUpgrade !== '0.3.2') throw new Error('Standard-user acceptance evidence is missing');
+          const hash = createHash('sha256').update(fs.readFileSync(`verified/HAICoMo-${version}-windows-x64-setup.exe`)).digest('hex');
+          if (hash !== w.installerSha256) throw new Error('Installer differs from accepted artifact');
+          NODE
+      - name: Publish Windows first without overwriting a release
+        run: |
+          if gh release view v$HAICOMO_VERSION >/dev/null 2>&1; then
+            echo 'Release already exists; inspect before retrying.' >&2
+            exit 1
+          fi
+          gh release create v$HAICOMO_VERSION --draft --prerelease --target "$SOURCE_SHA" --title "HAICoMo $HAICOMO_VERSION preview" --notes-file docs/RELEASE-NOTES-$HAICOMO_VERSION.md
+          gh release upload v$HAICOMO_VERSION verified/*.exe verified/*.blockmap verified/*-verification.json verified/SHA256SUMS*.txt
+          gh release edit v$HAICOMO_VERSION --draft=false --prerelease
+      - name: Verify anonymous downloads
+        run: |
+          mkdir public-downloads
+          cd public-downloads
+          base="https://github.com/$GH_REPO/releases/download/v$HAICOMO_VERSION"
+          curl --fail --location --retry 5 "$base/SHA256SUMS-win32-x64.txt" -o SHA256SUMS-win32-x64.txt
+          while read -r hash name; do
+            curl --fail --location --retry 5 "$base/$name" -o "$name"
+          done < SHA256SUMS-win32-x64.txt
+          sha256sum -c SHA256SUMS-win32-x64.txt
