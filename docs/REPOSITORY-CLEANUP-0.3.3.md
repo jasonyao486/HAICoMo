@@ -49,4 +49,10 @@ The eight formal Mac and Windows assets are retained. The 0.3.3 publication help
 
 Local tests used macOS ARM64 and Node 24.12.0; accepted native release tests used Node 24.21.0 as recorded in [0.3.3 verification](TESTING-0.3.3.md). These maintenance tests do not replace or broaden native installation acceptance.
 
-Public source/link checks, final attachment inventory, anonymous download checks and rendered-page review are recorded after publication below.
+## Published result
+
+- Maintenance source: `c940f0254446c0fcf7c842bb054ab670e9ae860a`; 269 public files passed the source privacy and relative Markdown-link scan. No application inputs differ from the original v0.3.3 tag.
+- The release inventory changed from 12 uploaded assets to exactly 8. Only the four named temporary files were removed; each retained asset has the same GitHub asset ID, size and SHA-256 as before cleanup. GitHub also displays its two automatically generated Source code archives.
+- [Mac anonymous downloads](https://github.com/jasonyao486/HAICoMo/actions/runs/37663229101) and [Windows anonymous downloads](https://github.com/jasonyao486/HAICoMo/actions/runs/37663239085) both passed after retirement. Every installer/archive/report/blockmap named in the formal manifests was downloaded without credentials and checked. The manifests themselves were independently downloaded and matched their pre-cleanup hashes.
+- GitHub-rendered English and Chinese READMEs were inspected. All three relay images loaded in the agreed order: execution/waiting, default empty preview, enhanced empty preview. The release page exposes direct formal DMG and Windows Setup links first, with ZIP, checksums and technical evidence afterwards.
+- No Git history was rewritten, and no accepted installer or v0.3.3 tag was replaced. Backups remain local and ignored; no further account action is required for this maintenance.
