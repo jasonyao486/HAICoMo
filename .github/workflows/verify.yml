@@ -1,0 +1,75 @@
+name: Verify and package
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "README*.md"]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: mac
+            arch: arm64
+          - os: windows-2025
+            platform: windows
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      HAICOMO_EVIDENCE_DIR: validation/0.3.1/regression
+      HAICOMO_SCREENSHOT_DIR: validation/0.3.1/screens
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.12.0'
+          cache: npm
+      - run: npm ci
+      - run: npm run check:public
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright test
+      - name: Package macOS ARM64
+        if: runner.os == 'macOS'
+        run: npx electron-builder --mac --arm64 --publish never
+      - name: Package Windows x64
+        if: runner.os == 'Windows'
+        run: npx electron-builder --win --x64 --publish never
+      - name: Test packaged application
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            export HAICOMO_PACKAGED_EXECUTABLE="$PWD/release/0.3.1/mac-arm64/HAICoMo.app/Contents/MacOS/HAICoMo"
+          else
+            export HAICOMO_PACKAGED_EXECUTABLE="$PWD/release/0.3.1/win-unpacked/HAICoMo.exe"
+          fi
+          npx playwright test
+      - name: Package checksums
+        run: node scripts/package-checksums.mjs
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: haicomo-0.3.1-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            release/0.3.1/*.dmg
+            release/0.3.1/*.zip
+            release/0.3.1/*.exe
+            release/0.3.1/*.blockmap
+            release/0.3.1/SHA256SUMS*.txt
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidence-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            test-results/
+            validation/0.3.1/
+          retention-days: 14

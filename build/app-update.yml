@@ -1,0 +1,2 @@
+# Cache metadata only. A release feed is explicitly configured in Settings.
+updaterCacheDirName: haicomo-updater

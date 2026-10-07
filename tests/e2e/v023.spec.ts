@@ -1,0 +1,70 @@
+import { test, expect, _electron as electron } from "@playwright/test";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { ProjectStore } from "../../src/core/store";
+import { dictionaries } from "../../src/ui/i18n";
+const screens = path.resolve(process.env.HAICOMO_EVIDENCE_DIR ?? "validation/0.2.3/screens");
+test("0.2.3 settings popovers preserve drafts, dismiss accessibly and stay below the trigger in every locale", async () => {
+  test.setTimeout(120000);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-settings-"));
+  const directory = path.join(root, "中文 Project"); fs.mkdirSync(directory); new ProjectStore(directory, "UI project").close();
+  fs.mkdirSync(screens, { recursive: true });
+  const app = await electron.launch({ ...(process.env.HAICOMO_PACKAGED_EXECUTABLE ? { executablePath: process.env.HAICOMO_PACKAGED_EXECUTABLE, args: ["--force-device-scale-factor=2"] } : { args: [".", "--force-device-scale-factor=2"] }), env: { ...process.env, HAICOMO_TEST: "1", HAICOMO_USER_DATA: path.join(root, "profile") } });
+  const page = await app.firstWindow(), current = page.locator(".tab-frame:not([hidden])");
+  const errors: string[] = []; page.on("pageerror", (e) => errors.push(String(e)));
+  const boot = () => page.evaluate(() => window.haicomo.request("bootstrap"));
+  try {
+    await current.getByRole("button", { name: "设置", exact: true }).click();
+    const panel = current.locator(".settings-panel").first(), trigger = panel.locator(".initials-trigger"), initials = panel.getByRole("textbox", { name: "头像缩写", exact: true });
+    const saved = (await boot()).settings;
+    await trigger.click(); await initials.fill("ABCD");
+    await panel.getByRole("heading").click();
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect((await boot()).settings).toEqual(saved);
+    await trigger.click(); await expect(initials).toHaveValue("ABCD");
+    await panel.getByRole("button", { name: "根据姓名自动生成" }).click();
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await initials.fill("JY"); await initials.press("Escape");
+    await expect(trigger).toBeFocused(); await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await trigger.click(); await panel.getByLabel("用户名", { exact: true }).click();
+    await expect(panel.getByLabel("用户名", { exact: true })).toBeFocused();
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await trigger.click(); await panel.getByRole("button", { name: "根据姓名自动生成" }).focus(); await page.keyboard.press("Tab");
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await trigger.click(); await page.keyboard.press(process.platform === "darwin" ? "Meta+t" : "Control+t");
+    await page.keyboard.press("Control+Shift+Tab");
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await trigger.click(); await expect(initials).toHaveValue("JY");
+    await panel.locator("button.primary").click();
+    expect((await boot()).settings.avatarInitials).toBe("JY");
+    for (const locale of ["zh-CN", "zh-TW", "en-US", "en-GB"] as const) for (const theme of ["light", "dark"] as const) {
+      await page.evaluate(async (next) => { const b = await window.haicomo.request("bootstrap"); await window.haicomo.request("settings.patch", { base: b.settings, next: { ...b.settings, ...next } }); }, { locale, theme });
+      await expect(panel.getByLabel(dictionaries[locale].accentColor, { exact: true })).toBeVisible();
+      await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1000, 700));
+      await panel.locator(".theme-trigger").click();
+      const box = await panel.locator(".theme-trigger").boundingBox(), menu = await panel.getByRole("listbox").boundingBox();
+      expect(menu!.y).toBeGreaterThanOrEqual(box!.y + box!.height);
+      expect(Math.abs(menu!.width - box!.width)).toBeLessThan(2);
+      await expect(panel.getByRole("listbox").getByRole("option", { selected: true })).toBeFocused();
+      await page.screenshot({ path: path.join(screens, `settings-${locale}-${theme}-2x.png`) });
+      await page.keyboard.press("End"); await expect(panel.getByRole("listbox").getByRole("option").last()).toBeFocused();
+      await page.keyboard.press("Home"); await expect(panel.getByRole("listbox").getByRole("option").first()).toBeFocused();
+      await page.keyboard.press("ArrowDown"); await expect(panel.getByRole("listbox").getByRole("option").nth(1)).toBeFocused();
+      await page.keyboard.press("Escape"); await expect(panel.locator(".theme-trigger")).toBeFocused();
+      expect((await boot()).settings.theme).toBe(theme);
+    }
+    await panel.locator(".theme-trigger").press("ArrowDown"); await page.keyboard.press("Home"); await page.keyboard.press("Enter");
+    await expect(panel.getByRole("listbox")).toHaveCount(0);
+    expect((await boot()).settings.theme).toBe("dark"); // selecting changes only the draft
+    await panel.locator("button.primary").click(); expect((await boot()).settings.theme).toBe("light");
+    await panel.locator(".theme-trigger").click(); await panel.getByRole("heading").click(); await expect(panel.getByRole("listbox")).toHaveCount(0);
+    await app.evaluate(({ app }, file) => app.emit("open-file", { preventDefault() {} }, file), path.join(directory, "HAICoMo.haicomo"));
+    await expect(current).toHaveAttribute("data-project-id", /.+/);
+    await current.getByRole("button", { name: "Settings", exact: true }).click();
+    await current.locator(".settings-panel").filter({ has: page.getByRole("heading", { name: dictionaries["en-GB"].projectSettings, exact: true }) }).screenshot({ path: path.join(screens, "project-settings.png") });
+    await expect(current.locator(".settings-page .muted.path")).toHaveCount(0);
+    await expect(current.locator(".legal-panel")).toContainText("ZipZipPipe");
+    expect(errors).toEqual([]);
+  } finally { await app.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});

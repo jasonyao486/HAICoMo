@@ -1,0 +1,9 @@
+name: Feature request / 功能建议
+description: Describe the workflow you want to improve.
+body:
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Workflow and proposed change / 使用场景与建议
+    validations:
+      required: true

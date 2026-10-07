@@ -1,0 +1,780 @@
+{
+  "version": 1,
+  "scope": "Public runtime assets only; permission confirmed by project owner for non-commercial character distribution. No source videos or personal paths.",
+  "files": [
+    {
+      "file": "local-assets/chatgpt-atlas.png",
+      "bytes": 2323571,
+      "sha256": "af083157fd732bcbaaf86210ec56e62d38a56764c329e421d3136951d29ed98c",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/chatgpt-original.png",
+      "bytes": 937641,
+      "sha256": "9cab4fcd7038ccbe271d6472ef369db66f7999791f07fb37ce44497b3325e48d",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/chatgpt-original.gif",
+      "bytes": 9925559,
+      "sha256": "c0a3fbf6d7522ebfb4ffa79ed63a025f58ea6069d13e3de39ce8f838f80f1b65",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/claude-atlas.png",
+      "bytes": 2695040,
+      "sha256": "4b868f145605960e24ec43782d57442a6aaef4deccaf92d32e5e08aae7dc83fb",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/claude-original.png",
+      "bytes": 998974,
+      "sha256": "a93347741f1c3f105b39db7a70e1c1822c380bcd4d6193d3b448a1ef2614ffaa",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/claude-original.gif",
+      "bytes": 12933014,
+      "sha256": "4724038bdfa50bc802c9c137c7fe41f23af624787cb822844b077fad0a2eb69d",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/gemini-atlas.png",
+      "bytes": 2462613,
+      "sha256": "0b9b22de8ca37b4f30045aeb07cef016adb55a604e8a0dc032cb96ab57c236bb",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/gemini-original.png",
+      "bytes": 848021,
+      "sha256": "ed09f7920b36086e0f477a9ccf83d96083deda5edac263a3af82e3677d122e67",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/gemini-original.gif",
+      "bytes": 13099354,
+      "sha256": "2696616fa3d797ce50aec9926d1268c421e1e1dce90e4dfcb33f39b4c48f7c05",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/deepseek-atlas.png",
+      "bytes": 2135036,
+      "sha256": "18a17ce5716575bb847cf9d31666e81b5b634b953d52e424d6abaa842390e30a",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "上善无形 → ZipZipPipe → HAICoMo adaptation",
+      "license": "CC-BY-NC-SA-4.0",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/deepseek-original-2.png",
+      "bytes": 463423,
+      "sha256": "07084bde2548fdb9afdfe0c95a52ed22a4bab8a1047816b2d3ad8779448b98d6",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "上善无形 → ZipZipPipe → HAICoMo adaptation",
+      "license": "CC-BY-NC-SA-4.0",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/deepseek-original-2.gif",
+      "bytes": 7711890,
+      "sha256": "67576197fa795864f80daab63c9dcc8040cec391233f14a17de8f5d8e9f20c39",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "上善无形 → ZipZipPipe → HAICoMo adaptation",
+      "license": "CC-BY-NC-SA-4.0",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/grok-atlas.png",
+      "bytes": 2363058,
+      "sha256": "7e68d5eb6e73820439e336068fbe76037fdfd9be428943eac7d9d6043bc348cc",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/grok-original.png",
+      "bytes": 845044,
+      "sha256": "6965afa01cfb521ce63d2eb0ccc70a03e79f3f46b2a2897343579a467ce356b6",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/grok-original.gif",
+      "bytes": 12207358,
+      "sha256": "c89fb44df84f81ee5976cb02baba27577833e26e37b70664e2cb6de6b3e69ab0",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/kimi-atlas.png",
+      "bytes": 2410835,
+      "sha256": "12072479b516eb2c779ac92bda4351619e4c461c691d6db4a3ac10a30791bacd",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/kimi-original-2.png",
+      "bytes": 623513,
+      "sha256": "e31dace1551a38f54bb470108661b913e007a13a78d74bd97820be8080fe06cd",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/kimi-original-2.gif",
+      "bytes": 20670113,
+      "sha256": "ebe2e8905a536058e5be3d28d5b167b8d9a749ec41e36921a12f749e3a99a0e8",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/glm-atlas.png",
+      "bytes": 2487960,
+      "sha256": "4e73fc406459579ff3b2c40c36a6e5a40a2b45b066986456b46826904b2b511b",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/glm-original.png",
+      "bytes": 770144,
+      "sha256": "af2264138a5d77bd3e1f997c5b61d98fe16ecb2fe88a30c20df382ebdcf5c7f7",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/glm-original.gif",
+      "bytes": 13068167,
+      "sha256": "c18af103770654d503b722be6e1ec65158c0017dcd661bcff33ec84872e475aa",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/minimax-atlas.png",
+      "bytes": 2207581,
+      "sha256": "21af0a9ae2eb8107fe08a2fe5d7700be0dc22007f92ff8fbf2ca1512a3168868",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/minimax-original.png",
+      "bytes": 715350,
+      "sha256": "d5412384e9232afd5959f38d436c99f998665babb331ceff7bd95561893d900c",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/minimax-original.gif",
+      "bytes": 11624171,
+      "sha256": "8ee9442d689ce7b28cff387089c75eec900f69905aab1811bd7de4d8d9426936",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/mistral-atlas.png",
+      "bytes": 2477228,
+      "sha256": "91af36f6d43ee756315bb7e22948fcb56f0ad8703abe244f473e2a29da32e616",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/mistral-original.png",
+      "bytes": 1027992,
+      "sha256": "293daf787259832f020eeee274ea96ea37c6a936e10b65d652f689a9ca6c041e",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/mistral-original.gif",
+      "bytes": 13089853,
+      "sha256": "41480cb00f1a96e3a250471e1c847ae28ec208c977f3140b5a9b0ec1d4c5d79b",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/qwen-atlas.png",
+      "bytes": 2375171,
+      "sha256": "2b6f78dd8dee8863244f095454efeb1e441b5fcdd7a5d2034f0bbc460ff87840",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/qwen-original.png",
+      "bytes": 880035,
+      "sha256": "6a07b31a95261d12edc6df522a9bd45ad47168e347a92ce8e58f27072555d63d",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/qwen-original.gif",
+      "bytes": 15811202,
+      "sha256": "d3df13c4d6a111fcb38dc805416c259989c8e672122e7745cef640bf7d102d42",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/llama-atlas.png",
+      "bytes": 2303090,
+      "sha256": "80bea1c0817dbc1f920ae0aa3bb31a6437e4b08f2b865d362f18da674488731f",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/llama-original.png",
+      "bytes": 535352,
+      "sha256": "bb9f244163ccc8bc6335dce61ecfd38bca56ce61782d4ca2ceb70a2889847fdc",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/llama-original.gif",
+      "bytes": 11455875,
+      "sha256": "08d77d633a46b29d06f4fb59338f450f08233aece565da182697b66221edffb0",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/seedance-atlas.png",
+      "bytes": 2382069,
+      "sha256": "793f0a97480aa4fb3f6a07209b85eab160a860a147ea2fdf1f5de87204626a7a",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/seedance-original.png",
+      "bytes": 644134,
+      "sha256": "5e77b4601c91dcfb194c12a885fbd5cb21a6bce30c30680944d635c6b2a15670",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/seedance-original.gif",
+      "bytes": 9843357,
+      "sha256": "0d922be364ccf325539c28dd471d51f9b6f3b2aedfce7ba002af2305f8e5007d",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/ernie-atlas.png",
+      "bytes": 2808459,
+      "sha256": "4d0ba815300206d07d603965b7930a1c6a935c2ec018e031741ce41445d6818f",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/ernie-original.png",
+      "bytes": 1084515,
+      "sha256": "9d9a8549224d9b60ac7a189d12925800bdb2b1faf25f7746dfc5fd2fa65ff434",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/ernie-original.gif",
+      "bytes": 11026465,
+      "sha256": "d432cbc3f7e6695e31b814e6791a4f290122792f1834e53cda6ff42b8a0da338",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/perplexity-atlas.png",
+      "bytes": 2435176,
+      "sha256": "35e837e1d04a0716eaaedf5fc4c66660a1ce00b3a2c5815a9432981c7ab2bc25",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/perplexity-original.png",
+      "bytes": 656244,
+      "sha256": "cb54c1fa706602a95512603b856ba9ce62a9e82171981b3236641a4c5d17c23e",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/perplexity-original.gif",
+      "bytes": 9157725,
+      "sha256": "6034f617a21967ac607e4d3a864998b2076549dd0eeb5cdaf872b1a5575169df",
+      "source": "https://space.bilibili.com/4168597",
+      "creator": "ZipZipPipe → HAICoMo adaptation",
+      "license": "LicenseRef-Character-NonCommercial",
+      "changes": "Extraction, cropping, background treatment, scaling and/or AI-assisted redraw and animation atlas creation; see ASSET-LICENSES.md."
+    },
+    {
+      "file": "local-assets/studio-floor.png",
+      "bytes": 1741275,
+      "sha256": "e88ff50f287e7592a9c5b69ec6a57d8d9eebd013b522d121329820a9f3342f4c",
+      "source": "HAICoMo generated environment",
+      "creator": "HAICoMo contributors",
+      "license": "CC-BY-4.0",
+      "changes": "AI-assisted hand-painted environment sprite."
+    },
+    {
+      "file": "local-assets/studio-wall.png",
+      "bytes": 1765646,
+      "sha256": "d523fe9446f6bfad835ea9a98a8fa7e1679edb60d0932e7f51ffaf812b330db7",
+      "source": "HAICoMo generated environment",
+      "creator": "HAICoMo contributors",
+      "license": "CC-BY-4.0",
+      "changes": "AI-assisted hand-painted environment sprite."
+    },
+    {
+      "file": "local-assets/studio-table.png",
+      "bytes": 1069480,
+      "sha256": "cd51cbfb8153d60ee1850f64a4c583054fd454db32b294373e078455ed7e87af",
+      "source": "HAICoMo generated environment",
+      "creator": "HAICoMo contributors",
+      "license": "CC-BY-4.0",
+      "changes": "AI-assisted hand-painted environment sprite."
+    },
+    {
+      "file": "local-assets/studio-bench.png",
+      "bytes": 1165574,
+      "sha256": "54e3cf886071d09fbcc20360947d12ccdb2d560fb455ac424486f480545daeb1",
+      "source": "HAICoMo generated environment",
+      "creator": "HAICoMo contributors",
+      "license": "CC-BY-4.0",
+      "changes": "AI-assisted hand-painted environment sprite."
+    },
+    {
+      "file": "local-assets/studio-tea.png",
+      "bytes": 957619,
+      "sha256": "661585c2848343a41748c372e397a1c051f27f3cd777b9995ce04ee7c2d2df90",
+      "source": "HAICoMo generated environment",
+      "creator": "HAICoMo contributors",
+      "license": "CC-BY-4.0",
+      "changes": "AI-assisted hand-painted environment sprite."
+    },
+    {
+      "file": "local-assets/studio-plant.png",
+      "bytes": 1581233,
+      "sha256": "11656b01d18d89ff245cc204a05218765e46d479fe86ad1606c4d06446589e00",
+      "source": "HAICoMo generated environment",
+      "creator": "HAICoMo contributors",
+      "license": "CC-BY-4.0",
+      "changes": "AI-assisted hand-painted environment sprite."
+    },
+    {
+      "file": "local-assets/studio-desk.png",
+      "bytes": 1027563,
+      "sha256": "5261d32036ba3d2dc54c9da1e61142aae412526287a1a0ce7bc0ee2d79bda580",
+      "source": "HAICoMo image generation, 0.3.1",
+      "creator": "HAICoMo contributors",
+      "license": "CC-BY-4.0",
+      "changes": "Generated and revised for a left laptop, centre workstation and extended right display with notebook and sports bottle."
+    },
+    {
+      "file": "local-assets/studio-sofa.png",
+      "bytes": 2545761,
+      "sha256": "ef6ed4348bdd2d2fdf5477a77f7c6e2296408b34c15573f32a6f6641fac4ff9f",
+      "source": "HAICoMo image generation, 0.3.1",
+      "creator": "HAICoMo contributors",
+      "license": "CC-BY-4.0",
+      "changes": "Generated and revised to a symmetric front-facing elevated view for seated characters."
+    },
+    {
+      "file": "local-assets/company-openai.svg",
+      "bytes": 1687,
+      "sha256": "a595df6b423920c67a7f8f73c063e4bfb72d415948097b6cac063a2366bb5186",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/company-anthropic.svg",
+      "bytes": 368,
+      "sha256": "e833fdfa7e7187a86a05b870925067556a506dcd4239089aed73e1e58c9366a3",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/company-google.svg",
+      "bytes": 900,
+      "sha256": "c4bb45d362cb0a98b33b1f2fb424db2a5cd95a90e1043ae4e387de81a5e64951",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/company-deepseek.svg",
+      "bytes": 2189,
+      "sha256": "8f9443e351b6dacce71871790201b799d92e8bf96a45ef79aeb5e9bf4db423e2",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/company-xai.svg",
+      "bytes": 372,
+      "sha256": "89eb7de9f0d02a41cfecd9109e253d7fd3529e27467dee4254faa67f3ac21451",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/company-moonshot.svg",
+      "bytes": 4028,
+      "sha256": "435f41b74e6a87639b6bf860e9628f20cbe7d6229bece412d548f4cea3081852",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/company-zai.svg",
+      "bytes": 319,
+      "sha256": "e748cb5108ce37b116d7a5ba97d37e0ae97eadf6849b0de11afb248e244a01e1",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/company-minimax.svg",
+      "bytes": 1334,
+      "sha256": "bb96e2005081494716de6af5fd030701ae551ee68393ad61b325c07325607848",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/company-mistral.svg",
+      "bytes": 418,
+      "sha256": "a06cfa54e7deff7f7544175b006b7f8a03fbc5624c44f7d553a44d07ea96e629",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/company-alibaba.svg",
+      "bytes": 1412,
+      "sha256": "9ecd942970e4616933c9e1c014f58ad31ea4c1775efefc4f41b55ea166f443ee",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/company-meta.svg",
+      "bytes": 1735,
+      "sha256": "805ef9a35305393eb5a89be46b0708c9b119b3308ca44aaedd1457ff04857060",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/company-bytedance.svg",
+      "bytes": 873,
+      "sha256": "f7ae0a574bd2e28b17258e6e65061c564f764d807cba65d6d1013f50cbfdd7f5",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/company-baidu.svg",
+      "bytes": 1389,
+      "sha256": "6eb0cf7d291162b803e0440e61b5a165fc9c36af61b83c8c90d69f5811177f65",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/company-perplexity.svg",
+      "bytes": 608,
+      "sha256": "c66c64e9e3c273ef6c235f743808d67ffa7d482e8cbe4a79496a42b60333e1fe",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/chatgpt-logo.svg",
+      "bytes": 1687,
+      "sha256": "a595df6b423920c67a7f8f73c063e4bfb72d415948097b6cac063a2366bb5186",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/claude-logo.svg",
+      "bytes": 1701,
+      "sha256": "365a70a7eb3956d9b9a96086058ebe04e1dbd8e291a756ad964e8a283fbd6d38",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/gemini-logo.svg",
+      "bytes": 651,
+      "sha256": "87d5b3c4be75a66f54c1936482a263df68185545b741129badd1b7c2449c18d3",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/deepseek-logo.svg",
+      "bytes": 2189,
+      "sha256": "8f9443e351b6dacce71871790201b799d92e8bf96a45ef79aeb5e9bf4db423e2",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/grok-logo.svg",
+      "bytes": 756,
+      "sha256": "9175fc90c22655160231976c849f25a03b888d7cc0e04c5f1b987b659bb07c95",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/kimi-logo.svg",
+      "bytes": 786,
+      "sha256": "ed08131b46acf70e6e2144eceb775e74098b58ea65fa21eaee04be7b05cfe63b",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/glm-logo.svg",
+      "bytes": 319,
+      "sha256": "e748cb5108ce37b116d7a5ba97d37e0ae97eadf6849b0de11afb248e244a01e1",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/minimax-logo.svg",
+      "bytes": 1334,
+      "sha256": "bb96e2005081494716de6af5fd030701ae551ee68393ad61b325c07325607848",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/mistral-logo.svg",
+      "bytes": 418,
+      "sha256": "a06cfa54e7deff7f7544175b006b7f8a03fbc5624c44f7d553a44d07ea96e629",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/qwen-logo.svg",
+      "bytes": 1790,
+      "sha256": "dcb3ba2f2b55ccbacbade0ca0bf98921fbaf8a07848972974b4a9bf8077376cf",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/llama-logo.svg",
+      "bytes": 1735,
+      "sha256": "805ef9a35305393eb5a89be46b0708c9b119b3308ca44aaedd1457ff04857060",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/seedance-logo.svg",
+      "bytes": 1151,
+      "sha256": "cbda61929dbe7263a969d34ca8a022226d45d20fddfe333c1608abcb52de7b52",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/ernie-logo.svg",
+      "bytes": 797,
+      "sha256": "3624b6084ce8ebefcbbb90ae6ab6485c4df9083187ae6e4012e1aba9a4bcea04",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/perplexity-logo.svg",
+      "bytes": 608,
+      "sha256": "c66c64e9e3c273ef6c235f743808d67ffa7d482e8cbe4a79496a42b60333e1fe",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/pi-app.svg",
+      "bytes": 313,
+      "sha256": "d82978781b824273c55473822c1f243a6ed34fc6e8c2dbfe1a90dfc66ae43ee8",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/github-copilot-app.svg",
+      "bytes": 2019,
+      "sha256": "bbc7fddc13448236e5edea8c399d2072dc40aa5da5bca07f7a2f412405c500a3",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/opencode-app.svg",
+      "bytes": 235,
+      "sha256": "7cfa6e9d6726f7c9fa26c7d9aef0dfec52d20a137380454340f30f12ccbfd302",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/cursor-app.svg",
+      "bytes": 547,
+      "sha256": "0cb51bddf264ae108926fd554c063ef40fc1aac3c5c921ddb39ad184e4e5d0ef",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/trae-app.svg",
+      "bytes": 402,
+      "sha256": "59ef6255dfce52d4b1e77aff4e1b4ee3cda71cda735b4fb45575e9874a1c11f6",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/qoder-app.svg",
+      "bytes": 6214,
+      "sha256": "f8503aacc41a58e723430488d082f6730c8a6a9ffecdd0a00c522e6bcdb4abb9",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/codebuddy-app.svg",
+      "bytes": 1144,
+      "sha256": "abe926f4acd9d56439bb5568a267d19d5a92201dbd69ad1cf179209b5ef79f91",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon."
+    },
+    {
+      "file": "local-assets/workbuddy-app.svg",
+      "bytes": 239,
+      "sha256": "b666e53706d2658aa8a2dc22847215d421229ebcfeed97b15464b304cf4c66bb",
+      "source": "HAICoMo generic client initial",
+      "creator": "HAICoMo contributors",
+      "license": "MIT",
+      "changes": "Generic W identifier; not an official company logo."
+    }
+  ]
+}

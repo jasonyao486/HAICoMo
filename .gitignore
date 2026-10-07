@@ -1,0 +1,72 @@
+# Dependencies and generated output
+node_modules/
+dist/
+dist-electron/
+release/
+test-results/
+playwright-report/
+validation/
+.output/
+*.log
+.DS_Store
+Thumbs.db
+
+# Real projects, backups and historical/private review material
+.haicomo/
+.haicomo-history/
+*.haicomo
+*.haicomo.zip
+*.sqlite
+*.sqlite-*
+*.db
+handoff/
+legacy/
+prd_draft.md
+public/
+.env*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+.codex/
+.claude/
+.vscode/
+.idea/
+
+# Superseded private reports, screenshots and provenance (retain locally)
+docs/*0.2*.md
+docs/*0.3.0.md
+docs/*.json
+docs/review/
+docs/images/0.2*/
+docs/images/0.3.0/
+
+# Historical scripts tied to personal accounts/projects
+scripts/trial-*
+scripts/live-trials.mts
+scripts/prototype-*
+scripts/check-prototypes.mts
+scripts/check-browser-prototypes.mts
+scripts/compatibility-0.2.1.mts
+scripts/prepare-review.mjs
+scripts/art-qa.mts
+scripts/encode-deepseek.mjs
+scripts/matte-kimi.py
+scripts/render-client-icons.cjs
+
+# Superseded local release/upgrade evidence generators
+scripts/native-upgrade-trial.mts
+scripts/upgrade-fixtures.mjs
+scripts/office-stress.mts
+scripts/scale-test.mts
+scripts/scale-ui.mts
+scripts/prepare-release.mts
+
+# Original media and local references (public runtime is separately curated)
+*.mp4
+*.mov
+*.webm
+private/
+local-reference/

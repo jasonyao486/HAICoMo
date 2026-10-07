@@ -1,0 +1,127 @@
+{
+  "name": "haicomo",
+  "version": "0.3.1",
+  "private": true,
+  "description": "A local workspace for human–AI collaboration",
+  "author": "HAICoMo",
+  "main": "dist-electron/main.cjs",
+  "type": "module",
+  "engines": {
+    "node": ">=24.12"
+  },
+  "scripts": {
+    "dev": "node scripts/check-assets.mjs && node scripts/dev.mjs",
+    "build": "node scripts/check-assets.mjs && tsc --noEmit && vite build && node scripts/build.mjs",
+    "start": "electron .",
+    "test": "tsx --test tests/*.test.ts",
+    "test:e2e": "npm run build && playwright test",
+    "typecheck": "tsc --noEmit",
+    "cli": "tsx src/cli.ts",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder --publish never",
+    "dist:win": "npm run build && electron-builder --win --x64 --publish never",
+    "install:local:mac": "node scripts/install-local-mac.mjs",
+    "check:assets": "node scripts/check-assets.mjs",
+    "demo": "tsx scripts/create-demo.ts",
+    "check:public": "node scripts/check-public.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "electron-updater": "6.8.9",
+    "fflate": "0.8.3",
+    "lucide-react": "^0.468.0",
+    "pixi.js": "8.22.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.1",
+    "prettier": "3.9.9",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vite": "8.3.2"
+  },
+  "build": {
+    "icon": "build/icon.png",
+    "appId": "app.haicomo.desktop",
+    "productName": "HAICoMo",
+    "directories": {
+      "output": "release/0.3.1"
+    },
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "package.json",
+      "build/icon.png"
+    ],
+    "fileAssociations": [
+      {
+        "ext": "haicomo",
+        "name": "HAICoMo Project",
+        "role": "Editor"
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.productivity",
+      "minimumSystemVersion": "13.0",
+      "identity": "-"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "HAICoMo-${version}-windows-${arch}-setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Office"
+    },
+    "extraResources": [
+      {
+        "from": "build/app-update.yml",
+        "to": "app-update.yml"
+      },
+      {
+        "from": "LICENSE",
+        "to": "licenses/LICENSE"
+      },
+      {
+        "from": "ASSET-LICENSES.md",
+        "to": "licenses/ASSET-LICENSES.md"
+      },
+      {
+        "from": "THIRD-PARTY-NOTICES.md",
+        "to": "licenses/THIRD-PARTY-NOTICES.md"
+      }
+    ]
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jasonyao486/HAICoMo.git"
+  },
+  "homepage": "https://github.com/jasonyao486/HAICoMo",
+  "bugs": {
+    "url": "https://github.com/jasonyao486/HAICoMo/issues"
+  }
+}
