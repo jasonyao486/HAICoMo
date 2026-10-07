@@ -6,6 +6,10 @@ The first public channel is a GitHub pre-release with manual downloads. No indep
 
 The `.github/workflows/verify.yml` matrix builds on native macOS ARM64 and Windows x64. Node 24.12.0 runs `npm ci`, type checking, unit tests, build, Electron tests, packaging and packaged Electron tests. Release files and test evidence are retained as workflow artifacts. Packaging always uses `--publish never`; publication is a separate reviewed action.
 
+The workflow also scans each packaged `app.asar` against the asset manifest and checks the bundled licences. Windows CI performs a silent NSIS install into a temporary directory and runs the 0.3.1 scenario against that installed executable. This does not replace the human Windows checklist.
+
+After reviewing the completed native run and local acceptance, dispatch `publish.yml` with its `verification_run` ID. It requires both jobs to have succeeded and refuses a changed non-documentation source tree. It downloads that run's installers, verifies their SHA-256 values, uploads to a draft, then publishes the pre-release. An existing release requires inspection instead of automatic overwriting.
+
 ```sh
 npm ci
 npm run typecheck

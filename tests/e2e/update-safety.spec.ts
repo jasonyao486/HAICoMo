@@ -1,3 +1,4 @@
+import { closeTestApp, removeTestDirectory } from "./cleanup";
 import { fixtureAgent } from "../fixture-agent";
 const currentVersion: string = JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
 const nextVersion = currentVersion.replace(/(\d+)$/, (patch) => String(Number(patch) + 1));
@@ -60,7 +61,7 @@ test("install preflight coordinates two dirty windows, cancels globally and free
     expect(readSnapshot(dirs[1]).tasks[0].title).toBe("Beta saved before install");
     await expect(other.locator("[inert]")).toHaveCount(0);
     expect(fs.existsSync(path.join(root, "profile/pending-update.json"))).toBe(false);
-  } finally { await app.evaluate(({ app }) => app.exit()).catch(() => {}); await app.close().catch(() => {}); await new Promise<void>((r) => server.close(() => r())); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await closeTestApp(app); await new Promise<void>((r) => server.close(() => r())); await removeTestDirectory(root); }
 });
 
 test("update-only restoration checks file identity, keeps missing entry deleted, then ordinary startup stays blank", async () => {
@@ -81,5 +82,5 @@ test("update-only restoration checks file identity, keeps missing entry deleted,
     await expect(current(page).getByRole("button", { name: "新建项目", exact: true })).toBeVisible();
     expect((await page.evaluate(() => window.haicomo.request("bootstrap"))).projects).toHaveLength(0);
     expect(fs.existsSync(tabs[1].entryPath)).toBe(false);
-  } finally { await app.close().catch(() => {}); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await app.close().catch(() => {}); await removeTestDirectory(root); }
 });

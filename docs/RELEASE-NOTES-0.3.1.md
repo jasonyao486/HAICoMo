@@ -8,6 +8,6 @@
 - Added GitHub Releases and Issues links, MIT source licensing, separate asset permissions and dependency notices.
 - Added a curated asset build, native Mac ARM64/Windows x64 CI, bilingual README, four complete manuals and synthetic application screenshots.
 
-Downloads are manual. Mac packages are ad-hoc signed and not notarised; Windows has no publisher signature. Windows human desktop acceptance remains pending. See the [platform report](COMPATIBILITY-0.3.1.md) and [test evidence](TESTING-0.3.1.md).
+Downloads are manual. Mac packages are ad-hoc signed and not notarised; Windows has no publisher signature. Windows human desktop acceptance remains pending. See the [platform report](https://github.com/jasonyao486/HAICoMo/blob/main/docs/COMPATIBILITY-0.3.1.md) and [test evidence](https://github.com/jasonyao486/HAICoMo/blob/main/docs/TESTING-0.3.1.md).
 
 Keep the `.haicomo` entry, hidden data directory and actual deliverables together when moving projects. Stop work and exit before syncing. Live NAS databases and simultaneous multi-computer editing are not supported. Do not reopen a migrated v5 database with an older application; restore its pre-migration ZIP to an empty folder instead.

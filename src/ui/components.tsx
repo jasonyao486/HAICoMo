@@ -1283,6 +1283,7 @@ export function HandoffDialog({
               <span>{t("terminal")}</span>
               <button
                 className="button small"
+                disabled={busy || !cap}
                 onClick={() => void copy("command")}
               >
                 {copied === "command" ? (
@@ -1306,7 +1307,7 @@ export function HandoffDialog({
       <div className="modal-footer">
         <button
           className="button"
-          disabled={busy}
+          disabled={busy || !cap}
           onClick={() => void act("foreground")}
         >
           {t("foreground")}

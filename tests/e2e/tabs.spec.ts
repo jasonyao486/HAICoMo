@@ -1,4 +1,5 @@
 import { fixtureAgent } from "../fixture-agent";
+import { closeTestApp, removeTestDirectory } from "./cleanup";
 import {
   test,
   expect,
@@ -355,18 +356,18 @@ test("single window tabs retain drafts, route background permissions and keep cl
     await page.screenshot({ path: "test-results/tabs-projects.png" });
     expect(errors).toEqual([]);
   } finally {
-    await app.evaluate(({ app }) => app.exit()).catch(() => {});
-    await app.close().catch(() => {});
-    fs.rmSync(root, { recursive: true, force: true });
+    await closeTestApp(app);
+    await removeTestDirectory(root);
   }
 });
 
 test("agent discovery cannot race project replacement or silently start after its entry is removed", async () => {
   const { root, dirs, fake } = fixture();
+  const script = path.join(root, "agent.cjs");
   fs.writeFileSync(
-    fake,
+    script,
     fs
-      .readFileSync(fake, "utf8")
+      .readFileSync(script, "utf8")
       .replace(
         'if (args.includes("--version")) {',
         'if (args.includes("--version")) {\n  fs.writeFileSync(require("node:path").join(__dirname, "detect-started"), "1");\n  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 800);',
@@ -419,9 +420,8 @@ test("agent discovery cannot race project replacement or silently start after it
     expect(await attempt()).not.toBe(original);
     expect(readSnapshot(dirs[0]).tasks).toHaveLength(0);
   } finally {
-    await app.evaluate(({ app }) => app.exit()).catch(() => {});
-    await app.close().catch(() => {});
-    fs.rmSync(root, { recursive: true, force: true });
+    await closeTestApp(app);
+    await removeTestDirectory(root);
   }
 });
 
@@ -525,9 +525,8 @@ test("deleted entry stays missing in recents; same-directory recreation has new 
       2,
     );
   } finally {
-    await app.evaluate(({ app }) => app.exit()).catch(() => {});
-    await app.close().catch(() => {});
-    fs.rmSync(root, { recursive: true, force: true });
+    await closeTestApp(app);
+    await removeTestDirectory(root);
   }
 });
 
@@ -547,7 +546,7 @@ test("project moves respect platform locks; hidden offices pause and native clos
       updateFeed: "",
     }),
   );
-  const app = await launch(root, dirs[0]);
+  let app = await launch(root, dirs[0]);
   let page = await app.firstWindow();
   try {
     const initial = await page.evaluate(() =>
@@ -664,9 +663,16 @@ test("project moves respect platform locks; hidden offices pause and native clos
       .poll(() => readSnapshot(movedAgain).tasks[0].title)
       .toBe("Native close saved");
     await expect.poll(() => app.windows().length).toBe(0);
-    const nextWindow = app.waitForEvent("window");
-    await app.evaluate(({ app }) => app.emit("activate"));
-    page = await nextWindow;
+    if (process.platform === "darwin") {
+      const nextWindow = app.waitForEvent("window");
+      await app.evaluate(({ app }) => app.emit("activate"));
+      page = await nextWindow;
+    } else {
+      // With no retained work, Windows exits when its last window closes.
+      await app.close().catch(() => {});
+      app = await launch(root, movedAgain);
+      page = await app.firstWindow();
+    }
     await expect(
       current(page).getByRole("button", { name: "新建项目", exact: true }),
     ).toBeVisible();
@@ -688,8 +694,7 @@ test("project moves respect platform locks; hidden offices pause and native clos
     ).toBeVisible();
     expect(app.windows()).toHaveLength(1);
   } finally {
-    await app.evaluate(({ app }) => app.exit()).catch(() => {});
-    await app.close().catch(() => {});
-    fs.rmSync(root, { recursive: true, force: true });
+    await closeTestApp(app);
+    await removeTestDirectory(root);
   }
 });

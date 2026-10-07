@@ -18,7 +18,7 @@ Choose New project, select a local working folder and save a `.haicomo` entry. O
 
 Open an entry using the app or file association. Reopening the same project focuses its tab. Cmd+T/Ctrl+T creates a tab; Cmd+W/Ctrl+W closes one. The top-left switcher lists retained tabs and additional project operations. Unsaved forms can be saved, discarded or kept open when closing a tab. Closing a tab does not stop its agents or pending relays. Use Background tasks to return to them. Quit the app to release all project locks.
 
-Move the complete folder after stopping work and quitting the app. Recent entries can be relocated. Ordinary Open does not recreate a deleted entry. Recovery distinguishes a missing entry, retained project history and ZIP backups. A fresh project in a folder whose entry was removed has a new identity; prior data is retained in local history. An independent copy gets a new identity and fresh run, relay and audit history; it does not copy deliverable files.
+Move the complete folder after stopping work and quitting the app. Windows normally refuses to move a folder while its SQLite database is open. Recent entries can be relocated. Ordinary Open does not recreate a deleted entry. Recovery distinguishes a missing entry, retained project history and ZIP backups. A fresh project in a folder whose entry was removed has a new identity; prior data is retained in local history. An independent copy gets a new identity and fresh run, relay and audit history; it does not copy deliverable files.
 
 ## 3. Tasks, subtasks and acceptance
 

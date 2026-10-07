@@ -1,3 +1,4 @@
+import { closeTestApp, removeTestDirectory } from "./cleanup";
 import { test, expect, _electron as electron } from "@playwright/test";
 import fs from "node:fs";
 import os from "node:os";
@@ -252,6 +253,6 @@ test("v2 desktop: full proposal count, filters, date dragging, keyboard, stale r
   } finally {
     await app.evaluate(({ app }) => app.exit()).catch(() => {});
     await app.close();
-    fs.rmSync(root, { recursive: true, force: true });
+    await removeTestDirectory(root);
   }
 });
