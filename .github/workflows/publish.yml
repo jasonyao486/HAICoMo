@@ -6,6 +6,10 @@ on:
         description: Successful Verify and package run ID
         type: string
         required: true
+      first_open_dmg_sha256:
+        description: Exact DMG SHA-256 after browser first-open acceptance in a fresh macOS account
+        type: string
+        required: true
 permissions:
   contents: write
   actions: read
@@ -17,49 +21,18 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       VERIFY_RUN_ID: ${{ inputs.verification_run }}
+      FIRST_OPEN_DMG_SHA256: ${{ inputs.first_open_dmg_sha256 }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - run: node scripts/ci-version.mjs
-      - name: Require both native platforms from this source
-        shell: bash
-        run: |
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs';
-          import { execFileSync } from 'node:child_process';
-          const id = process.env.VERIFY_RUN_ID;
-          if (!/^\d+$/.test(id)) throw new Error('Invalid run ID');
-          const api = route => JSON.parse(execFileSync('gh', ['api', `repos/${process.env.GH_REPO}/${route}`], { encoding: 'utf8' }));
-          const run = api(`actions/runs/${id}`);
-          if (run.conclusion !== 'success' || run.head_branch !== 'main' || run.path !== '.github/workflows/verify.yml')
-            throw new Error('A successful main-branch verification run is required');
-          const jobs = api(`actions/runs/${id}/jobs`).jobs;
-          for (const name of ['desktop (macos-15, mac, arm64)', 'desktop (windows-2025, windows, x64)'])
-            if (!jobs.some(job => job.name === name && job.conclusion === 'success')) throw new Error(`Missing success: ${name}`);
-          execFileSync('git', ['fetch', 'origin', run.head_sha]);
-          execFileSync('git', ['diff', '--exit-code', run.head_sha, 'HEAD', '--', '.', ':!docs', ':!README.md', ':!README.zh-CN.md', ':!.github/workflows/publish.yml', ':!.github/workflows/notarization-status.yml', ':!.github/workflows/publish-windows.yml']);
-          fs.appendFileSync(process.env.GITHUB_ENV, `SOURCE_SHA=${run.head_sha}\n`);
-          NODE
-      - name: Download verified installers and check their hashes
-        shell: bash
-        run: |
-          gh run download "$VERIFY_RUN_ID" -p "haicomo-$HAICOMO_VERSION-*" -D verified
-          for checksum in verified/*/SHA256SUMS*.txt; do
-            (cd "$(dirname "$checksum")" && sha256sum -c "$(basename "$checksum")")
-          done
-          test -f verified/haicomo-$HAICOMO_VERSION-mac-arm64/HAICoMo-$HAICOMO_VERSION-arm64.dmg
-          test -f verified/haicomo-$HAICOMO_VERSION-mac-arm64/HAICoMo-$HAICOMO_VERSION-arm64-mac.zip
-          test -f verified/haicomo-$HAICOMO_VERSION-windows-x64/HAICoMo-$HAICOMO_VERSION-windows-x64-setup.exe
-      - name: Require signed Mac and standard-user Windows evidence
-        run: node scripts/check-release-evidence.mjs verified "$SOURCE_SHA"
+      - name: Verify Mac provenance, first-open evidence and retained Windows files
+        run: node scripts/prepare-mac-publish.mjs
       - name: Publish verified version as a pre-release
         shell: bash
         run: |
-          if gh release view v$HAICOMO_VERSION >/dev/null 2>&1; then
-            # Supplement the Windows-first preview; never overwrite existing assets.
-            test "$(gh api repos/$GH_REPO/git/ref/tags/v$HAICOMO_VERSION --jq .object.sha)" = "$SOURCE_SHA"
-            gh release download v$HAICOMO_VERSION -p '*windows-x64*' -p 'windows-user-verification.json' -p 'SHA256SUMS-win32-x64.txt' -D existing
-            (cd existing && sha256sum -c SHA256SUMS-win32-x64.txt)
-            cmp existing/SHA256SUMS-win32-x64.txt verified/haicomo-$HAICOMO_VERSION-windows-x64/SHA256SUMS-win32-x64.txt
+          if [ "$EXISTING_RELEASE" = "true" ]; then
             gh release upload v$HAICOMO_VERSION verified/*/*.dmg verified/*/*.zip verified/*/mac-release-verification.json verified/*/SHA256SUMS-darwin-arm64.txt
             gh release edit v$HAICOMO_VERSION --notes-file docs/RELEASE-NOTES-$HAICOMO_VERSION.md
           else
@@ -76,7 +49,19 @@ jobs:
           for manifest in SHA256SUMS-darwin-arm64.txt SHA256SUMS-win32-x64.txt; do
             curl --fail --location --retry 5 --retry-all-errors --retry-delay 3 "$base/$manifest" -o "$manifest"
             while read -r hash name; do
+              [[ "$hash" =~ ^[a-f0-9]{64}$ ]]
+              [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
               curl --fail --location --retry 5 --retry-all-errors --retry-delay 3 "$base/$name" -o "$name"
             done < "$manifest"
             sha256sum -c "$manifest"
           done
+      - name: Verify Windows files were not replaced
+        if: env.EXISTING_RELEASE == 'true'
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { fileHash } from './scripts/mac-release-state.mjs';
+          const previous=JSON.parse(fs.readFileSync('windows-before.json'));
+          for (const [name, hash] of Object.entries(previous)) if (fileHash(`public-downloads/${name}`)!==hash) throw new Error('A previously published Windows file changed');
+          console.log('All existing Windows files retained exactly.');
+          NODE

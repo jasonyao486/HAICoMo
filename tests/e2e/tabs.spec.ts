@@ -225,9 +225,31 @@ test("single window tabs retain drafts, route background permissions and keep cl
     await expect(
       current(page).getByRole("button", { name: "复制命令", exact: true }),
     ).toBeVisible();
+    await expect(current(page).locator("#provider-models option[value='fixture']")).toHaveCount(1);
     await current(page)
       .getByRole("button", { name: "后台发送", exact: true })
       .click();
+    // Discovery and spawning are separate from permission delivery. Wait for the
+    // synthetic CLI's actual turn handshake, rather than spending the default
+    // five-second permission deadline on OS process startup as well.
+    const methods = () => {
+      const log = path.join(root, "requests.jsonl");
+      if (!fs.existsSync(log)) return [] as string[];
+      return fs.readFileSync(log, "utf8").trim().split("\n").flatMap(line => {
+        try { const m = JSON.parse(line).method; return typeof m === "string" ? [m] : []; }
+        catch { return []; }
+      });
+    };
+    try {
+      await expect.poll(() => methods().includes("turn/start"), { timeout: 15000, message: "Fixture CLI must receive the turn before permission delivery" }).toBe(true);
+    } catch (error) {
+      const background = await page.evaluate(() => window.haicomo.request("providers.background"));
+      await test.info().attach("fixture-start-diagnostics", {
+        body: JSON.stringify({ methods: methods(), statuses: background.runs.map((r: any) => r.status), permissions: background.permissions.length }),
+        contentType: "application/json",
+      });
+      throw error;
+    }
     await expect
       .poll(
         async () =>

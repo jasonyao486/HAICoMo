@@ -58,3 +58,11 @@ Publication requires matching Mac signature/notarization evidence and Windows no
 ## Windows-first publication
 
 At the owner’s request, `publish-windows.yml` can publish a successful native Windows job while Mac notarization is pending. It verifies identical application source, the actual standard-user acceptance report, installer hashes, and anonymous downloads. An inspected empty draft may be resumed, but a populated release cannot be overwritten. Mac interim artifacts, if offered, must have `unnotarized` in the filename and explicitly state that Open Anyway may be required; they do not satisfy MAC-033. The normal notarized publication gate remains unchanged.
+
+## Resumable formal Mac build
+
+Dispatch `verify.yml` with `platform=mac`. The main Mac job has a 180-minute ceiling and each Apple wait has a 60-minute ceiling. Prepared and packaged candidate artifacts retain their exact bytes for 14 days; separate progress artifacts retain submission IDs and statuses. If waiting fails or remains pending, dispatch again with `platform=mac` and `resume_run_id` set to the previous run. Only trusted main-branch verification runs are accepted, with source compatibility and candidate hashes rechecked. Checkpoint artifacts never include keychains, certificate exports or credentials. The latest run uploads candidates again so a second recovery can use that run ID.
+
+For an existing release, the application source, dependencies, resources and build inputs must match its tag; only release infrastructure, tests and documentation may differ. The report records the original build, application-reference and verification commits separately. A 0.3.3 supplement additionally requires the same application archive hash as its published interim build. Existing Windows downloads are independently downloaded and validated, then checked again after publication.
+
+Dispatch `publish.yml` only after a browser download and first launch in a fresh macOS account, supplying `first_open_dmg_sha256` from the exact accepted candidate. This is an operator attestation, not an automated claim based on signing alone. Publication records the method and hash in the final report. Never enter that attestation for a simulated launch or a different file. Until that acceptance is complete, keep formal candidates in Actions artifacts and retain the existing public interim downloads.

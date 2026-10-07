@@ -5,26 +5,32 @@ on:
     paths-ignore: ["docs/**", "README*.md"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      platform:
+        description: Native platforms to verify
+        type: choice
+        options: [all, mac, windows]
+        default: all
+      resume_run_id:
+        description: Earlier main Mac verification run to resume
+        type: string
+        default: ''
 permissions:
   contents: read
+  actions: read
 jobs:
   desktop:
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: macos-15
-            platform: mac
-            arch: arm64
-          - os: windows-2025
-            platform: windows
-            arch: x64
+      matrix: ${{ fromJSON(inputs.platform == 'mac' && '{"include":[{"os":"macos-15","platform":"mac","arch":"arm64"}]}' || inputs.platform == 'windows' && '{"include":[{"os":"windows-2025","platform":"windows","arch":"x64"}]}' || '{"include":[{"os":"macos-15","platform":"mac","arch":"arm64"},{"os":"windows-2025","platform":"windows","arch":"x64"}]}') }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 180
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24.21.0'
@@ -41,15 +47,95 @@ jobs:
       - name: Package unsigned macOS PR validation
         if: runner.os == 'macOS' && github.event_name == 'pull_request'
         run: npx electron-builder --mac --arm64 --publish never
-      - name: Sign and notarize macOS release
+      - name: Restore saved Mac candidate
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && inputs.resume_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RESUME_RUN_ID: ${{ inputs.resume_run_id }}
+        run: node scripts/restore-mac-candidate.mjs
+      - name: Prepare signed Mac application
         if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: node scripts/release-mac.mjs prepare
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          name: mac-candidate-${{ env.HAICOMO_VERSION }}-prepared
+          path: release/${{ env.HAICOMO_VERSION }}/mac-checkpoint/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Test signed Mac candidate before notarization
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          export HAICOMO_PACKAGED_EXECUTABLE="$PWD/release/$HAICOMO_VERSION/mac-arm64/HAICoMo.app/Contents/MacOS/HAICoMo"
+          node scripts/check-package.mjs "release/$HAICOMO_VERSION/mac-arm64/HAICoMo.app/Contents/Resources"
+          npx playwright test
+      - name: Mac release submit-app
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-        run: node scripts/release-mac.mjs
+        run: node scripts/release-mac.mjs submit-app
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          name: mac-progress-${{ env.HAICOMO_VERSION }}-submit-app
+          path: release/${{ env.HAICOMO_VERSION }}/mac-checkpoint/state.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Mac release wait-app
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: node scripts/release-mac.mjs wait-app
+      - name: Mac release package
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: node scripts/release-mac.mjs package
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          name: mac-candidate-${{ env.HAICOMO_VERSION }}-packaged
+          path: release/${{ env.HAICOMO_VERSION }}/mac-checkpoint/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Mac release submit-dmg
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: node scripts/release-mac.mjs submit-dmg
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          name: mac-progress-${{ env.HAICOMO_VERSION }}-submit-dmg
+          path: release/${{ env.HAICOMO_VERSION }}/mac-checkpoint/state.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Mac release wait-dmg
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: node scripts/release-mac.mjs wait-dmg
+      - name: Mac release finalize
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: node scripts/release-mac.mjs finalize
       - name: Package Windows x64
         if: runner.os == 'Windows'
         run: npx electron-builder --win --x64 --publish never
@@ -109,4 +195,14 @@ jobs:
           path: |
             test-results/
             validation/${{ env.HAICOMO_VERSION }}/
+          retention-days: 14
+      - name: Cleanup Mac signing keychain
+        if: always() && runner.os == 'macOS' && github.event_name != 'pull_request'
+        run: node scripts/release-mac.mjs cleanup
+      - uses: actions/upload-artifact@v4
+        if: always() && runner.os == 'macOS' && github.event_name != 'pull_request'
+        with:
+          name: mac-progress-${{ env.HAICOMO_VERSION }}-final
+          path: release/${{ env.HAICOMO_VERSION }}/mac-checkpoint/state.json
+          if-no-files-found: warn
           retention-days: 14
