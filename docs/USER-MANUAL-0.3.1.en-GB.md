@@ -10,6 +10,8 @@ On macOS, open the DMG, drag the app to Applications, eject the image and start 
 
 Task management requires no Node.js, Git or AI subscription. Background AI work requires your own installed, signed-in client. Updates are manual: stop agents, quit HAICoMo, keep project folders, and replace/reinstall the app. Settings includes Downloads and releases, GitHub feedback and a separate diagnostic export. Diagnostic export does not send anything automatically. The optional custom update-source field is for a separately configured, verified update channel; it is not needed for this release.
 
+If the first launch uses Chinese, open **设置 (Settings) → 语言 (Language)**, choose **English (UK)** or **English (US)**, then select **保存修改 (Save changes)**.
+
 ## 2. Create, open and move a project
 
 Choose New project, select a local working folder and save a `.haicomo` entry. One folder contains one project identity. The entry is only a pointer: the hidden `.haicomo/` directory holds the SQLite database, saved snapshot, proposal inbox, events and receipts. Deliverable files are ordinary files in the working folder or explicitly referenced elsewhere. Keep all required files together.

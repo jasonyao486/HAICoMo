@@ -5,7 +5,22 @@ Date: 7 October 2026. Tests use disposable projects and isolated Electron profil
 ## Execution record
 
 <!-- TEST_EVIDENCE_START -->
-Final execution and native package results are being collected. The release is gated on native CI and local Mac verification; unexecuted checks are not counted as passed.
+| Check | Result |
+|---|---|
+| Local host | Apple Silicon ARM64, macOS 27.0; Node 24.12.0, Electron 44.5.1 |
+| Type check / curated assets | Passed; 86 allowed runtime files |
+| Unit tests | 75 passed, 0 failed |
+| Source Electron scenarios | 18 passed in full run; revised 0.3.1 case passed separately after adding required project binding to the test harness |
+| Packaged Mac Electron scenarios | 19 passed, 0 failed |
+| Mac DMG/ZIP and ad-hoc integrity | `hdiutil verify`, `unzip -tq` and `codesign --verify --deep --strict` passed |
+| Packaged application content | 10,518 archive entries scanned; all 86 runtime asset hashes match; no recognised private content found |
+| Clean source clone | Fresh `npm ci`, public-file scan, build/type check, 75 unit tests and the 60-task Electron demo passed without private reference folders |
+| DMG installation simulation | Mounted read-only, copied to an isolated application directory, ejected, verified signature and passed both fresh-profile desktop scenarios |
+| Public source index | 239 files; excluded-path, recognised credential-pattern, personal-path and relative Markdown-link checks passed |
+| Native GitHub matrix | Awaiting upload/build completion; no Windows result inferred from Mac |
+| Public download round trip | Pending release assets |
+
+The private raw evidence directory is `validation/0.3.1/`. The source test harness initially omitted the required project binding for its direct IPC calls; the app correctly returned `NO_PROJECT`. The harness now supplies the bootstrap binding, and the complete packaged suite passes. Older fixed-delay screenshot checks were replaced with explicit renderer readiness and mode checks; obsolete link-count and migration-count assertions were updated for the intentional additions.
 <!-- TEST_EVIDENCE_END -->
 
 ## Behaviour covered

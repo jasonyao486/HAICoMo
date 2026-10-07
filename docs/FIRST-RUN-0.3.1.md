@@ -25,6 +25,7 @@ Final native package, clean-clone and public download outcomes are recorded in [
 
 ## Friction found and addressed
 
+- The initial interface can use Chinese: the English installation steps include the exact Chinese labels for switching language before creating a project.
 - A non-developer can easily choose GitHub's “Source code” instead of an installer: README now identifies exact filenames and explains chip/System type discovery.
 - A `.haicomo` entry looks self-contained: all manuals explain the hidden sibling data and separate deliverables, and give a safe closed-app transfer sequence.
 - Agent “completed” can be mistaken for accepted: installation tutorial and task guidance distinguish delivery from human acceptance.

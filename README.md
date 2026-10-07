@@ -23,7 +23,7 @@ On a Mac, find the chip under **Apple menu → About This Mac**. On Windows, ope
 
 3. **Mac:** open the DMG, drag HAICoMo into Applications, eject the disk image, then open HAICoMo from Applications. The first release is ad-hoc signed and not notarised. If macOS blocks it, confirm you downloaded this release, then use the app-specific **Open Anyway** option in **System Settings → Privacy & Security**. Do not disable Gatekeeper globally.
 4. **Windows:** open the setup `.exe`, follow the installer and launch HAICoMo. This release is unsigned and Windows may show a publisher/SmartScreen warning. Check the source and supplied SHA-256 before choosing to continue; managed computers may require administrator approval.
-5. Select **New project**, choose an empty local folder and save the `.haicomo` entry. Add a task and a subtask. No AI account is required for this step.
+5. If the app opens in Chinese, first choose **设置 (Settings) → 语言 (Language) → English (UK) → 保存修改 (Save changes)**. Select **New project**, choose an empty local folder and save the `.haicomo` entry. Add a task and a subtask. No AI account is required for this step.
 6. When a delivery is ready, open its file from the task, inspect it, then choose **Accept delivery**. Agent completion alone does not accept work.
 
 For AI collaboration, install and sign into a supported client yourself. **Settings → Local agents → Detect** checks what is available. Codex and Claude Code support background handoff; other listed clients use foreground/file collaboration. HAICoMo does not provide subscriptions or switch you to paid APIs.

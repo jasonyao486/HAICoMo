@@ -19,7 +19,7 @@ The Mac package's minimum version metadata is 13.0. This is not evidence of runn
 <!-- PLATFORM_EVIDENCE_START -->
 | Environment | Type/unit tests | Electron automation | Native package | Human desktop acceptance |
 |---|---|---|---|---|
-| Local Apple Silicon macOS | Running final verification | Running final verification | Pending final package | Actual application screenshots reviewed; installation checks pending |
+| Local macOS 27.0 ARM64 | Passed, 75 unit tests | Packaged 19/19 passed | DMG/ZIP and ad-hoc integrity passed | Actual screenshots reviewed; fresh-profile installation copy checked separately |
 | GitHub macOS ARM64 | Pending CI | Pending source + packaged tests | DMG/ZIP pending CI | Not a separate human tester |
 | GitHub Windows x64 | Pending CI | Pending source + packaged tests | NSIS `.exe` pending CI | Not performed |
 | Windows 10/11 consumer desktop | Not performed | Not performed here | Use x64 artifact only after native CI | Required checklist below |
