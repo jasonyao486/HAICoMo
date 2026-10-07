@@ -17,9 +17,9 @@ Date: 7 October 2026. All tests use disposable synthetic projects and isolated E
 | Local Mac package | DMG/ZIP integrity and ad-hoc signature passed; packaged Electron 22/22 passed |
 | Clean clone | Fresh npm ci, public scan, build/type check, 77 unit tests and four demo/navigation scenarios passed |
 | DMG installed checks | Mounted read-only, copied into an isolated application directory, ejected, signature verified; six installed-app scenarios passed |
-| Public release/download hashes | Awaiting publication and anonymous round-trip verification |
+| Public release/download hashes | [Publish run 37618269320](https://github.com/jasonyao486/HAICoMo/actions/runs/37618269320) passed: anonymous full downloads of three installers/archives and three blockmaps matched the published SHA-256 manifests |
 | Public content | 274 tracked files scanned; 16 current synthetic screenshots inspected; original private brief checksum unchanged |
-| Local application | Canonical Mac app replaced with verified 0.3.2 after confirming 0.3.1 was not running; previous app archived; no real user projects opened |
+| Local application | Canonical Mac app replaced with verified 0.3.2 after confirming 0.3.1 was not running; previous app archived; three canonical installed-app navigation cases passed with isolated profiles; no real user projects opened |
 
 ## Changed behaviour
 
@@ -44,3 +44,15 @@ No live paid-agent calls were sent. Fixtures test integration logic, not all cur
 Mac ASAR: `f0c2c0af8c8a66b734b4a707f54b3050eda04666ad874d15243a2e8d1c22379a`. Windows ASAR: `7d21c2a6e85854ea8183328b8e2d45784a2cfb0070c6be466c9f9881fddeea1b`. The locally rebuilt Mac DMG application has the same ASAR as native CI. The installed Windows ASAR matches its unpacked build. Container hashes can differ because of packaging metadata; published downloads use the native CI installer files and their own checksum manifests.
 
 Mac DMG verification, ZIP integrity and ad-hoc signature checks passed. Installation simulation used a read-only DMG mount, copy to an isolated application directory, eject, then tests with a new isolated profile. This is not an independent person's quarantined-browser-download/Gatekeeper acceptance. Mac Developer ID/notarisation and Windows publisher signing remain unconfigured.
+
+## Published files
+
+[0.3.2 pre-release](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.2), published 7 October 2026. The existing 0.3.1 release is retained. The release tag points to the exact verified build source; later documentation-only commits record the completed release.
+
+| File | SHA-256 |
+|---|---|
+| `HAICoMo-0.3.2-arm64.dmg` | `f95fbcb783700f9f259ef06f2c24725dbdc3905e45dcf68165dacdcd55561f8c` |
+| `HAICoMo-0.3.2-arm64-mac.zip` | `23fea1e46de44f042a0ae25da14feef0913258f2b325e1d27c7815ef411f8283` |
+| `HAICoMo-0.3.2-windows-x64-setup.exe` | `4034d9a13d84b7695ba683a062ada151fae30fe9c5c0b407496ac6eb8afd9951` |
+
+The publishing runner performed the full anonymous download checks. The local host separately fetched both public checksum files. Five known generated/test app copies were unregistered from macOS Launch Services without deleting their files; the canonical Applications app is the sole remaining HAICoMo registration. These actions did not open or modify actual user project data.

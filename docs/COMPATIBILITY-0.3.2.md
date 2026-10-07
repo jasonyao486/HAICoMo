@@ -25,7 +25,9 @@ The Mac package's minimum version metadata is 13.0. This is not evidence of runn
 | Windows 10/11 consumer desktop | Not performed | Not performed here | Awaiting human install check | Pending owner checklist below |
 <!-- PLATFORM_EVIDENCE_END -->
 
-Both native jobs passed in [run 37616743573](https://github.com/jasonyao486/HAICoMo/actions/runs/37616743573) from source `926255a58003723691796c2fbf1d2c7e59cfdcb2`. Local Mac DMG installation passed six scenarios and its ASAR matches the CI build. The canonical Mac application is now 0.3.2; 0.3.1 was archived before replacement. See [test provenance](TESTING-0.3.2.md).
+Both native jobs passed in [run 37616743573](https://github.com/jasonyao486/HAICoMo/actions/runs/37616743573) from source `926255a58003723691796c2fbf1d2c7e59cfdcb2`. Local Mac DMG installation passed six scenarios and its ASAR matches the CI build. Three post-install canonical Mac navigation cases also passed with isolated profiles. The canonical Mac application is now 0.3.2; 0.3.1 was archived before replacement. See [test provenance](TESTING-0.3.2.md).
+
+[0.3.2 downloads](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.2) passed [anonymous SHA-256 verification](https://github.com/jasonyao486/HAICoMo/actions/runs/37618269320). The old 0.3.1 download remains available.
 
 ## Shared behaviour and specific paths
 

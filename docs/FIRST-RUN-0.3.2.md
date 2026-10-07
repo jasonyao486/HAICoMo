@@ -5,7 +5,7 @@ This is an agent-run simulation of a stranger following the public README, not f
 | Step | Evidence / status |
 |---|---|
 | Choose correct download | README distinguishes Apple Silicon DMG, Windows x64 NSIS and source archives; unsupported architectures have no acceptance claim |
-| Download and verify | Public 0.3.2 download round trip is pending publication |
+| Download and verify | [Publication runner](https://github.com/jasonyao486/HAICoMo/actions/runs/37618269320) downloaded all three binary files and three blockmaps anonymously; all hashes matched; local public checksum-file access also passed |
 | Install Mac DMG/ZIP | DMG mounted read-only, copied, ejected, signature checked; six installed-app scenarios passed (desktop lifecycle, demo and navigation) |
 | Install Windows NSIS | Native NSIS silent install and four installed-app demo/navigation scenarios passed; consumer-desktop human check not performed |
 | First launch / change language | Four-locale Electron coverage; task manager requires no AI account |
