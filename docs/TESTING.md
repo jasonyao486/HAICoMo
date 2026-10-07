@@ -1,6 +1,6 @@
 # Testing
 
-Use [TESTING-0.3.1.md](TESTING-0.3.1.md) for the current evidence, [REVIEW-0.3.1.md](REVIEW-0.3.1.md) for scenario review, [FIRST-RUN-0.3.1.md](FIRST-RUN-0.3.1.md) for the simulated new-user journey and [COMPATIBILITY-0.3.1.md](COMPATIBILITY-0.3.1.md) for platform limits.
+Use [TESTING-0.3.3.md](TESTING-0.3.3.md) for current native-platform acceptance and [REPOSITORY-CLEANUP-0.3.3.md](REPOSITORY-CLEANUP-0.3.3.md) for documentation, screenshot and repository checks. Historical version-specific reports remain historical evidence.
 
 ```sh
 npm ci

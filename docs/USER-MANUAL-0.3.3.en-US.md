@@ -1,14 +1,14 @@
-# HAICoMo 0.3.2 — User manual (US English)
+# HAICoMo 0.3.3 — User manual (US English)
 
-This is a complete guide to version 0.3.2. Interface translations: UK English, US English, Simplified Chinese and Traditional Chinese. Examples and screenshots are synthetic. Platform evidence is recorded separately in [the compatibility report](COMPATIBILITY-0.3.2.md).
+This is a complete guide to version 0.3.3. Interface translations: UK English, US English, Simplified Chinese and Traditional Chinese. Examples and screenshots are synthetic. Platform evidence is recorded separately in [the compatibility report](TESTING-0.3.3.md).
 
 ## 1. Install and update
 
-Open [GitHub Releases](https://github.com/jasonyao486/HAICoMo/releases), choose v0.3.2 and expand Assets. Apple Silicon Mac users download the arm64 DMG; Windows x64 users download the windows-x64-setup.exe. Source-code ZIPs are not installers. Intel Mac, Windows ARM64 and Linux are not verified release targets.
+Open [GitHub Releases](https://github.com/jasonyao486/HAICoMo/releases), choose v0.3.3 and expand Assets. Apple Silicon Mac users download the arm64 DMG; Windows x64 users download the windows-x64-setup.exe. Source-code ZIPs are not installers. Intel Mac, Windows ARM64 and Linux are not verified release targets.
 
-On macOS, open the DMG, drag the app to Applications, eject the image and start the installed app. This build is ad-hoc signed and not notarized: if blocked, verify the download source and use the app-specific Open Anyway control in Privacy & Security. On Windows, run the installer and follow its steps. The unsigned package may trigger SmartScreen; check the source and checksum before proceeding. Do not disable system-wide security.
+On macOS, open the DMG, drag the app to Applications, eject the image and start the installed app. The formal package is Developer ID signed, notarized by Apple and stapled. A normal downloaded-app Open confirmation may appear; Open Anyway was not needed in fresh-account acceptance. On Windows, setup installs automatically for the current user; installation, upgrade and uninstall do not request administrator permissions. Existing machine-wide installations require separate handling. The unsigned package may trigger SmartScreen, which is separate from administrator permissions; check the source and checksum before proceeding.
 
-Task management requires no Node.js, Git or AI subscription. Background AI work requires your own installed, signed-in client. Updates are manual: stop agents, quit HAICoMo, keep project folders, and replace/reinstall the app. Settings includes Downloads and releases, GitHub feedback and a separate diagnostic export. Diagnostic export does not send anything automatically. The optional custom update-source field is for a separately configured, verified update channel; it is not needed for this release.
+Task management requires no Node.js, Git or AI subscription. Background AI work requires an installed, signed-in client. Updates are manual: stop agents, quit HAICoMo, keep project folders, and replace/reinstall the app. Settings includes Downloads and releases, GitHub feedback and a separate diagnostic export. Diagnostic export does not send anything automatically. The optional custom update-source field is for a separately configured, verified update channel; it is not needed for this release.
 
 If the first launch uses Chinese, open **设置 (Settings) → 语言 (Language)**, choose **English (UK)** or **English (US)**, then select **保存修改 (Save changes)**.
 
@@ -24,7 +24,7 @@ Move the complete folder after stopping work and quitting the app. Windows norma
 
 Create a task and enter its title, description, dates, assignees, prerequisites, handoff notes and deliverables. Choose a parent to make a subtask. Models and clients are distinct assignments; a client can use an unknown model. Human work is also supported. Saving a human edit applies it immediately; model proposals require review.
 
-Task hierarchy and dependencies cannot contain cycles. A prerequisite stays blocking until human acceptance; a parent cannot be accepted while its children remain unaccepted. “Delivered” means work awaits your review. Open each deliverable, inspect it, then accept or return the task with a reason. Changes affecting an accepted delivery can invalidate acceptance. Archive children before their parent; permanently removing an archived task is blocked while it is still referenced.
+Task hierarchy and dependencies cannot contain cycles. A prerequisite stays blocking until human acceptance; a parent cannot be accepted while its children remain unaccepted. “Delivered” means work awaits human review. Open each deliverable, inspect it, then accept or return the task with a reason. Changes affecting an accepted delivery can invalidate acceptance. Archive children before their parent; permanently removing an archived task is blocked while it is still referenced.
 
 Relative deliverable paths use `/` across platforms. Existing Windows separators are recognized. Absolute and parent-directory paths are external references and may not work after moving computers. Relocate those files in the task; HAICoMo does not silently substitute another file.
 
@@ -66,7 +66,9 @@ A relay starts once after both conditions are met. It does not accept results. C
 
 Relays require HAICoMo to be running with the project loaded. A closed tab can remain loaded in the background. Quitting or sleeping through the due time can cause a missed relay after the grace period. Check Background tasks before switching computers. The visual view shows a three-person workstation and a two-seat sofa in enhanced mode; reducing motion or hiding the view stops animation.
 
-![Relay](images/0.3.2/relay-enhanced.png)
+![Relay](images/0.3.3/relay-claude-chatgpt.png)
+
+Synthetic demonstration: a test CLI keeps Claude running at the workstation; ChatGPT sits on the sofa waiting for relay. The relay is paused and no model account is invoked.
 
 With no relays, Table view retains its empty message. Visual view shows one unoccupied workstation and sofa row, followed by the same message; it creates no relay or agent work.
 
@@ -88,7 +90,7 @@ A GitHub URL cannot be opened as a live project. Copying only the `.haicomo` ent
 
 ## 10. Settings, privacy and licenses
 
-Settings controls display name/initials, four languages, theme/accent, enhanced visuals, reduced motion, client paths and project preferences. The sidebar toggle and `version 0.3.2` are beneath the app logo. When collapsed, the switcher shows a centred 19px folder icon and Background tasks shows a matching terminal icon. Hover or focus for the control name; click to open the menu or background list. The collapse state is shared by home and project tabs in the same window. Feedback opens GitHub; sanitize all attachments yourself.
+Settings controls display name/initials, four languages, theme/accent, enhanced visuals, reduced motion, client paths and project preferences. The sidebar toggle and `version 0.3.3` are beneath the app logo. When collapsed, the switcher shows a centred 19px folder icon and Background tasks shows a matching terminal icon. Hover or focus for the control name; click to open the menu or background list. The collapse state is shared by home and project tabs in the same window. Feedback opens GitHub; sanitize all attachments before submission.
 
 Code: MIT. Characters: separately permitted non-commercial use/distribution, with ZipZipPipe attribution. Whale character: original 上善无形 → ZipZipPipe → application adaptation, CC BY-NC-SA 4.0. Environment furniture: CC BY 4.0. Third-party dependencies and logos retain their own licenses and trademark ownership. No endorsement is implied. See [asset permissions](../ASSET-LICENSES.md) and [third-party notices](../THIRD-PARTY-NOTICES.md).
 

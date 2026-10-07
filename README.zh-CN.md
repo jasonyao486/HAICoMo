@@ -4,7 +4,7 @@
 
 [English](README.md) · **简体中文**
 
-一个管理任务、人工审阅与 AI 协作的本地桌面应用。智能体提交修改提案，由你决定是否批准及何时通过交付验收。项目数据保存在你选择的工作目录中。
+一个管理项目、人工审阅与多 AI 智能体协作的本地桌面应用。智能体提交修改提案，由人类用户决定是否批准及何时通过交付验收。项目数据保存在选定的工作目录中。
 
 **0.3.3** 为 Apple Silicon Mac 与 Windows x64 预发布版本。原生平台测试与 Mac 干净账户首次打开验收见[验证记录](docs/TESTING-0.3.3.md)。
 
@@ -15,18 +15,18 @@
 1. 打开[下载与版本发布](https://github.com/jasonyao486/HAICoMo/releases)，选择 **v0.3.3**，展开 **Assets**。
 2. 按电脑类型下载。页面上的 “Source code” 是开发者源码，不是安装包。
 
-| 你的电脑 | 下载文件 |
+| 电脑系统 | 下载文件 |
 |---|---|
-| 搭载 Apple M 系列芯片的 Mac | `HAICoMo-0.3.3-arm64.dmg` |
-| 系统类型为“基于 x64 的处理器”的 Windows PC | `HAICoMo-0.3.3-windows-x64-setup.exe` |
+| 搭载 Apple M 系列芯片的 Mac | [HAICoMo-0.3.3-arm64.dmg](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.3/HAICoMo-0.3.3-arm64.dmg) |
+| 系统类型为“基于 x64 的处理器”的 Windows PC | [HAICoMo-0.3.3-windows-x64-setup.exe](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.3/HAICoMo-0.3.3-windows-x64-setup.exe) |
 | Intel Mac、Windows ARM64、Linux | 本版暂不提供已验证安装包 |
 
 Mac 在“苹果菜单 → 关于本机”查看芯片；Windows 在“设置 → 系统 → 系统信息”查看系统类型。
 
-3. **Mac：**打开 DMG，将 HAICoMo 拖到 Applications（应用程序），推出磁盘映像，再从应用程序启动。正式包已通过 Developer ID 签名、Apple 公证并附加票据；首次启动可能出现普通“打开”确认，已完成的干净账户测试无需 Open Anyway。旧的 `unnotarized` 文件保留作历史附件，请选择上表文件。
-4. **Windows：**打开 setup `.exe`，自动安装到当前用户目录并启动；安装、升级和卸载不主动请求管理员权限。本版没有发布者签名，可能出现 SmartScreen 或未知发布者提示；确认来源并核对 SHA-256 后再决定继续。单位管理的电脑可能需要管理员协助。
+3. **Mac：** 打开 DMG，将 HAICoMo 拖到 Applications（应用程序），推出磁盘映像，再从应用程序启动。正式包已通过 Developer ID 签名、Apple 公证并附加票据；首次启动可能出现普通“打开”确认，已完成的干净账户测试无需 Open Anyway。
+4. **Windows：** 打开 setup `.exe`，自动安装到当前用户目录并启动；安装、升级和卸载不主动请求管理员权限。本版没有发布者签名，可能出现 SmartScreen 或未知发布者提示，这与管理员权限不同；确认来源并核对 SHA-256 后再决定继续。单位管理的电脑可能需要管理员协助。
 5. 点击“新建项目”，选择一个空的本地文件夹，保存 `.haicomo` 入口文件。创建一个任务，再添加子任务。此过程不需要 AI 账号。
-6. 交付后，从任务中打开交付物，检查内容，再点击“通过验收”。智能体运行完成不会自动替你验收。
+6. 交付后，从任务中打开交付物，检查内容，再点击“通过验收”。智能体运行完成不会自动通过人工验收。
 
 <details>
 <summary>如何核对下载文件的 SHA-256</summary>
@@ -53,9 +53,9 @@ Get-FileHash "$HOME\Downloads\HAICoMo-0.3.3-windows-x64-setup.exe" -Algorithm SH
 
 更新采用手动下载安装：退出应用，保留项目文件夹，下载新版并替换或重新安装应用。0.3.1 之前的项目首次在新版中打开时，会先备份再迁移到 v5；早于 0.3.1 的应用不能打开已迁移项目。需要回退时，将迁移前备份恢复到空目录。
 
-完整手册：[简体中文](docs/USER-MANUAL-0.3.2.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.3.2.zh-TW.md) · [UK English](docs/USER-MANUAL-0.3.2.en-GB.md) · [US English](docs/USER-MANUAL-0.3.2.en-US.md)。
+完整手册：[简体中文](docs/USER-MANUAL-0.3.3.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.3.3.zh-TW.md) · [UK English](docs/USER-MANUAL-0.3.3.en-GB.md) · [US English](docs/USER-MANUAL-0.3.3.en-US.md)。
 
-点击 logo 返回首页，不增加标签；原项目页面与草稿保留。收起侧栏后保留正常尺寸的文件夹与终端按钮。活动摘要使用简短角色，展开详情保留完整身份。0.3.2 沿用 0.3.1 的项目格式 v5。
+点击 logo 返回首页，不增加标签；原项目页面与草稿保留。收起侧栏后保留正常尺寸的文件夹与终端按钮。活动摘要使用简短角色，展开详情保留完整身份。0.3.3 沿用 0.3.1 的项目格式 v5。
 
 ## 功能
 
@@ -105,7 +105,9 @@ Get-FileHash "$HOME\Downloads\HAICoMo-0.3.3-windows-x64-setup.exe" -Algorithm SH
 
 实验性接力在前置运行或时间条件满足后，启动一次后台交接，要求应用运行且项目保持加载。笔记与会议记录跟随项目保存。活动记录可在确认后逐条永久删除，不撤销任务操作，也不改变历史返工统计。备份及独立副本用于恢复；备份 ZIP 只包含管理数据，不包含实际交付物文件。
 
-![增强接力家具](docs/images/0.3.2/relay-enhanced.png)
+![Claude 在工位执行，ChatGPT 坐在沙发等待](docs/images/0.3.3/relay-claude-chatgpt.png)
+
+合成演示：测试 CLI 保持 Claude 运行，ChatGPT 坐在沙发等待接力。接力处于暂停状态，不会调用模型账号。
 
 `.haicomo` 入口与隐藏的 `.haicomo/` 数据目录必须一起保留。云盘或 Git 应采用本地编辑，停止运行及接力、退出应用、同步完成后再换电脑。活动 NAS 数据库与多机同时写入不受支持。不要把私人项目数据库或提示词提交到公开源码仓库。
 
@@ -136,4 +138,4 @@ npm run dev
 
 `npm test` 执行单元测试；`npm run test:e2e` 使用临时数据执行 Electron 测试；`npm run dist` 构建当前平台安装包，`npm run dist:win` 构建 Windows x64；`npm run demo -- /绝对路径/空目录` 生成演示项目。维护说明见[贡献指南](CONTRIBUTING.md)、[架构](docs/ARCHITECTURE.md)及[文件、CLI、MCP 协议](docs/PROTOCOL.md)。
 
-[前往 GitHub 反馈](https://github.com/jasonyao486/HAICoMo/issues/new/choose)。附加诊断或截图前，请删除私人路径、提示词及凭据。当前证据见[测试记录](docs/TESTING-0.3.2.md)、[应用审查](docs/REVIEW-0.3.2.md)、[首次使用报告](docs/FIRST-RUN-0.3.2.md)和[差距分析](docs/GAP-ANALYSIS.md)。
+[前往 GitHub 反馈](https://github.com/jasonyao486/HAICoMo/issues/new/choose)。附加诊断或截图前，请删除私人路径、提示词及凭据。当前证据见[0.3.3 验证记录](docs/TESTING-0.3.3.md)和[差距分析](docs/GAP-ANALYSIS.md)。

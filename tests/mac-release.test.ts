@@ -5,8 +5,33 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 // @ts-expect-error Native ESM release helpers are exercised by subprocess-free runtime tests.
-import { fileHash, isSubmissionId, submitNotarization, verifyArtifact, validateState, waitForAcceptance, requireEnvironment, withCleanup, isReleaseMaintenance } from '../scripts/mac-release-state.mjs';
+import { fileHash, isSubmissionId, submitNotarization, verifyArtifact, validateState, waitForAcceptance, requireEnvironment, withCleanup, isReleaseMaintenance, verifyPublishedMacBaseline } from '../scripts/mac-release-state.mjs';
 const id = '12345678-1234-1234-1234-123456789abc';
+test('formal baseline works without interim assets and rejects missing or modified evidence', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'haicomo-formal-baseline-'));
+  try {
+    const version = '0.3.3', reference = '1'.repeat(40), archiveSha256 = '2'.repeat(64);
+    const dmg = `HAICoMo-${version}-arm64.dmg`, zip = `HAICoMo-${version}-arm64-mac.zip`;
+    const reportFile = path.join(dir, 'mac-release-verification.json'), manifestFile = path.join(dir, 'SHA256SUMS-darwin-arm64.txt');
+    const prior: any = { version, applicationReferenceCommit: reference, buildCommit: reference, sourceCommit: reference, archiveSha256,
+      developerId: true, notarized: true, stapled: true, gatekeeper: true, notarization: { app: id, dmg: id },
+      hashes: { [dmg]: '3'.repeat(64), [zip]: '4'.repeat(64) }, firstOpen: { method: 'browser-download-fresh-macos-account', dmgSha256: '3'.repeat(64) } };
+    const reset = () => {
+      fs.writeFileSync(reportFile, JSON.stringify(prior));
+      fs.writeFileSync(manifestFile, Object.entries({ ...prior.hashes, 'mac-release-verification.json': fileHash(reportFile) }).map(([name, hash]) => `${hash}  ${name}\n`).join(''));
+    };
+    const check = () => verifyPublishedMacBaseline(dir, { archiveSha256 }, version, reference);
+    reset(); assert.equal(check().archiveSha256, archiveSha256);
+    fs.unlinkSync(reportFile); assert.throws(check); reset();
+    fs.unlinkSync(manifestFile); assert.throws(check); reset();
+    fs.appendFileSync(reportFile, ' '); assert.throws(check, /hash mismatch/); reset();
+    fs.writeFileSync(manifestFile, fs.readFileSync(manifestFile, 'utf8').replace('3'.repeat(64), '5'.repeat(64))); assert.throws(check, /baseline/); reset();
+    fs.appendFileSync(manifestFile, `${'6'.repeat(64)}  mac-release-verification.json\n`); assert.throws(check, /manifest/); reset();
+    assert.throws(() => verifyPublishedMacBaseline(dir, { archiveSha256: '7'.repeat(64) }, version, reference), /archive changed/);
+    assert.throws(() => verifyPublishedMacBaseline(dir, { archiveSha256 }, version, '8'.repeat(40)), /baseline/);
+    prior.notarized = false; reset(); assert.throws(check, /baseline/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
 test('notarization survives pending, transient disconnect and resumption without a new submission', async () => {
   const item = { id, status: 'In Progress' };
   let clock = 0, calls = 0, saved = 0;

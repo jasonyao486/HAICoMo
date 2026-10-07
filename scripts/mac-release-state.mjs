@@ -10,6 +10,32 @@ export function requireEnvironment(names, env = process.env) {
 export function fileHash(file) {
   return createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
+// An existing formal release is the source of truth after interim files retire.
+// The caller downloads both files from the same public release into a separate directory.
+export function verifyPublishedMacBaseline(directory, candidate, version, reference) {
+  const reportName = 'mac-release-verification.json';
+  const manifest = fs.readFileSync(path.join(directory, 'SHA256SUMS-darwin-arm64.txt'), 'utf8');
+  const entries = new Map();
+  for (const line of manifest.trim().split(/\r?\n/)) {
+    const match = /^([a-f0-9]{64})  ([A-Za-z0-9][A-Za-z0-9._-]*)$/.exec(line);
+    if (!match || entries.has(match[2])) throw new Error('Invalid formal Mac checksum manifest');
+    entries.set(match[2], match[1]);
+  }
+  const dmg = `HAICoMo-${version}-arm64.dmg`, zip = `HAICoMo-${version}-arm64-mac.zip`;
+  if (entries.size !== 3 || ![reportName, dmg, zip].every(name => entries.has(name))) throw new Error('Incomplete formal Mac checksum manifest');
+  const reportFile = verifyArtifact(directory, {file: reportName, sha256: entries.get(reportName)});
+  const prior = JSON.parse(fs.readFileSync(reportFile, 'utf8'));
+  if (prior.version !== version || prior.applicationReferenceCommit !== reference
+      || !/^[a-f0-9]{40}$/.test(prior.buildCommit ?? '') || prior.sourceCommit !== prior.buildCommit
+      || !/^[a-f0-9]{64}$/.test(prior.archiveSha256 ?? '')
+      || !['developerId', 'notarized', 'stapled', 'gatekeeper'].every(key => prior[key] === true)
+      || !['app', 'dmg'].every(key => isSubmissionId(prior.notarization?.[key]))
+      || ![dmg, zip].every(name => prior.hashes?.[name] === entries.get(name))
+      || prior.firstOpen?.method !== 'browser-download-fresh-macos-account'
+      || prior.firstOpen?.dmgSha256 !== entries.get(dmg)) throw new Error('Invalid formal Mac acceptance baseline');
+  if (candidate.archiveSha256 !== prior.archiveSha256) throw new Error('Application archive changed; publish a new patch version');
+  return prior;
+}
 export function saveState(file, state) {
   fs.writeFileSync(`${file}.tmp`, JSON.stringify(state, null, 2) + '\n', { mode: 0o600 });
   fs.renameSync(`${file}.tmp`, file);
