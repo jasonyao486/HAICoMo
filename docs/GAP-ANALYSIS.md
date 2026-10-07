@@ -11,7 +11,7 @@
 | 监控 | 有状态、权限应答、失联/未知、可观测时长 | runner 生命周期、后台任务、`office-updates.test.ts`、`tabs.spec.ts` | 全量对话流、跨客户端统一工具轨迹、可靠成本核算、外部运行的可信身份未实现 |
 | 交接 | 人工交接和实验性一步接力 | `relay.test.ts`、`v030.test.ts`、`v030.spec.ts`；启动前认领、失败/错过不重发 | OS 常驻服务、关机/休眠唤醒调度、条件分支、多步工作流、可证明的外部幂等执行 |
 | 跨机协作 | 关闭应用后的完整目录搬运可行 | 身份/epoch、锁接管、路径规范、备份恢复测试 | 同时在线编辑、冲突合并、分布式锁/事务、远程 runner 均未实现 |
-| 发布与维护 | 当前代码、公开素材清单、四语手册、原生双平台 CI 已配置 | `verify.yml`、素材校验脚本、公开 README、平台报告 | 签名、公证、真实 Windows 桌面验收及更广系统覆盖按报告逐项完成 |
+| 发布与维护 | 公开源码、四语手册、双平台 CI 与预发布下载已完成 | [0.3.1 预发布](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.1)、[原生 CI](https://github.com/jasonyao486/HAICoMo/actions/runs/37602609681)、[公开下载校验](https://github.com/jasonyao486/HAICoMo/actions/runs/37604601688)、素材清单 | 签名、公证、真实 Windows 桌面验收及更广系统覆盖仍待完成 |
 
 ## 三类壁垒
 

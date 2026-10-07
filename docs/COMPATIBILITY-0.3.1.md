@@ -22,11 +22,13 @@ The Mac package's minimum version metadata is 13.0. This is not evidence of runn
 | Local macOS 27.0 ARM64 | Passed, 75 unit tests | Source and packaged 19/19 passed | DMG/ZIP and ad-hoc integrity passed | Agent-assisted screenshot and isolated installation checks; no independent human tester |
 | GitHub macOS 15.7.9 ARM64 | Passed, 75 unit tests | Source 19/19; packaged 19/19 | DMG and ZIP built; contents/hashes passed | Not performed by a person |
 | GitHub Windows Server 2025 x64 | Passed, 73 unit tests; 2 Mac-only tests skipped | Source 19/19; packaged 19/19; installed demo passed | NSIS `.exe` built, silently installed and content-checked | Not performed by a person |
-| Windows 10/11 consumer desktop | Not performed | Not performed here | x64 pre-release available after publication | Required checklist below |
+| Windows 10/11 consumer desktop | Not performed | Not performed here | x64 pre-release published; consumer-desktop acceptance remains open | Required checklist below |
 
 Both CI jobs passed in [run 37602609681](https://github.com/jasonyao486/HAICoMo/actions/runs/37602609681), using source `5893593fe4c56d40226a2eab8a4186c725fa7819` and Node 24.21.0. The same 86-file artwork manifest passed on both platforms. Packaged and installed Windows ASAR hashes match. The first public release has no previous public NSIS version against which to claim a completed upgrade test.
 
 Local Mac acceptance used an installer rebuilt from the same source, with an ASAR hash identical to CI, and disposable profiles. Public download integrity is checked separately by the publishing workflow. A browser-quarantined install and every Gatekeeper/SmartScreen prompt have not been manually exercised by an independent tester.
+
+The [0.3.1 pre-release](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.1) is public. [Publication verification](https://github.com/jasonyao486/HAICoMo/actions/runs/37604601688) downloaded every installer/archive and blockmap anonymously and matched its SHA-256. The local canonical Mac application was updated to 0.3.1 after retaining a verified archive of 0.3.0; this replacement did not open or migrate real user projects.
 <!-- PLATFORM_EVIDENCE_END -->
 
 ## Shared behaviour and specific paths
