@@ -36,9 +36,15 @@ Stop agent runs, pause pending relays, exit HAICoMo, retain the full project dir
 
 GitHub Releases and Issues are fixed allowlisted destinations in Settings. No project is uploaded automatically. The optional custom updater remains unconfigured in this channel. Checks must report “not configured” rather than “up to date” when no source is set.
 
-## Signing and later automatic installation
+## Signing and installation
 
-The Mac package uses ad-hoc signing; Windows has no publisher certificate. Users may see operating-system security prompts. Do not instruct users to disable system protection globally. Developer ID, hardened runtime/entitlements, notarisation and Windows signing, followed by actual signed replacement/rollback tests, are future requirements for a trusted automatic-install channel. A loopback updater fixture is not that validation.
+Trusted main-branch builds run `scripts/release-mac.mjs`; PR builds have no signing secrets and cannot be published. Required repository secrets are `CSC_LINK` (base64 encrypted PKCS#12), `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_TEAM_ID`, and `APPLE_APP_SPECIFIC_PASSWORD`. Export only the Developer ID Application identity. Never commit or print secret values. App-specific passwords are created by the account owner in Apple's account UI.
+
+The Mac job imports the identity into an ephemeral keychain, signs and notarizes the App, checks the ZIP, signs/notarizes/staples the DMG and verifies Gatekeeper. The temporary keychain and exported identity are removed even on failure. Checksums are generated after final stapling. Differential metadata for the modified DMG is omitted because this is a manual-download channel.
+
+Windows uses a one-click current-user installer under LocalAppData with `asInvoker`, no elevation helper, and user-level file associations. Existing per-machine installations are left alone; uninstalling those old installations may independently require an administrator. The CI creates a disposable non-admin user to verify install, desktop behavior, reinstall, data retention and uninstall. No real projects are used.
+
+Publication requires matching Mac signature/notarization evidence and Windows non-admin evidence bound to the exact final installer hashes. Windows remains unsigned, so SmartScreen can still prompt. Automatic installation and rollback remain separate future work.
 
 ## Release checklist
 

@@ -49,6 +49,8 @@ jobs:
           test -f verified/haicomo-$HAICOMO_VERSION-mac-arm64/HAICoMo-$HAICOMO_VERSION-arm64.dmg
           test -f verified/haicomo-$HAICOMO_VERSION-mac-arm64/HAICoMo-$HAICOMO_VERSION-arm64-mac.zip
           test -f verified/haicomo-$HAICOMO_VERSION-windows-x64/HAICoMo-$HAICOMO_VERSION-windows-x64-setup.exe
+      - name: Require signed Mac and standard-user Windows evidence
+        run: node scripts/check-release-evidence.mjs verified "$SOURCE_SHA"
       - name: Publish verified version as a pre-release
         shell: bash
         run: |
@@ -57,7 +59,7 @@ jobs:
             exit 1
           fi
           gh release create v$HAICOMO_VERSION --draft --prerelease --target "$SOURCE_SHA" --title "HAICoMo $HAICOMO_VERSION preview" --notes-file docs/RELEASE-NOTES-$HAICOMO_VERSION.md
-          gh release upload v$HAICOMO_VERSION verified/*/*.dmg verified/*/*.zip verified/*/*.exe verified/*/*.blockmap verified/*/SHA256SUMS*.txt
+          gh release upload v$HAICOMO_VERSION verified/*/*.dmg verified/*/*.zip verified/*/*.exe verified/*/*.blockmap verified/*/*-verification.json verified/*/SHA256SUMS*.txt
           gh release edit v$HAICOMO_VERSION --draft=false --prerelease
       - name: Verify anonymous public downloads
         shell: bash

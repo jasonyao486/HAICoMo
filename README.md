@@ -1,5 +1,7 @@
 # HAICoMo
 
+> 0.3.3 packaging work: signed/notarized Mac releases and Windows current-user installation. Validation and publication are pending; see [release notes](docs/RELEASE-NOTES-0.3.3.md).
+
 **English** · [简体中文](README.zh-CN.md)
 
 A local desktop workspace for tasks, human review and AI collaboration. Agents propose changes; you decide what to approve and when a delivery is accepted. Project data stays in your chosen working directory.

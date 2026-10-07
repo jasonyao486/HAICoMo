@@ -40,3 +40,13 @@ The final user addition also requires an unoccupied relay preview when no relays
 | NAV-02 | Hidden drafts guarded on close/update; compatible home restore | v032 unit/Electron and update-safety two-window test |
 | AUDIT-03 | Short roles, explicit identity only, full details unchanged | v032 unit/Electron: legacy snapshots, long names, unknown models, record equality |
 | RELEASE-03 | Version-derived build, CI, scan and publishing paths | package output macro and ci-version; native verification required before publish |
+
+## 0.3.3 installation and release
+
+| ID | Requirement | Evidence/status |
+| --- | --- | --- |
+| MAC-033 | Developer ID, hardened runtime, notarization, stapling and Gatekeeper required for release | Implemented release gate; native acceptance pending |
+| WIN-033 | Current-user install/run/reinstall/uninstall without elevation | One-click per-user installer and non-admin CI test; execution pending |
+| PRIV-033 | No signing credentials in Git or release attachments | Expanded ignore/scanning rules; regression tests passed; release scan pending |
+
+See [0.3.3 verification](TESTING-0.3.3.md). Existing acceptance evidence is not retroactively changed.

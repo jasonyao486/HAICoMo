@@ -1,0 +1,16 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { createHash } from 'node:crypto';
+const [directory, sourceCommit] = process.argv.slice(2);
+if (!directory || !/^[a-f0-9]{40}$/.test(sourceCommit ?? '')) throw new Error('Verified directory and source commit required');
+const { version } = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const mac = path.join(directory, `haicomo-${version}-mac-arm64`);
+const windows = path.join(directory, `haicomo-${version}-windows-x64`);
+const m = JSON.parse(fs.readFileSync(path.join(mac, 'mac-release-verification.json'), 'utf8'));
+const w = JSON.parse(fs.readFileSync(path.join(windows, 'windows-user-verification.json'), 'utf8'));
+if (m.version !== version || m.sourceCommit !== sourceCommit || !['developerId', 'notarized', 'stapled', 'gatekeeper'].every(key => m[key] === true)) throw new Error('Mac signing verification is missing or mismatched');
+const hash = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+for (const name of [`HAICoMo-${version}-arm64.dmg`, `HAICoMo-${version}-arm64-mac.zip`]) if (hash(path.join(mac, name)) !== m.hashes?.[name]) throw new Error('Mac verified file differs from release file');
+if (w.version !== version || w.result !== 'passed' || w.admin !== false || !['protectedWriteDenied', 'install', 'launch', 'reinstall', 'uninstall', 'retainedData'].every(key => w[key] === true)) throw new Error('Windows standard-user verification is missing');
+if (hash(path.join(windows, `HAICoMo-${version}-windows-x64-setup.exe`)) !== w.installerSha256) throw new Error('Windows verified installer differs from release file');
+console.log('Both release artifacts match their platform acceptance evidence.');

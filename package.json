@@ -1,6 +1,6 @@
 {
   "name": "haicomo",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
   "description": "A local workspace for human–AI collaboration",
   "author": "HAICoMo",
@@ -86,11 +86,17 @@
           ]
         }
       ],
-      "artifactName": "HAICoMo-${version}-windows-${arch}-setup.${ext}"
+      "artifactName": "HAICoMo-${version}-windows-${arch}-setup.${ext}",
+      "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "packElevateHelper": false,
+      "allowToChangeInstallationDirectory": false,
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh"
     },
     "linux": {
       "target": "AppImage",

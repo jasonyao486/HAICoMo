@@ -70,3 +70,15 @@ scripts/prepare-release.mts
 *.webm
 private/
 local-reference/
+
+# Signing identities, notarization credentials and local keychains
+*.p8
+*.cer
+*.crt
+*.csr
+*.certSigningRequest
+*.keychain
+*.keychain-db
+*.provisionprofile
+.signing/
+signing.local.*

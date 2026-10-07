@@ -20,7 +20,7 @@ jobs:
             platform: windows
             arch: x64
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 35
+    timeout-minutes: 60
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
@@ -38,9 +38,18 @@ jobs:
       - run: npm run build
       - run: npx playwright test
         timeout-minutes: 10
-      - name: Package macOS ARM64
-        if: runner.os == 'macOS'
+      - name: Package unsigned macOS PR validation
+        if: runner.os == 'macOS' && github.event_name == 'pull_request'
         run: npx electron-builder --mac --arm64 --publish never
+      - name: Sign and notarize macOS release
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: node scripts/release-mac.mjs
       - name: Package Windows x64
         if: runner.os == 'Windows'
         run: npx electron-builder --win --x64 --publish never
@@ -74,6 +83,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npx playwright test tests/e2e/v031.spec.ts tests/e2e/v032.spec.ts
           exit $LASTEXITCODE
+      - name: Verify installation with a real standard-user token
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/test-windows-user-install.ps1
       - name: Package checksums
         run: node scripts/package-checksums.mjs
       - uses: actions/upload-artifact@v4
@@ -85,6 +98,7 @@ jobs:
             release/${{ env.HAICOMO_VERSION }}/*.zip
             release/${{ env.HAICOMO_VERSION }}/*.exe
             release/${{ env.HAICOMO_VERSION }}/*.blockmap
+            release/${{ env.HAICOMO_VERSION }}/*-verification.json
             release/${{ env.HAICOMO_VERSION }}/SHA256SUMS*.txt
           if-no-files-found: error
           retention-days: 14
