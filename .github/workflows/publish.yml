@@ -36,7 +36,7 @@ jobs:
           for (const name of ['desktop (macos-15, mac, arm64)', 'desktop (windows-2025, windows, x64)'])
             if (!jobs.some(job => job.name === name && job.conclusion === 'success')) throw new Error(`Missing success: ${name}`);
           execFileSync('git', ['fetch', 'origin', run.head_sha]);
-          execFileSync('git', ['diff', '--exit-code', run.head_sha, 'HEAD', '--', '.', ':!docs', ':!README.md', ':!README.zh-CN.md', ':!.github/workflows/publish.yml']);
+          execFileSync('git', ['diff', '--exit-code', run.head_sha, 'HEAD', '--', '.', ':!docs', ':!README.md', ':!README.zh-CN.md', ':!.github/workflows/publish.yml', ':!.github/workflows/notarization-status.yml']);
           fs.appendFileSync(process.env.GITHUB_ENV, `SOURCE_SHA=${run.head_sha}\n`);
           NODE
       - name: Download verified installers and check their hashes

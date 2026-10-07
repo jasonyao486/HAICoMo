@@ -1,0 +1,27 @@
+name: Inspect HAICoMo notarization status
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  status:
+    runs-on: macos-15
+    timeout-minutes: 5
+    steps:
+      - name: Read only HAICoMo submissions
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          result = subprocess.run(['xcrun', 'notarytool', 'history', '--apple-id', os.environ['APPLE_ID'], '--team-id', os.environ['APPLE_TEAM_ID'], '--password', os.environ['APPLE_APP_SPECIFIC_PASSWORD'], '--output-format', 'json'], capture_output=True, text=True, timeout=180)
+          if result.returncode:
+              raise SystemExit('Apple notarization status could not be read; credentials and raw response are not logged.')
+          data = json.loads(result.stdout)
+          rows = [{key: item.get(key) for key in ['id', 'name', 'status', 'createdDate']} for item in data.get('history', []) if item.get('name', '').startswith('HAICoMo')]
+          print(json.dumps(rows, indent=2))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as output:
+              output.write('### HAICoMo notarization submissions\n\n```json\n' + json.dumps(rows, indent=2) + '\n```\n')
+          PY
