@@ -99,6 +99,11 @@ test("single window tabs retain drafts, route background permissions and keep cl
     errors: string[] = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   try {
+    // At the minimum supported window size the editor overlaps the menu footprint.
+    // Switching must remain clickable and retain drafts without force-clicking.
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].setSize(1000, 720);
+    });
     for (const dir of dirs) {
       await emitOpen(app, path.join(dir, "HAICoMo.haicomo"));
       await expect(
@@ -526,7 +531,7 @@ test("deleted entry stays missing in recents; same-directory recreation has new 
   }
 });
 
-test("moving open projects preserves drafts; hidden offices pause and native close respects save or cancel", async () => {
+test("project moves respect platform locks; hidden offices pause and native close respects save or cancel", async () => {
   const { root, dirs, fake } = fixture();
   fs.mkdirSync(path.join(root, "profile"));
   fs.writeFileSync(
@@ -591,6 +596,12 @@ test("moving open projects preserves drafts; hidden offices pause and native clo
       .fill("Keep after move");
     const moved = path.join(root, "搬家 路径"),
       renamed = path.join(moved, "重命名.haicomo");
+    if (process.platform === "win32") {
+      expect(() => fs.renameSync(dirs[0], moved)).toThrow(/EPERM|EBUSY|EACCES/);
+      await closeTab(page);
+      await page.getByRole("alertdialog").getByRole("button", { name: "保存修改", exact: true }).click();
+      await expect.poll(() => fs.existsSync(path.join(dirs[0], ".haicomo/writer.lock"))).toBe(false);
+    }
     fs.renameSync(dirs[0], moved);
     fs.renameSync(path.join(moved, "HAICoMo.haicomo"), renamed);
     await emitOpen(app, renamed);
@@ -601,6 +612,9 @@ test("moving open projects preserves drafts; hidden offices pause and native clo
         ).projects.some((p: any) => p.entryPath === fs.realpathSync(renamed)),
       )
       .toBe(true);
+    if (process.platform === "win32") {
+      await current(page).getByRole("button", { name: "Keep after move", exact: true }).click();
+    }
     await expect(current(page).getByLabel("标题", { exact: true })).toHaveValue(
       "Keep after move",
     );
@@ -612,8 +626,12 @@ test("moving open projects preserves drafts; hidden offices pause and native clo
       .poll(() => readSnapshot(moved).tasks[0].title)
       .toBe("Keep after move");
     const movedAgain = path.join(root, "二次移动");
+    if (process.platform === "win32") {
+      await closeTab(page);
+      await expect.poll(() => fs.existsSync(path.join(moved, ".haicomo/writer.lock"))).toBe(false);
+    }
     fs.renameSync(moved, movedAgain);
-    await closeTab(page);
+    if (process.platform !== "win32") await closeTab(page);
     await emitOpen(app, path.join(movedAgain, "重命名.haicomo"));
     await expect(
       current(page).getByRole("heading", { name: "Alpha", exact: true }),

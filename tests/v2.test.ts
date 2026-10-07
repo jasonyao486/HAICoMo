@@ -1,3 +1,4 @@
+import { temporaryDirectory, beforeRemove } from "./temp-directory";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -22,9 +23,7 @@ import { shiftSchedule } from "../src/shared/schedule";
 import { legacyPreview } from "../src/core/legacy";
 
 function setup(t: any) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-v2-"));
-  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
-  return dir;
+  return temporaryDirectory(t, "haicomo-v2-");
 }
 function legacyProject(dir: string) {
   const store = new ProjectStore(dir, "Migration");
@@ -55,7 +54,7 @@ test("v1 migration backs up and keeps project identity, revisions and immutable 
     path.join(dir, ".haicomo/inbox", `${p.proposalId}.json`),
   );
   const store = new ProjectStore(dir);
-  t.after(() => store.close());
+  beforeRemove(t, () => store.close());
   assert.equal(store.state().schemaVersion, 5);
   assert.equal(store.state().id, original.id);
   assert.equal(store.state().revision, original.revision);
@@ -104,7 +103,7 @@ test("failed backup leaves v1 intact; interrupted manifest publication resumes c
     fs.renameSync = rename;
   }
   const store = new ProjectStore(dir);
-  t.after(() => store.close());
+  beforeRemove(t, () => store.close());
   assert.equal(store.state().schemaVersion, 5);
   assert.equal(
     JSON.parse(
@@ -121,7 +120,7 @@ test("failed backup leaves v1 intact; interrupted manifest publication resumes c
 test("client assignment, unknown model aggregation and model discovery preserve separate identities", (t) => {
   const dir = setup(t),
     store = new ProjectStore(dir, "Clients");
-  t.after(() => store.close());
+  beforeRemove(t, () => store.close());
   assert.equal(inferFamily("unannounced-provider-model"), null);
   assert.equal(inferFamily("claude-sonnet-4-6"), "claude");
   const p = exampleProposal(store.state());
@@ -164,7 +163,7 @@ test("client assignment, unknown model aggregation and model discovery preserve 
 test("incremental scans do not reread unchanged payloads and detect tampering; counts use receipts", (t) => {
   const dir = setup(t),
     store = new ProjectStore(dir, "Inbox");
-  t.after(() => store.close());
+  beforeRemove(t, () => store.close());
   const p = exampleProposal(store.state());
   publishProposal(dir, p);
   assert.equal(collaborationStatus(dir).awaitingReceipt, 1);
@@ -181,7 +180,7 @@ test("incremental scans do not reread unchanged payloads and detect tampering; c
   const read = fs.readFileSync;
   try {
     fs.readFileSync = ((f: any, ...args: any[]) => {
-      if (String(f).includes("/inbox/")) reads++;
+      if (String(f).split(path.sep).includes("inbox")) reads++;
       return (read as any)(f, ...args);
     }) as any;
     store.ingest();
@@ -199,7 +198,7 @@ test("incremental scans do not reread unchanged payloads and detect tampering; c
 test("proposal filters paginate all history and metrics are independent of the current page", (t) => {
   const dir = setup(t),
     store = new ProjectStore(dir, "Pages");
-  t.after(() => store.close());
+  beforeRemove(t, () => store.close());
   for (let i = 0; i < 65; i++) {
     const p = exampleProposal(store.state());
     p.actor = { name: "Pi reviewer", harnessId: "pi" };
@@ -228,7 +227,7 @@ test("proposal filters paginate all history and metrics are independent of the c
 test("schedule edits preserve acceptance and still guard revision; dates work beyond two years", (t) => {
   const dir = setup(t),
     store = new ProjectStore(dir, "Schedule");
-  t.after(() => store.close());
+  beforeRemove(t, () => store.close());
   store.command({
     id: randomUUID(),
     type: "change",
@@ -284,7 +283,7 @@ test("schedule edits preserve acceptance and still guard revision; dates work be
 test("merged legacy projects preserve cross-project dependencies and their source mapping", (t) => {
   const dir = setup(t),
     store = new ProjectStore(dir, "Import");
-  t.after(() => store.close());
+  beforeRemove(t, () => store.close());
   const file = path.join(dir, "legacy.json");
   fs.writeFileSync(
     file,

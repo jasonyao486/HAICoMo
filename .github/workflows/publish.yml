@@ -1,0 +1,60 @@
+name: Publish verified preview
+on:
+  workflow_dispatch:
+    inputs:
+      verification_run:
+        description: Successful Verify and package run ID
+        type: string
+        required: true
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERIFY_RUN_ID: ${{ inputs.verification_run }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require both native platforms from this source
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          const id = process.env.VERIFY_RUN_ID;
+          if (!/^\d+$/.test(id)) throw new Error('Invalid run ID');
+          const api = route => JSON.parse(execFileSync('gh', ['api', `repos/${process.env.GH_REPO}/${route}`], { encoding: 'utf8' }));
+          const run = api(`actions/runs/${id}`);
+          if (run.conclusion !== 'success' || run.head_branch !== 'main' || run.path !== '.github/workflows/verify.yml')
+            throw new Error('A successful main-branch verification run is required');
+          const jobs = api(`actions/runs/${id}/jobs`).jobs;
+          for (const name of ['desktop (macos-15, mac, arm64)', 'desktop (windows-2025, windows, x64)'])
+            if (!jobs.some(job => job.name === name && job.conclusion === 'success')) throw new Error(`Missing success: ${name}`);
+          execFileSync('git', ['fetch', 'origin', run.head_sha]);
+          execFileSync('git', ['diff', '--exit-code', run.head_sha, 'HEAD', '--', '.', ':!docs', ':!README.md', ':!README.zh-CN.md']);
+          fs.appendFileSync(process.env.GITHUB_ENV, `SOURCE_SHA=${run.head_sha}\n`);
+          NODE
+      - name: Download verified installers and check their hashes
+        shell: bash
+        run: |
+          gh run download "$VERIFY_RUN_ID" -p 'haicomo-0.3.1-*' -D verified
+          for checksum in verified/*/SHA256SUMS*.txt; do
+            (cd "$(dirname "$checksum")" && sha256sum -c "$(basename "$checksum")")
+          done
+          test -f verified/haicomo-0.3.1-mac-arm64/HAICoMo-0.3.1-arm64.dmg
+          test -f verified/haicomo-0.3.1-mac-arm64/HAICoMo-0.3.1-arm64-mac.zip
+          test -f verified/haicomo-0.3.1-windows-x64/HAICoMo-0.3.1-windows-x64-setup.exe
+      - name: Publish 0.3.1 as a pre-release
+        shell: bash
+        run: |
+          if gh release view v0.3.1 >/dev/null 2>&1; then
+            echo 'The release already exists; inspect it before retrying.' >&2
+            exit 1
+          fi
+          gh release create v0.3.1 --draft --prerelease --target "$SOURCE_SHA" --title 'HAICoMo 0.3.1 preview' --notes-file docs/RELEASE-NOTES-0.3.1.md
+          gh release upload v0.3.1 verified/*/*.dmg verified/*/*.zip verified/*/*.exe verified/*/SHA256SUMS*.txt
+          gh release edit v0.3.1 --draft=false --prerelease

@@ -1764,6 +1764,10 @@ legend {
 .tab-picker {
   position: relative;
 }
+/* A menu must escape the sidebar's stacking context while a tab retains an editor. */
+.sidebar:has(.tab-menu) {
+  z-index: 500;
+}
 .tab-menu {
   position: absolute;
   top: 48px;

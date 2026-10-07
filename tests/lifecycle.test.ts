@@ -1,3 +1,4 @@
+import { temporaryDirectory, beforeRemove } from "./temp-directory";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -22,11 +23,7 @@ import {
 import { ProjectStore } from "../src/core/store";
 import { aggregateFamily } from "../src/shared/domain";
 function setup(t: any) {
-  const dir = fs.realpathSync(
-    fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-lifecycle-")),
-  );
-  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
-  return dir;
+  return temporaryDirectory(t, "haicomo-lifecycle-");
 }
 test("deleted entry cannot open/read/submit or mutate a cached store; fresh creation retains recoverable data", (t) => {
   const dir = setup(t),
@@ -128,9 +125,19 @@ test("closing a moved database releases only its own lock, and reopening preserv
   fs.mkdirSync(directory);
   const store = new ProjectStore(directory, "Moved while open"),
     id = store.state().id;
-  fs.renameSync(directory, moved);
-  assert.throws(() => new ProjectStore(moved), /PROJECT_LOCKED/);
-  store.close();
+  beforeRemove(t, () => { try { store.close(); } catch {} });
+  if (process.platform === "win32") {
+    // Windows refuses to move an open SQLite directory. Verify both the refusal
+    // and the supported workflow: close first, then move the complete project.
+    assert.throws(() => fs.renameSync(directory, moved), /EPERM|EBUSY|EACCES/);
+    assert.equal(store.state().id, id);
+    store.close();
+    fs.renameSync(directory, moved);
+  } else {
+    fs.renameSync(directory, moved);
+    assert.throws(() => new ProjectStore(moved), /PROJECT_LOCKED/);
+    store.close();
+  }
   const reopened = new ProjectStore(moved);
   assert.equal(reopened.state().id, id);
   assert.throws(() => new ProjectStore(moved), /PROJECT_LOCKED/);
@@ -228,7 +235,7 @@ test("v3 migration preserves legacy unknown outcomes, while future lost runs sta
     JSON.stringify({ ...manifest, schemaVersion: 2 }),
   );
   const next = new ProjectStore(dir);
-  t.after(() => {
+  beforeRemove(t, () => {
     try {
       next.close();
     } catch {}

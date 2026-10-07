@@ -7,6 +7,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import { pathToFileURL } from "node:url";
 import { zipSync } from "fflate";
 import { ProjectStore, restoreZip } from "../src/core/store";
 import {
@@ -31,7 +32,7 @@ function setup(t: any) {
 test("a process killed inside a transaction leaves no partial project or audit", async (t) => {
   const { dir, store } = setup(t);
   store.close();
-  const script = `import {ProjectStore} from ${JSON.stringify(path.resolve("src/core/store.ts"))};const s=new ProjectStore(${JSON.stringify(dir)});s.db.exec('BEGIN IMMEDIATE');const state=s.state();state.title='Uncommitted';s.db.prepare('UPDATE project SET json=? WHERE id=1').run(JSON.stringify(state));s.db.prepare('INSERT INTO audit(json) VALUES(?)').run('{}');process.stdout.write('inside-transaction\\n');setInterval(()=>{},1000);`;
+  const script = `import {ProjectStore} from ${JSON.stringify(pathToFileURL(path.resolve("src/core/store.ts")).href)};const s=new ProjectStore(${JSON.stringify(dir)});s.db.exec('BEGIN IMMEDIATE');const state=s.state();state.title='Uncommitted';s.db.prepare('UPDATE project SET json=? WHERE id=1').run(JSON.stringify(state));s.db.prepare('INSERT INTO audit(json) VALUES(?)').run('{}');process.stdout.write('inside-transaction\\n');setInterval(()=>{},1000);`;
   const child = spawn(
     process.execPath,
     ["--import", "tsx", "--input-type=module", "-e", script],

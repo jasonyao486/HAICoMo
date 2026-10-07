@@ -1,3 +1,4 @@
+import { temporaryDirectory, beforeRemove } from "./temp-directory";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -14,13 +15,11 @@ import { resolveArtifactPath } from "../src/core/artifact-path";
 import { dictionaries } from "../src/ui/i18n";
 
 function setup(t: any) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-031-"));
-  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
-  return dir;
+  return temporaryDirectory(t, "haicomo-v031-");
 }
 test("permanent audit deletion preserves entities and historical return statistics across reopen, backup and fork", t => {
   const dir = setup(t); let store = new ProjectStore(dir, "Audit example");
-  t.after(() => { try { store.close(); } catch {} });
+  beforeRemove(t, () => { try { store.close(); } catch {} });
   const command = (type: string, payload: unknown) => store.command({ id: randomUUID(), type, payload });
   const taskId = randomUUID();
   command("change", { entity: "task", operation: "create", id: taskId, expectedRevision: null, values: { title: "Delivery" } });

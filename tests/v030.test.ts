@@ -1,3 +1,4 @@
+import { temporaryDirectory, beforeRemove } from "./temp-directory";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -12,9 +13,7 @@ import { errorData } from "../src/shared/errors";
 import { formatDuration, dictionaries } from "../src/ui/i18n";
 
 function setup(t: any) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-030 "));
-  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
-  return dir;
+  return temporaryDirectory(t, "haicomo-v030-");
 }
 test("projects get Git hygiene files once and a lock left by another computer needs explicit takeover", (t) => {
   const dir = setup(t);
@@ -39,7 +38,7 @@ test("projects get Git hygiene files once and a lock left by another computer ne
   const lock = ProjectStore.takeoverForeignLock(dir);
   assert.equal(lock.hostname, "other-computer");
   store = new ProjectStore(dir);
-  t.after(() => { try { store.close(); } catch {} });
+  beforeRemove(t, () => { try { store.close(); } catch {} });
   store.auditLockTakeover(lock, "Jason");
   const audit = store.queryAudit().items.find((a) => a.action === "project.lock.takeover")!;
   assert.equal((audit.before as any).hostname, "other-computer");
@@ -52,7 +51,7 @@ test("projects get Git hygiene files once and a lock left by another computer ne
 test("in-flight runner telemetry defers the snapshot write; commands, history and close flush immediately", async (t) => {
   const dir = setup(t);
   const store = new ProjectStore(dir, "Telemetry");
-  t.after(() => { try { store.close(); } catch {} });
+  beforeRemove(t, () => { try { store.close(); } catch {} });
   const taskId = randomUUID();
   store.command({ id: randomUUID(), type: "change", payload: { entity: "task", operation: "create", id: taskId, expectedRevision: null, values: { title: "Run", assignees: ["claude"] } } });
   const base = store.state().revision;

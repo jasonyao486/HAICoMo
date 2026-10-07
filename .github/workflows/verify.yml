@@ -35,8 +35,10 @@ jobs:
       - run: npm run check:public
       - run: npm run typecheck
       - run: npm test
+        timeout-minutes: 5
       - run: npm run build
       - run: npx playwright test
+        timeout-minutes: 10
       - name: Package macOS ARM64
         if: runner.os == 'macOS'
         run: npx electron-builder --mac --arm64 --publish never
@@ -48,10 +50,26 @@ jobs:
         run: |
           if [[ "$RUNNER_OS" == "macOS" ]]; then
             export HAICOMO_PACKAGED_EXECUTABLE="$PWD/release/0.3.1/mac-arm64/HAICoMo.app/Contents/MacOS/HAICoMo"
+            node scripts/check-package.mjs release/0.3.1/mac-arm64/HAICoMo.app/Contents/Resources
           else
             export HAICOMO_PACKAGED_EXECUTABLE="$PWD/release/0.3.1/win-unpacked/HAICoMo.exe"
+            node scripts/check-package.mjs release/0.3.1/win-unpacked/resources
           fi
           npx playwright test
+      - name: Install Windows package into an isolated directory
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = (Get-Item release/0.3.1/*-setup.exe).FullName
+          $installDirectory = Join-Path $env:RUNNER_TEMP 'HAICoMo-install-check'
+          $process = Start-Process -FilePath $installer -ArgumentList @('/S', "/D=$installDirectory") -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Installer exit code: $($process.ExitCode)" }
+          $env:HAICOMO_PACKAGED_EXECUTABLE = Join-Path $installDirectory 'HAICoMo.exe'
+          if (!(Test-Path $env:HAICOMO_PACKAGED_EXECUTABLE)) { throw 'Installed executable is missing' }
+          node scripts/check-package.mjs (Join-Path $installDirectory 'resources')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npx playwright test tests/e2e/v031.spec.ts
+          exit $LASTEXITCODE
       - name: Package checksums
         run: node scripts/package-checksums.mjs
       - uses: actions/upload-artifact@v4
