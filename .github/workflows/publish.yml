@@ -35,7 +35,7 @@ jobs:
           for (const name of ['desktop (macos-15, mac, arm64)', 'desktop (windows-2025, windows, x64)'])
             if (!jobs.some(job => job.name === name && job.conclusion === 'success')) throw new Error(`Missing success: ${name}`);
           execFileSync('git', ['fetch', 'origin', run.head_sha]);
-          execFileSync('git', ['diff', '--exit-code', run.head_sha, 'HEAD', '--', '.', ':!docs', ':!README.md', ':!README.zh-CN.md']);
+          execFileSync('git', ['diff', '--exit-code', run.head_sha, 'HEAD', '--', '.', ':!docs', ':!README.md', ':!README.zh-CN.md', ':!.github/workflows/publish.yml']);
           fs.appendFileSync(process.env.GITHUB_ENV, `SOURCE_SHA=${run.head_sha}\n`);
           NODE
       - name: Download verified installers and check their hashes
@@ -56,5 +56,18 @@ jobs:
             exit 1
           fi
           gh release create v0.3.1 --draft --prerelease --target "$SOURCE_SHA" --title 'HAICoMo 0.3.1 preview' --notes-file docs/RELEASE-NOTES-0.3.1.md
-          gh release upload v0.3.1 verified/*/*.dmg verified/*/*.zip verified/*/*.exe verified/*/SHA256SUMS*.txt
+          gh release upload v0.3.1 verified/*/*.dmg verified/*/*.zip verified/*/*.exe verified/*/*.blockmap verified/*/SHA256SUMS*.txt
           gh release edit v0.3.1 --draft=false --prerelease
+      - name: Verify anonymous public downloads
+        shell: bash
+        run: |
+          mkdir public-downloads
+          cd public-downloads
+          base="https://github.com/$GH_REPO/releases/download/v0.3.1"
+          for manifest in SHA256SUMS-darwin-arm64.txt SHA256SUMS-win32-x64.txt; do
+            curl --fail --location --retry 5 --retry-all-errors --retry-delay 3 "$base/$manifest" -o "$manifest"
+            while read -r hash name; do
+              curl --fail --location --retry 5 --retry-all-errors --retry-delay 3 "$base/$name" -o "$name"
+            done < "$manifest"
+            sha256sum -c "$manifest"
+          done
