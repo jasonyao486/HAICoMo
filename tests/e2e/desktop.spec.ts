@@ -210,6 +210,13 @@ test("real desktop: create, edit, accept, concurrent proposal review, windows, v
   }
 });
 test("project entries reopen persisted data and distinct projects remain isolated", async () => {
+  const mark = (stage: string) => {
+    const evidence = process.env.HAICOMO_EVIDENCE_DIR;
+    if (!evidence) return;
+    fs.mkdirSync(evidence, { recursive: true });
+    fs.appendFileSync(path.join(evidence, "entry-lifecycle.jsonl"), JSON.stringify({ stage, node: process.versions.node, packaged: Boolean(process.env.HAICOMO_PACKAGED_EXECUTABLE) }) + "\n");
+  };
+  mark("start");
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-entry-"));
   const first = path.join(root, "原始"),
     other = path.join(root, "独立");
@@ -219,9 +226,12 @@ test("project entries reopen persisted data and distinct projects remain isolate
     [first, "First project"],
     [other, "Independent project"],
   ]) {
+    mark(`create ${title}`);
     const store = new ProjectStore(directory, title);
     store.close();
+    mark(`closed ${title}`);
   }
+  mark("launch");
   const app = await electron.launch({
     ...(process.env.HAICOMO_PACKAGED_EXECUTABLE
       ? {
@@ -235,8 +245,10 @@ test("project entries reopen persisted data and distinct projects remain isolate
       HAICOMO_USER_DATA: path.join(root, "profile"),
     },
   });
+  mark("launched");
   try {
     const page = await app.firstWindow();
+    mark("window ready");
     await expect(
       page.getByRole("heading", { name: "First project", exact: true }),
     ).toBeVisible();
@@ -245,8 +257,10 @@ test("project entries reopen persisted data and distinct projects remain isolate
       other,
     );
     expect(view.state.title).toBe("Independent project");
+    mark("independent opened");
     const duplicate = path.join(root, "外部复制");
     fs.cpSync(first, duplicate, { recursive: true });
+    mark("copied");
     const error = await page.evaluate(async (directory) => {
       try {
         await window.haicomo.request("project.open", { directory });
@@ -256,14 +270,19 @@ test("project entries reopen persisted data and distinct projects remain isolate
       }
     }, duplicate);
     expect(error).toContain("DUPLICATE_PROJECT");
+    mark("duplicate rejected");
     const firstAgain = await page.evaluate(
       (directory) => window.haicomo.request("project.open", { directory }),
       first,
     );
     expect(firstAgain.state.title).toBe("First project");
     expect(firstAgain.state.id).not.toBe(view.state.id);
+    mark("original reopened");
   } finally {
+    mark("closing app");
     await app.close();
+    mark("removing directory");
     await removeTestDirectory(root);
+    mark("complete");
   }
 });
