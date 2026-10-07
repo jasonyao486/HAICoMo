@@ -73,3 +73,12 @@ See [Windows functional evidence and limitations](TESTING-WINDOWS-2026-10-07.md)
 | QUIT-034 | Wait for database shutdown acknowledgement before terminating its process | Windows main CI 37669497273 exposed a retained writer lock. A recovered worker fixture delaying shutdown by 2 seconds reproduces the old 1.5-second forced-exit failure; after removing that premature kill and guarding re-entrant quit, the same desktop scenario passes three independent local runs |
 | TEST-WIN-PROCESS | Observe and clean up only the test-owned terminal, retaining primary failure diagnostics | The same CI trace revealed a WMI observation timeout hidden by directory cleanup failure. Native Toolhelp snapshots replace WMI; cleanup locates the owned child even after assertion failure and terminates its console tree. Three independent local runs passed without changing assertion timeout |
 | TABS-RESTORE-034 | Keyboard navigation uses the current restored tab list even before passive effects replace a listener | Mac CI 37671811094 exposed all restored pages becoming hidden after Ctrl+Tab. Retaining and invoking the initial keyboard callback reproduces the same failure on Windows before the fix; reading the existing current-tabs ref fixes the stale closure. Native and retained-callback forward/reverse navigation remain asserted |
+
+## 0.3.4 Windows installation and publication
+
+| ID | Requirement | Evidence/status |
+| --- | --- | --- |
+| WIN-034 | Install the accepted Windows artifact locally before publishing the identical bytes | Main CI 37675096047 passed all Windows gates; current-user 0.3.3 upgrade and version/shortcut/association checks passed locally, preserving all 58 existing profile-file hashes. Installed desktop suite 25/25, background handoff 3/3 and real Codex file/resume/cancel passed |
+| PUB-034 | Keep historical downloads and separate platform recommendations | Publication 37677874919 passed; anonymous downloads match installed SHA-256, and all 8 v0.3.3 attachments retain names/sizes/digests. Windows recommendation is 0.3.4; signed/notarised Mac remains 0.3.3 |
+
+See [0.3.4 Windows acceptance, failure analysis and screenshot](TESTING-0.3.4-WINDOWS.md). Remaining provider limitations and unobserved native mouse interactions remain explicit.

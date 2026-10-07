@@ -1,24 +1,24 @@
 # HAICoMo
 
-> [0.3.3 预览版](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.3)：Apple Silicon Mac 提供正式签名公证版，Windows 仅当前用户安装、无需提权。见[发布说明](docs/RELEASE-NOTES-0.3.3.md)。
+> Windows x64 推荐 [0.3.4 预览版](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.4)，修复客户端识别、终端和 Codex 取消；Apple Silicon Mac 继续使用[已签名公证的 0.3.3](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.3)。见 [Windows 发布说明](docs/RELEASE-NOTES-0.3.4.md)。
 
 [English](README.md) · **简体中文**
 
 一个管理项目、人工审阅与多 AI 智能体协作的本地桌面应用。智能体提交修改提案，由人类用户决定是否批准及何时通过交付验收。项目数据保存在选定的工作目录中。
 
-**0.3.3** 为 Apple Silicon Mac 与 Windows x64 预发布版本。原生平台测试与 Mac 干净账户首次打开验收见[验证记录](docs/TESTING-0.3.3.md)。
+当前推荐预览版为 **Windows x64 0.3.4** 和 **Apple Silicon Mac 0.3.3**。见 [Windows 升级验证](docs/TESTING-0.3.4-WINDOWS.md)与 [Mac 0.3.3 验证记录](docs/TESTING-0.3.3.md)。旧 Windows 安装包保留供回退使用。
 
 ## 安装与开始使用
 
 使用任务管理功能不需要安装 Node.js、Git，也不需要购买模型订阅。
 
-1. 打开[下载与版本发布](https://github.com/jasonyao486/HAICoMo/releases)，选择 **v0.3.3**，展开 **Assets**。
+1. 打开[下载与版本发布](https://github.com/jasonyao486/HAICoMo/releases)，Windows 选择 **v0.3.4**，Mac 选择 **v0.3.3**，展开 **Assets**。
 2. 按电脑类型下载。页面上的 “Source code” 是开发者源码，不是安装包。
 
 | 电脑系统 | 下载文件 |
 |---|---|
 | 搭载 Apple M 系列芯片的 Mac | [HAICoMo-0.3.3-arm64.dmg](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.3/HAICoMo-0.3.3-arm64.dmg) |
-| 系统类型为“基于 x64 的处理器”的 Windows PC | [HAICoMo-0.3.3-windows-x64-setup.exe](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.3/HAICoMo-0.3.3-windows-x64-setup.exe) |
+| 系统类型为“基于 x64 的处理器”的 Windows PC | [HAICoMo-0.3.4-windows-x64-setup.exe](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.4/HAICoMo-0.3.4-windows-x64-setup.exe) |
 | Intel Mac、Windows ARM64、Linux | 本版暂不提供已验证安装包 |
 
 Mac 在“苹果菜单 → 关于本机”查看芯片；Windows 在“设置 → 系统 → 系统信息”查看系统类型。
@@ -42,20 +42,20 @@ shasum -a 256 ~/Downloads/HAICoMo-0.3.3-arm64.dmg
 Windows：打开 PowerShell 运行：
 
 ```powershell
-Get-FileHash "$HOME\Downloads\HAICoMo-0.3.3-windows-x64-setup.exe" -Algorithm SHA256
+Get-FileHash "$HOME\Downloads\HAICoMo-0.3.4-windows-x64-setup.exe" -Algorithm SHA256
 ```
 
 校验值用于确认下载完整性，不等同于发布者签名。
 
 </details>
 
-需要 AI 协作时，自行安装并登录相应客户端，然后在“设置 → 本地智能体 → 检测”查看能力。Codex、Claude Code 支持后台交接；其他列出的客户端使用前台或文件协作。HAICoMo 不提供订阅，也不会自动转用另行收费的 API。
+需要 AI 协作时，自行安装并登录相应客户端，然后在“设置 → 本地智能体 → 检测”查看能力。Codex、Claude Code 支持后台交接；其他列出的客户端使用前台或文件协作。当前 Claude 适配无法在 HAICoMo 内批准交互写入权限，也不能可靠确认取消结束，详见 [Windows 功能验证](docs/TESTING-WINDOWS-2026-10-07.md)。HAICoMo 不提供订阅，也不会自动转用另行收费的 API。
 
 更新采用手动下载安装：退出应用，保留项目文件夹，下载新版并替换或重新安装应用。0.3.1 之前的项目首次在新版中打开时，会先备份再迁移到 v5；早于 0.3.1 的应用不能打开已迁移项目。需要回退时，将迁移前备份恢复到空目录。
 
 完整手册：[简体中文](docs/USER-MANUAL-0.3.3.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.3.3.zh-TW.md) · [UK English](docs/USER-MANUAL-0.3.3.en-GB.md) · [US English](docs/USER-MANUAL-0.3.3.en-US.md)。
 
-点击 logo 返回首页，不增加标签；原项目页面与草稿保留。收起侧栏后保留正常尺寸的文件夹与终端按钮。活动摘要使用简短角色，展开详情保留完整身份。0.3.3 沿用 0.3.1 的项目格式 v5。
+点击 logo 返回首页，不增加标签；原项目页面与草稿保留。收起侧栏后保留正常尺寸的文件夹与终端按钮。活动摘要使用简短角色，展开详情保留完整身份。0.3.3 和 0.3.4 沿用 0.3.1 的项目格式 v5。
 
 ## 功能
 

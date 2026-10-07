@@ -1,24 +1,24 @@
 # HAICoMo
 
-> [0.3.3 preview](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.3): signed and notarised Apple Silicon Mac downloads, plus Windows current-user installation without elevation. See [release notes](docs/RELEASE-NOTES-0.3.3.md).
+> Windows x64: [0.3.4 preview](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.4), with client discovery, terminal and Codex cancellation fixes. Apple Silicon Mac: [signed and notarised 0.3.3](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.3). See [Windows release notes](docs/RELEASE-NOTES-0.3.4.md).
 
 **English** · [简体中文](README.zh-CN.md)
 
 A local desktop app for project management, human review, and collaboration with multiple AI agents. Agents propose changes; human users approve proposals and accept deliveries. Project data stays in the selected working directory.
 
-Version **0.3.3** is a pre-release for Apple Silicon Mac and Windows x64. See the [verification report](docs/TESTING-0.3.3.md) for the native tests and fresh-account Mac first-open acceptance.
+Recommended previews are **0.3.4 for Windows x64** and **0.3.3 for Apple Silicon Mac**. See [Windows upgrade verification](docs/TESTING-0.3.4-WINDOWS.md) and the [Mac 0.3.3 verification report](docs/TESTING-0.3.3.md). Historical Windows downloads remain available for rollback.
 
 ## Install and start
 
 Task management requires no Node.js, Git or model subscription.
 
-1. Open [Downloads and releases](https://github.com/jasonyao486/HAICoMo/releases). Select **v0.3.3**, then expand **Assets**.
+1. Open [Downloads and releases](https://github.com/jasonyao486/HAICoMo/releases). Select **v0.3.4 for Windows** or **v0.3.3 for Mac**, then expand **Assets**.
 2. Choose the installer below. The “Source code” archives are for developers, not installers.
 
 | Computer system | Download |
 |---|---|
 | Mac with an Apple M-series chip | [HAICoMo-0.3.3-arm64.dmg](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.3/HAICoMo-0.3.3-arm64.dmg) |
-| Windows PC, System type “x64-based processor” | [HAICoMo-0.3.3-windows-x64-setup.exe](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.3/HAICoMo-0.3.3-windows-x64-setup.exe) |
+| Windows PC, System type “x64-based processor” | [HAICoMo-0.3.4-windows-x64-setup.exe](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.4/HAICoMo-0.3.4-windows-x64-setup.exe) |
 | Intel Mac, Windows ARM64 or Linux | No verified installer in this release |
 
 On a Mac, find the chip under **Apple menu → About This Mac**. On Windows, open **Settings → System → About → System type**.
@@ -42,18 +42,18 @@ shasum -a 256 ~/Downloads/HAICoMo-0.3.3-arm64.dmg
 Windows — open PowerShell:
 
 ```powershell
-Get-FileHash "$HOME\Downloads\HAICoMo-0.3.3-windows-x64-setup.exe" -Algorithm SHA256
+Get-FileHash "$HOME\Downloads\HAICoMo-0.3.4-windows-x64-setup.exe" -Algorithm SHA256
 ```
 
 The hash checks the download's integrity; it is not a publisher signature.
 
 </details>
 
-For AI collaboration, install and sign into a supported client. **Settings → Local agents → Detect** checks what is available. Codex and Claude Code support background handoff; other listed clients use foreground/file collaboration. HAICoMo does not provide subscriptions or switch to paid APIs.
+For AI collaboration, install and sign into a supported client. **Settings → Local agents → Detect** checks what is available. Codex and Claude Code support background handoff; other listed clients use foreground/file collaboration. Claude's current adapter cannot approve interactive write permissions inside HAICoMo or reliably confirm cancellation; see the [Windows functional evidence](docs/TESTING-WINDOWS-2026-10-07.md). HAICoMo does not provide subscriptions or switch to paid APIs.
 
 Updates are manual: quit HAICoMo, keep project folders, download the next release and replace/reinstall the application. Opening a pre-0.3.1 project migrates it to schema v5 after creating a backup. Older apps cannot reopen the migrated project; restore the pre-migration backup to an empty folder when reverting.
 
-Clicking the logo returns home without adding a tab. Project pages and drafts stay open. The collapsed sidebar keeps folder and terminal controls at their normal size. Activity summaries show short roles; expanded details retain full attribution. Version 0.3.3 uses the same v5 project format as 0.3.1.
+Clicking the logo returns home without adding a tab. Project pages and drafts stay open. The collapsed sidebar keeps folder and terminal controls at their normal size. Activity summaries show short roles; expanded details retain full attribution. Versions 0.3.3 and 0.3.4 use the same v5 project format as 0.3.1.
 
 Full manuals: [UK English](docs/USER-MANUAL-0.3.3.en-GB.md) · [US English](docs/USER-MANUAL-0.3.3.en-US.md) · [简体中文](docs/USER-MANUAL-0.3.3.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.3.3.zh-TW.md).
 
