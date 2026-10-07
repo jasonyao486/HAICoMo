@@ -8,6 +8,14 @@
 - Added GitHub Releases and Issues links, MIT source licensing, separate asset permissions and dependency notices.
 - Added a curated asset build, native Mac ARM64/Windows x64 CI, bilingual README, four complete manuals and synthetic application screenshots.
 
+Choose the file in **Assets** for your computer:
+
+- Apple Silicon Mac: `HAICoMo-0.3.1-arm64.dmg` (recommended) or `HAICoMo-0.3.1-arm64-mac.zip`.
+- Windows x64: `HAICoMo-0.3.1-windows-x64-setup.exe`.
+- Intel Mac, Windows ARM64 and Linux: no verified installer in this release.
+
+Installation steps: [English](https://github.com/jasonyao486/HAICoMo#install-and-start) · [简体中文](https://github.com/jasonyao486/HAICoMo/blob/main/README.zh-CN.md). The SHA256SUMS text files let you check download integrity. GitHub's source archives and `.blockmap` files are not installers.
+
 Downloads are manual. Mac packages are ad-hoc signed and not notarised; Windows has no publisher signature. Windows human desktop acceptance remains pending. See the [platform report](https://github.com/jasonyao486/HAICoMo/blob/main/docs/COMPATIBILITY-0.3.1.md) and [test evidence](https://github.com/jasonyao486/HAICoMo/blob/main/docs/TESTING-0.3.1.md).
 
 Keep the `.haicomo` entry, hidden data directory and actual deliverables together when moving projects. Stop work and exit before syncing. Live NAS databases and simultaneous multi-computer editing are not supported. Do not reopen a migrated v5 database with an older application; restore its pre-migration ZIP to an empty folder instead.

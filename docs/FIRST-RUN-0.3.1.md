@@ -23,6 +23,8 @@ This is a **simulated new-user test**, conducted with disposable project folders
 
 Final native package, clean-clone and public download outcomes are recorded in [TESTING-0.3.1.md](TESTING-0.3.1.md) and [COMPATIBILITY-0.3.1.md](COMPATIBILITY-0.3.1.md). A packaged executable launch is not counted as a human clicking through Windows NSIS, SmartScreen, file associations or uninstall. Those require the Windows desktop checklist.
 
+Windows CI built a complete NSIS installer, installed it silently into an isolated directory, checked the installed contents and passed the 0.3.1 demo against the installed executable. The local Mac simulation used a rebuilt DMG from the verified source with an ASAR hash identical to CI: read-only mount, application copy, eject, signature/content checks and fresh-profile desktop use. Public downloads are verified separately in the release workflow. This is a combined, reproducible simulation rather than one novice's uninterrupted browser-to-desktop session.
+
 ## Friction found and addressed
 
 - The initial interface can use Chinese: the English installation steps include the exact Chinese labels for switching language before creating a project.
