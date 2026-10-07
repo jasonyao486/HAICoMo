@@ -45,17 +45,22 @@ jobs:
       - name: Package Windows x64
         if: runner.os == 'Windows'
         run: npx electron-builder --win --x64 --publish never
-      - name: Test packaged application
+      - name: Test packaged macOS application
+        if: runner.os == 'macOS'
         shell: bash
         run: |
-          if [[ "$RUNNER_OS" == "macOS" ]]; then
-            export HAICOMO_PACKAGED_EXECUTABLE="$PWD/release/0.3.1/mac-arm64/HAICoMo.app/Contents/MacOS/HAICoMo"
-            node scripts/check-package.mjs release/0.3.1/mac-arm64/HAICoMo.app/Contents/Resources
-          else
-            export HAICOMO_PACKAGED_EXECUTABLE="$PWD/release/0.3.1/win-unpacked/HAICoMo.exe"
-            node scripts/check-package.mjs release/0.3.1/win-unpacked/resources
-          fi
+          export HAICOMO_PACKAGED_EXECUTABLE="$PWD/release/0.3.1/mac-arm64/HAICoMo.app/Contents/MacOS/HAICoMo"
+          node scripts/check-package.mjs release/0.3.1/mac-arm64/HAICoMo.app/Contents/Resources
           npx playwright test
+      - name: Test packaged Windows application
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:HAICOMO_PACKAGED_EXECUTABLE = (Resolve-Path release/0.3.1/win-unpacked/HAICoMo.exe).Path
+          node scripts/check-package.mjs release/0.3.1/win-unpacked/resources
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npx playwright test
+          exit $LASTEXITCODE
       - name: Install Windows package into an isolated directory
         if: runner.os == 'Windows'
         shell: pwsh

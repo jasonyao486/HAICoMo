@@ -16,8 +16,10 @@ const excluded = /(^|\/)(?:validation|handoff|legacy|public|\.haicomo|\.haicomo-
 // Require key material after a PEM header: libraries legitimately contain header literals.
 const secrets = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----\r?\n[A-Za-z0-9+/=]{32,}|\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-[A-Za-z0-9_-]{32,})\b/;
 for (const name of listPackage(archive)) {
-  const file = name.replace(/^[\\/]/, '').replaceAll('\\', '/');
-  const stat = statFile(archive, file);
+  // asar traverses using the host's path separator; normalise only for manifest comparisons.
+  const nativeFile = name.replace(/^[\\/]/, '');
+  const file = nativeFile.replaceAll('\\', '/');
+  const stat = statFile(archive, nativeFile, false);
   if (stat.files) continue;
   checkedFiles++;
   const dependency = file.startsWith('node_modules/');
@@ -25,12 +27,12 @@ for (const name of listPackage(archive)) {
   if (file.startsWith('dist/local-assets/')) {
     runtimeAssets++;
     const entry = expected.get(file);
-    if (!entry || stat.link || sha256(extractFile(archive, file)) !== entry.sha256)
+    if (!entry || stat.link || sha256(extractFile(archive, nativeFile)) !== entry.sha256)
       errors.push(`${file}: runtime allowlist/hash mismatch`);
     expected.delete(file);
   }
   if (/\.(?:[cm]?js|ts|json|html|css|md|txt|pem|key)$/i.test(file) && !stat.link) {
-    const text = extractFile(archive, file).toString('utf8');
+    const text = extractFile(archive, nativeFile).toString('utf8');
     if (secrets.test(text)) errors.push(`${file}: credential pattern`);
     if (!dependency && /\/Users\/(?!example\/|user\/|name\/|runner\/)[A-Za-z0-9._-]+\//.test(text))
       errors.push(`${file}: personal absolute path`);
