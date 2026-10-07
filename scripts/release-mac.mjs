@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { fileHash, requireEnvironment, saveState, validateState, verifyArtifact, waitForAcceptance, withCleanup } from './mac-release-state.mjs';
+import { fileHash, isSubmissionId, requireEnvironment, saveState, submitNotarization, validateState, verifyArtifact, waitForAcceptance, withCleanup } from './mac-release-state.mjs';
 import { assertApplicationSource } from './check-release-source.mjs';
 
 const command = process.argv[2];
@@ -71,7 +71,7 @@ function apple(action, args) {
   const result = spawnSync('xcrun', ['notarytool', action, ...args, '--apple-id', process.env.APPLE_ID, '--team-id', process.env.APPLE_TEAM_ID, '--password', process.env.APPLE_APP_SPECIFIC_PASSWORD, '--output-format', 'json'], { encoding: 'utf8', timeout: action === 'submit' ? 900_000 : 120_000, maxBuffer: 8 * 1024 * 1024 });
   let data;
   try { data = JSON.parse(result.stdout); } catch {}
-  if (action === 'submit' && /^[a-f0-9-]{36}$/i.test(data?.id ?? '')) return data;
+  if (action === 'submit' && isSubmissionId(data?.id)) return data;
   if (result.status !== 0 || !data) throw new Error('Apple service request failed; credentials and raw responses are not logged');
   return data;
 }
@@ -79,11 +79,22 @@ async function submit(kind) {
   const item = state[kind];
   const file = verifyArtifact(checkpoint, item);
   if (item.id) { console.log(`${kind}: using saved submission ${item.id}`); return; }
-  const response = apple('submit', [file, '--no-wait']);
-  if (!/^[a-f0-9-]{36}$/i.test(response.id ?? '')) throw new Error('Apple did not return a submission ID');
-  item.id = response.id;
-  item.status = 'In Progress';
-  save();
+  requireEnvironment(['APPLE_ID', 'APPLE_TEAM_ID', 'APPLE_APP_SPECIFIC_PASSWORD']);
+  await submitNotarization(item, {
+    submit: () => apple('submit', [file, '--no-wait']), save,
+    recover: async pending => {
+      const history = apple('history', []).history;
+      if (!Array.isArray(history)) throw new Error('Unexpected Apple submission history');
+      const candidates = history.filter(entry => isSubmissionId(entry.id) && entry.name === pending.file && Date.parse(entry.createdDate) >= Date.parse(pending.submissionStartedAt) - 60_000);
+      for (const entry of candidates.slice(0, 20)) {
+        // Logs may not exist while processing. Never expose Apple's raw log.
+        try {
+          const log = apple('log', [entry.id]);
+          if (log.jobId === entry.id && log.sha256 === pending.sha256) return log;
+        } catch {}
+      }
+    },
+  });
   console.log(`${kind}: submission ${item.id} saved`);
 }
 async function staple(file) {
@@ -169,6 +180,7 @@ async function main() {
       const copy = path.join(unpack, 'HAICoMo.app');
       signature(copy, true);
       run('xcrun', ['stapler', 'validate', copy]);
+      run('spctl', ['--assess', '--type', 'execute', '--verbose=2', copy]);
       if (fileHash(path.join(copy, 'Contents/Resources/app.asar')) !== state.archiveSha256) throw new Error('ZIP application differs from verified app');
     } finally { fs.rmSync(unpack, { recursive: true, force: true }); }
     for (const name of fs.readdirSync(root)) if (name.endsWith('.blockmap') || /^latest.*\.ya?ml$/.test(name)) fs.unlinkSync(path.join(root, name));

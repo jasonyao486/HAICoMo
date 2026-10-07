@@ -45,8 +45,10 @@ The final user addition also requires an unoccupied relay preview when no relays
 
 | ID | Requirement | Evidence/status |
 | --- | --- | --- |
-| MAC-033 | Developer ID, hardened runtime, notarization, stapling and Gatekeeper required for release | Apple accepted the CI App/DMG submissions; final notarized artifact acceptance incomplete. Owner-approved signed/unnotarized interim build passed 22 local packaged tests; Gatekeeper acceptance not claimed |
+| MAC-033 | Developer ID, hardened runtime, notarization, stapling and Gatekeeper required for release | Formal native run 37648181888 passed signature, App/DMG notarization, tickets, Gatekeeper and all 22 final packaged tests. Owner confirmed fresh-account browser download, first launch and project reopening without Open Anyway on 2026-10-07 |
 | WIN-033 | Current-user install/run/reinstall/uninstall without elevation | Passed native Windows CI with a real non-admin token, upgrade/reinstall/uninstall and retained-data checks |
 | PRIV-033 | No signing credentials in Git or release attachments | Expanded ignore/scanning rules and regression tests passed; Windows and interim Mac package scans passed |
+| REC-033 | Recover notarization without changing saved candidate bytes or duplicating known submissions | Persisted checkpoints/IDs, source and SHA-256 validation, bounded waits and main-only recovery; pending, disconnect, rejection, tampering, missing credential and cleanup regression scenarios passed |
+| PUB-033 | Supplement existing release only with matching application inputs and platform acceptance | Fixed v0.3.3 tag plus actual build commit and archive comparison; exact first-open DMG hash gate; retain and anonymously recheck existing Windows hashes |
 
 See [0.3.3 verification](TESTING-0.3.3.md). Existing acceptance evidence is not retroactively changed.

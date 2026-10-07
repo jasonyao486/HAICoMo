@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
+export const isSubmissionId = value => /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value ?? '');
 export function requireEnvironment(names, env = process.env) {
   const missing = names.filter(name => !env[name]);
   if (missing.length) throw new Error(`Missing release secrets: ${missing.join(', ')}`);
@@ -24,10 +25,30 @@ export function validateState(state, version) {
   for (const key of ['app', 'dmg']) {
     const item = state[key];
     if (!item) continue;
-    if (item.id && !/^[a-f0-9-]{36}$/i.test(item.id)) throw new Error('Invalid notarization submission ID');
+    if (item.id && !isSubmissionId(item.id)) throw new Error('Invalid notarization submission ID');
     if (!['Prepared', 'In Progress', 'Accepted', 'Invalid', 'Rejected'].includes(item.status)) throw new Error('Invalid notarization status');
   }
   return state;
+}
+// Persist the attempt before upload. A lost response is not permission to submit
+// again: recover only when Apple's log proves the exact uploaded file hash.
+export async function submitNotarization(item, { submit, recover, save, now = () => new Date().toISOString() }) {
+  if (item.id) return;
+  let response;
+  if (item.submissionStartedAt) {
+    response = await recover(item);
+    if (!response || !isSubmissionId(response.jobId) || response.sha256 !== item.sha256) throw new Error('Apple upload outcome unknown; preserve the candidate and retry status recovery');
+    response = { id: response.jobId };
+  } else {
+    item.submissionStartedAt = now();
+    save();
+    try { response = await submit(); }
+    catch { throw new Error('Apple upload response unavailable; resume status recovery without resubmitting'); }
+  }
+  if (!isSubmissionId(response?.id)) throw new Error('Apple did not return a valid submission ID; resume status recovery');
+  item.id = response.id;
+  item.status = 'In Progress';
+  save();
 }
 export async function waitForAcceptance(item, { info, save, sleep = ms => new Promise(resolve => setTimeout(resolve, ms)), now = Date.now, timeoutMs = 60 * 60 * 1000, intervalMs = 60_000 }) {
   if (!item.id) throw new Error('Submission ID required; do not resubmit a known submission');

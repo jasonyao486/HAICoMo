@@ -15,7 +15,7 @@ if (!artifacts.some(a => a.name === name)) throw new Error('Saved Mac candidate 
 const destination = path.resolve(`release/${version}/mac-checkpoint`);
 fs.mkdirSync(destination, { recursive: true });
 execFileSync('gh', ['run', 'download', id, '-n', name, '-D', destination], { stdio: 'inherit' });
-const progress = artifacts.filter(a => a.name.startsWith(`mac-progress-${version}-`)).sort((a,b) => b.created_at.localeCompare(a.created_at))[0];
+const progress = ['final', 'submit-dmg', 'submit-app'].map(stage => artifacts.find(a => a.name === `mac-progress-${version}-${stage}`)).find(Boolean);
 if (progress) {
   fs.rmSync(path.join(destination, 'state.json'), { force: true });
   execFileSync('gh', ['run', 'download', id, '-n', progress.name, '-D', destination], { stdio: 'inherit' });

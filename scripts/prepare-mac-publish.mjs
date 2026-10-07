@@ -9,7 +9,7 @@ const api = route => JSON.parse(gh(['api', `repos/${process.env.GH_REPO}/${route
 const id = process.env.VERIFY_RUN_ID;
 if (!/^\d+$/.test(id ?? '')) throw new Error('Invalid verification run ID');
 const run = api(`actions/runs/${id}`);
-if (run.conclusion !== 'success' || run.head_branch !== 'main' || !['push','workflow_dispatch'].includes(run.event) || run.path !== '.github/workflows/verify.yml') throw new Error('Successful trusted main verification required');
+if (run.conclusion !== 'success' || run.head_branch !== 'main' || !['push','workflow_dispatch'].includes(run.event) || run.path !== '.github/workflows/verify.yml' || run.head_repository?.full_name !== process.env.GH_REPO) throw new Error('Successful trusted main verification required');
 const jobs = api(`actions/runs/${id}/jobs`).jobs;
 if (!jobs.some(j => j.name === 'desktop (macos-15, mac, arm64)' && j.conclusion === 'success')) throw new Error('Mac native verification missing');
 execFileSync('git', ['fetch','origin',run.head_sha]);
@@ -30,6 +30,7 @@ if (hasRelease) {
   if (release.isDraft) throw new Error('Existing release must be public before supplementation');
   reference = execFileSync('git',['rev-parse',`${tag}^{commit}`],{encoding:'utf8'}).trim();
   assertApplicationSource(reference,run.head_sha);
+  assertApplicationSource(reference,report.buildCommit);
   const names = [`HAICoMo-${version}-windows-x64-setup.exe`,`HAICoMo-${version}-windows-x64-setup.exe.blockmap`,'windows-user-verification.json','SHA256SUMS-win32-x64.txt'];
   for (const name of names) gh(['release','download',tag,'-p',name,'-D',windows]);
   fs.writeFileSync('windows-before.json',JSON.stringify(Object.fromEntries(names.map(name=>[name,fileHash(path.join(windows,name))]))));

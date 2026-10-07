@@ -1,12 +1,12 @@
 # HAICoMo
 
-> [0.3.3 Windows preview](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.3) is available: current-user installation without elevation. Mac 0.3.3 is available as a signed, unnotarized interim build; see [release notes](docs/RELEASE-NOTES-0.3.3.md).
+> [0.3.3 preview](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.3): signed and notarised Apple Silicon Mac downloads, plus Windows current-user installation without elevation. See [release notes](docs/RELEASE-NOTES-0.3.3.md).
 
 **English** · [简体中文](README.zh-CN.md)
 
 A local desktop workspace for tasks, human review and AI collaboration. Agents propose changes; you decide what to approve and when a delivery is accepted. Project data stays in your chosen working directory.
 
-Version **0.3.3** is a pre-release for Apple Silicon Mac and Windows x64. See the [verification report](docs/TESTING-0.3.3.md) for what has actually been tested and the outstanding Mac notarization acceptance.
+Version **0.3.3** is a pre-release for Apple Silicon Mac and Windows x64. See the [verification report](docs/TESTING-0.3.3.md) for the native tests and fresh-account Mac first-open acceptance.
 
 ## Install and start
 
@@ -17,13 +17,13 @@ You do not need Node.js, Git or a model subscription to use the task manager.
 
 | Your computer | Download |
 |---|---|
-| Mac with an Apple M-series chip | `HAICoMo-0.3.3-arm64-unnotarized.dmg` |
+| Mac with an Apple M-series chip | `HAICoMo-0.3.3-arm64.dmg` |
 | Windows PC, System type “x64-based processor” | `HAICoMo-0.3.3-windows-x64-setup.exe` |
 | Intel Mac, Windows ARM64 or Linux | No verified installer in this release |
 
 On a Mac, find the chip under **Apple menu → About This Mac**. On Windows, open **Settings → System → About → System type**.
 
-3. **Mac:** open the DMG, drag HAICoMo into Applications, eject the disk image, then open HAICoMo from Applications. This interim release has a Developer ID signature but is not notarised. If macOS blocks it, confirm you downloaded this release, then use the app-specific **Open Anyway** option in **System Settings → Privacy & Security**. Do not disable Gatekeeper globally.
+3. **Mac:** open the DMG, drag HAICoMo into Applications, eject the disk image, then open HAICoMo from Applications. The formal package has Developer ID signing, Apple notarisation and stapled tickets. A normal downloaded-app **Open** confirmation may appear; **Open Anyway** is not required in the verified fresh-account test. The older `unnotarized` files remain historical attachments; choose the filename above.
 4. **Windows:** open the setup `.exe`, installation is automatic for your current user, then launch HAICoMo. Installation, upgrade and uninstall do not request elevation. This release is unsigned and Windows may show a publisher/SmartScreen warning. Check the source and supplied SHA-256 before choosing to continue; managed computers may require administrator approval.
 5. If the app opens in Chinese, first choose **设置 (Settings) → 语言 (Language) → English (UK) → 保存修改 (Save changes)**. Select **New project**, choose an empty local folder and save the `.haicomo` entry. Add a task and a subtask. No AI account is required for this step.
 6. When a delivery is ready, open its file from the task, inspect it, then choose **Accept delivery**. Agent completion alone does not accept work.
@@ -31,12 +31,12 @@ On a Mac, find the chip under **Apple menu → About This Mac**. On Windows, ope
 <details>
 <summary>Check a download's SHA-256</summary>
 
-Download the matching `SHA256SUMS-darwin-arm64-unnotarized.txt` or `SHA256SUMS-win32-x64.txt` from the same release. Keep the installer's filename unchanged. If it is in Downloads, run the corresponding command below and compare the full hash with the line naming that installer in the text file. Letter case does not matter. If the values differ, download again before installing.
+Download the matching `SHA256SUMS-darwin-arm64.txt` or `SHA256SUMS-win32-x64.txt` from the same release. Keep the installer's filename unchanged. If it is in Downloads, run the corresponding command below and compare the full hash with the line naming that installer in the text file. Letter case does not matter. If the values differ, download again before installing.
 
 Mac — open Terminal:
 
 ```sh
-shasum -a 256 ~/Downloads/HAICoMo-0.3.3-arm64-unnotarized.dmg
+shasum -a 256 ~/Downloads/HAICoMo-0.3.3-arm64.dmg
 ```
 
 Windows — open PowerShell:

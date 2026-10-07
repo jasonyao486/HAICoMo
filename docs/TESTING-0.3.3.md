@@ -1,6 +1,6 @@
 # 0.3.3 verification
 
-Status: Windows native acceptance passed; Apple accepted the CI App and DMG submissions, but final notarized artifact validation remains incomplete. Windows was published separately at the owner’s request. A signed but unnotarized Mac interim build is provided separately from the formal notarized acceptance.
+Status: Windows native acceptance and formal Mac native verification passed. The owner confirmed fresh-account browser download, first launch and project reopening without Open Anyway on 2026-10-07. Formal Mac publication/download verification is in progress; earlier intermediate results below are retained as history.
 
 - Local type checking and 79 unit tests passed on Node 24.12.0; native CI uses the required Node 24.21.0.
 - Developer ID identity creation and encrypted GitHub signing-secret setup completed. Account-specific values are intentionally omitted.
@@ -33,3 +33,16 @@ At 2026-10-07 14:34 UTC, [Apple status inspection](https://github.com/jasonyao48
 ## Formal Mac completion in progress
 
 The release job now persists signed candidates separately from notarization progress, including submission IDs and input hashes. Main-only resumption validates source compatibility and exact saved bytes. Local type checking, 84 unit tests (including five release recovery tests) and all 22 desktop tests passed. The permission-routing test now distinguishes the fixture CLI turn handshake from subsequent permission delivery and records protocol method names/statuses on startup failure; it retains the original permission assertions. Formal Mac publication remains blocked pending native candidate verification and fresh-account browser first-open acceptance of its exact DMG hash.
+
+Native formal verification [37648181888](https://github.com/jasonyao486/HAICoMo/actions/runs/37648181888) passed on 2026-10-07. The application reference is the unchanged v0.3.3 tag `3c475f244629cb3f286a54454b814b0bcc3c8ea4`; the actual build is `1f5243b1057a6dffd991ff94c7abf3cbd29f8583`. The application archive hash remains `686c6f9bbdb8854467812a85e27548aa29ca56567ac3112be2f12b824d4b48a2`, identical to the earlier native and interim builds.
+
+- Source type checking, 84 native unit tests and 22 source desktop tests passed.
+- All 22 signed-candidate tests and all 22 final packaged tests passed, including database/project reopening and synthetic CLI permission routing. Package privacy, resources and license scans passed.
+- Apple accepted App submission `efde642f-61e0-4e49-b635-1a9657fb3140` and DMG submission `37c0ea61-9b40-4a60-ba22-6b56b2ec5e9a`. Final signatures, stapled tickets and Gatekeeper checks passed; keychain cleanup succeeded.
+- The final artifact is [haicomo-0.3.3-mac-arm64](https://github.com/jasonyao486/HAICoMo/actions/runs/37648181888/artifacts/11496636283). It is a candidate for first-open acceptance, not yet the public formal release.
+- A subsequent local infrastructure update passed type checking and all 86 unit tests, including seven recovery/publication scenarios. A lost submission response now records an unknown upload outcome; recovery must match Apple's job log SHA-256 before reusing an ID and never silently duplicates the upload. Publication rejects missing or mismatched first-open acceptance, an altered DMG, unsigned/unnotarized evidence and Windows administrator-token evidence.
+- Synthetic desktop captures were inspected. The original brief still matches SHA-256 `da6a5edbdbe69b600080d9e76d40e4795e2938d7226267c69cf6c13cc0af41c8`. No recognized credential pattern was found in the formal CI log.
+
+The earlier timeout's trace records zero permissions at the five-second deadline but contains no CLI protocol diagnostic, so the precise historical missing event cannot be reconstructed. Inspection confirmed the test could begin its permission deadline before asynchronous capability discovery and process handshake completed. It now waits for the fixture model and actual `turn/start` request before the unchanged permission assertion, with bounded startup waits and sanitized failure diagnostics. This passed in source, signed candidate and final package without retries or application changes.
+
+On 2026-10-07, the owner explicitly confirmed completion and passage of the fresh-account browser-download, first-open and test-project reopening procedure for artifact `11496636283` from run `37648181888`, without using Open Anyway or removing the download quarantine marker. This is owner-observed acceptance, separate from automated CI checks. The publication report binds that acceptance to the final DMG hash. Existing Windows attachments and interim Mac attachments have not been replaced.

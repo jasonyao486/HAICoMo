@@ -1,12 +1,12 @@
 # HAICoMo
 
-> [0.3.3 Windows 预览版](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.3) 已发布：仅当前用户安装，无需提权。Mac 0.3.3 提供已签名、尚未公证的临时版，见[发布说明](docs/RELEASE-NOTES-0.3.3.md)。
+> [0.3.3 预览版](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.3)：Apple Silicon Mac 提供正式签名公证版，Windows 仅当前用户安装、无需提权。见[发布说明](docs/RELEASE-NOTES-0.3.3.md)。
 
 [English](README.md) · **简体中文**
 
 一个管理任务、人工审阅与 AI 协作的本地桌面应用。智能体提交修改提案，由你决定是否批准及何时通过交付验收。项目数据保存在你选择的工作目录中。
 
-**0.3.3** 为 Apple Silicon Mac 与 Windows x64 预发布版本。实际验证范围及 Mac 公证验收限制见[验证记录](docs/TESTING-0.3.3.md)。
+**0.3.3** 为 Apple Silicon Mac 与 Windows x64 预发布版本。原生平台测试与 Mac 干净账户首次打开验收见[验证记录](docs/TESTING-0.3.3.md)。
 
 ## 安装与开始使用
 
@@ -17,13 +17,13 @@
 
 | 你的电脑 | 下载文件 |
 |---|---|
-| 搭载 Apple M 系列芯片的 Mac | `HAICoMo-0.3.3-arm64-unnotarized.dmg` |
+| 搭载 Apple M 系列芯片的 Mac | `HAICoMo-0.3.3-arm64.dmg` |
 | 系统类型为“基于 x64 的处理器”的 Windows PC | `HAICoMo-0.3.3-windows-x64-setup.exe` |
 | Intel Mac、Windows ARM64、Linux | 本版暂不提供已验证安装包 |
 
 Mac 在“苹果菜单 → 关于本机”查看芯片；Windows 在“设置 → 系统 → 系统信息”查看系统类型。
 
-3. **Mac：**打开 DMG，将 HAICoMo 拖到 Applications（应用程序），推出磁盘映像，再从应用程序启动。此临时版使用 Developer ID 正式签名，但尚未公证。如果系统阻止打开，先确认下载来源，再到“系统设置 → 隐私与安全性”对本应用选择“仍要打开”。不要全局关闭 Gatekeeper。
+3. **Mac：**打开 DMG，将 HAICoMo 拖到 Applications（应用程序），推出磁盘映像，再从应用程序启动。正式包已通过 Developer ID 签名、Apple 公证并附加票据；首次启动可能出现普通“打开”确认，已完成的干净账户测试无需 Open Anyway。旧的 `unnotarized` 文件保留作历史附件，请选择上表文件。
 4. **Windows：**打开 setup `.exe`，自动安装到当前用户目录并启动；安装、升级和卸载不主动请求管理员权限。本版没有发布者签名，可能出现 SmartScreen 或未知发布者提示；确认来源并核对 SHA-256 后再决定继续。单位管理的电脑可能需要管理员协助。
 5. 点击“新建项目”，选择一个空的本地文件夹，保存 `.haicomo` 入口文件。创建一个任务，再添加子任务。此过程不需要 AI 账号。
 6. 交付后，从任务中打开交付物，检查内容，再点击“通过验收”。智能体运行完成不会自动替你验收。
@@ -31,12 +31,12 @@ Mac 在“苹果菜单 → 关于本机”查看芯片；Windows 在“设置 �
 <details>
 <summary>如何核对下载文件的 SHA-256</summary>
 
-从同一发布页下载对应的 `SHA256SUMS-darwin-arm64-unnotarized.txt` 或 `SHA256SUMS-win32-x64.txt`。保留安装包原文件名；如果文件位于“下载”文件夹，运行下面的对应命令，将结果与文本文件中该安装包那一行的完整校验值比较，大小写不影响结果。如不一致，请重新下载后再安装。
+从同一发布页下载对应的 `SHA256SUMS-darwin-arm64.txt` 或 `SHA256SUMS-win32-x64.txt`。保留安装包原文件名；如果文件位于“下载”文件夹，运行下面的对应命令，将结果与文本文件中该安装包那一行的完整校验值比较，大小写不影响结果。如不一致，请重新下载后再安装。
 
 Mac：打开“终端”运行：
 
 ```sh
-shasum -a 256 ~/Downloads/HAICoMo-0.3.3-arm64-unnotarized.dmg
+shasum -a 256 ~/Downloads/HAICoMo-0.3.3-arm64.dmg
 ```
 
 Windows：打开 PowerShell 运行：
