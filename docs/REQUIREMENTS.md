@@ -45,8 +45,8 @@ The final user addition also requires an unoccupied relay preview when no relays
 
 | ID | Requirement | Evidence/status |
 | --- | --- | --- |
-| MAC-033 | Developer ID, hardened runtime, notarization, stapling and Gatekeeper required for release | Implemented release gate; native acceptance pending |
-| WIN-033 | Current-user install/run/reinstall/uninstall without elevation | One-click per-user installer and non-admin CI test; execution pending |
+| MAC-033 | Developer ID, hardened runtime, notarization, stapling and Gatekeeper required for release | Developer ID signing completed; Apple notarization In Progress; final Gatekeeper acceptance pending |
+| WIN-033 | Current-user install/run/reinstall/uninstall without elevation | Passed native Windows CI with a real non-admin token, upgrade/reinstall/uninstall and retained-data checks |
 | PRIV-033 | No signing credentials in Git or release attachments | Expanded ignore/scanning rules; regression tests passed; release scan pending |
 
 See [0.3.3 verification](TESTING-0.3.3.md). Existing acceptance evidence is not retroactively changed.
