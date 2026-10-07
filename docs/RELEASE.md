@@ -1,6 +1,6 @@
-# Release process — 0.3.2
+# Release process — 0.3.3
 
-The first public channel is a GitHub pre-release with manual downloads. No independent website is required. An installer being built does not prove that it works on a user's desktop; consult [COMPATIBILITY-0.3.2.md](COMPATIBILITY-0.3.2.md) for the evidence and outstanding checks.
+The first public channel is a GitHub pre-release with manual downloads. No independent website is required. An installer being built does not prove that it works on a user's desktop; consult [TESTING-0.3.3.md](TESTING-0.3.3.md) for the evidence and outstanding checks.
 
 ## Targets and workflow
 
@@ -51,6 +51,6 @@ Publication requires matching Mac signature/notarization evidence and Windows no
 1. Verify source version, four manuals, release notes and manifest.
 2. Complete native matrix checks and local Mac acceptance; record Windows human checks honestly as pending until performed.
 3. Inspect clean-clone outputs and packaged content for private information.
-4. Calculate SHA-256 of final files, publish the `v0.3.2` GitHub pre-release, and attach both native platform packages plus checksums.
+4. Calculate SHA-256 of final files, publish the `v0.3.3` GitHub pre-release, and attach both native platform packages plus checksums.
 5. Verify anonymous public links, downloaded hashes, extracted contents and a fresh-profile launch.
 6. Preserve old local recovery material. Do not include private historical repositories or databases in the release.
