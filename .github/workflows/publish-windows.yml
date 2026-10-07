@@ -44,7 +44,7 @@ jobs:
           import { createHash } from 'node:crypto';
           const version = process.env.HAICOMO_VERSION;
           const w = JSON.parse(fs.readFileSync('verified/windows-user-verification.json', 'utf8'));
-          if (w.version !== version || w.result !== 'passed' || w.admin !== false || !['protectedWriteDenied', 'install', 'launch', 'reinstall', 'uninstall', 'retainedData'].every(key => w[key] === true) || w.previousVersionUpgrade !== '0.3.2') throw new Error('Standard-user acceptance evidence is missing');
+          if (w.version !== version || w.result !== 'passed' || w.admin !== false || !['protectedWriteDenied', 'install', 'launch', 'reinstall', 'uninstall', 'retainedData'].every(key => w[key] === true) || w.previousVersionUpgrade !== '0.3.3') throw new Error('Standard-user acceptance evidence is missing');
           const hash = createHash('sha256').update(fs.readFileSync(`verified/HAICoMo-${version}-windows-x64-setup.exe`)).digest('hex');
           if (hash !== w.installerSha256) throw new Error('Installer differs from accepted artifact');
           NODE

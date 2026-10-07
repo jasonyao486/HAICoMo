@@ -244,8 +244,9 @@ test("single window tabs retain drafts, route background permissions and keep cl
       await expect.poll(() => methods().includes("turn/start"), { timeout: 15000, message: "Fixture CLI must receive the turn before permission delivery" }).toBe(true);
     } catch (error) {
       const background = await page.evaluate(() => window.haicomo.request("providers.background"));
+      const visibleErrors = await current(page).locator(".error-box").allTextContents();
       await test.info().attach("fixture-start-diagnostics", {
-        body: JSON.stringify({ methods: methods(), statuses: background.runs.map((r: any) => r.status), permissions: background.permissions.length }),
+        body: JSON.stringify({ methods: methods(), statuses: background.runs.map((r: any) => r.status), permissions: background.permissions.length, visibleErrors }),
         contentType: "application/json",
       });
       throw error;

@@ -52,3 +52,14 @@ The final user addition also requires an unoccupied relay preview when no relays
 | PUB-033 | Supplement existing release only with matching application inputs and platform acceptance | Publication 37651600519 passed fixed-tag/build/archive comparisons and the first-open DMG hash gate; anonymous downloads passed and all original Windows hashes were retained |
 
 See [0.3.3 verification](TESTING-0.3.3.md). Existing acceptance evidence is not retroactively changed.
+
+## Windows functional validation, 2026-10-07
+
+| ID | Requirement | Evidence/status |
+| --- | --- | --- |
+| WIN-DISCOVERY | Separate CLI, desktop opening and background capability | Windows Cursor dual-install and Claude MSIX discovery regressions; real desktop launches and Cursor handoff verified |
+| WIN-TERMINAL | Open a usable terminal in Unicode/space-containing project paths | Fixed independent PowerShell console; native child remains alive, including ampersand path |
+| RUN-CANCEL | Acknowledgement is distinct from actual start and confirmed termination | Queued-start and missing-completion fixture regressions; real Codex cancelled; Claude cancellation remains unknown |
+| WIN-SCENARIOS | Verify real files and preserve human acceptance boundary | Real Codex/Claude files and resume, Cursor manual delivery, isolated native Windows scenario evidence |
+
+See [Windows functional evidence and limitations](TESTING-WINDOWS-2026-10-07.md). No post-change Mac execution, publishing or replacement of the everyday installation is implied.

@@ -138,12 +138,34 @@ test(
     await until(() => !f.runners.active().length);
     const b = await f.runners.start({ ...f.options, prompt: "cancel" });
     await f.runners.cancel(b.runId);
+    assert.equal(f.events.at(-1)?.endReason, "cancelled");
+    assert.equal(f.events.at(-1)?.lifecycle, "history");
     assert.match(
       fs.readFileSync(path.join(f.directory, "requests.jsonl"), "utf8"),
       /"turn\/interrupt","params":\{"threadId":"thread-fixture","turnId":"turn-fixture"\}/,
     );
   },
 );
+
+test("an acknowledged interrupt without final confirmation remains unknown", async t => {
+  const f = fixture(t);
+  const started = await f.runners.start({ ...f.options, prompt: "cancelWithoutCompletion" });
+  await f.runners.cancel(started.runId);
+  assert.equal(f.events.at(-1)?.status, "unknown");
+  assert.equal(f.events.at(-1)?.endReason, "lost");
+  assert.equal(f.events.at(-1)?.lifecycle, "current");
+});
+
+test("cancel waits for a queued Codex turn to start before interrupting", async t => {
+  const f = fixture(t);
+  const started = await f.runners.start({ ...f.options, prompt: "cancelQueued" });
+  assert.equal(f.events.at(-1)?.status, "unknown", "A turn/start acknowledgement is not execution evidence");
+  await f.runners.cancel(started.runId);
+  assert.equal(f.events.at(-1)?.endReason, "cancelled");
+  assert.equal(f.events.at(-1)?.lifecycle, "history");
+  const requests = fs.readFileSync(path.join(f.directory, "requests.jsonl"), "utf8");
+  assert.equal((requests.match(/turn\/interrupt/g) ?? []).length, 1, "No retries mask an early interrupt");
+});
 test(
   "an exit without completion stays unknown and spawn errors clean up",
   unix,
