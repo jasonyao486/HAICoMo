@@ -21,6 +21,7 @@ Implementation and verification are separate. Current platform acceptance and te
 | LINK-01 | GitHub Releases/Issues and separate diagnostics | Fixed shared allowlist, unit and offline Electron external-link tests |
 | DOC-01 | UK/US English, simplified/traditional Chinese full manuals | Four USER-MANUAL-0.3.3 files; aligned locale key test |
 | DOC-02 | Bilingual README, installation SOP, at least seven actual screenshots | README pair, synthetic demo and `docs/images/0.3.2` |
+| DOC-03 | Two agent connection routes, copyable instructions and a reviewed-delivery walkthrough | Bilingual README links to four 0.3.3 manuals, sections 4.1–4.4; isolated file-protocol and desktop walkthrough verified on 2026-10-08; no automatic client configuration implied |
 | PUBLIC-01 | Clean public repository, no private history/data/keys | .gitignore, index/file scan, curated initial commit, clean clone |
 | RELEASE-01 | Native Mac ARM64 and Windows x64 package/automation | GitHub matrix; complete NSIS and DMG/ZIP; per-platform evidence |
 | RELEASE-02 | Manual pre-release, correct download choices and SHA-256 | Releases page, checksum script, compatibility report |

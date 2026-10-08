@@ -40,6 +40,86 @@ Optional developer CLI: `npm run cli -- read --project /absolute/project`; submi
 
 ![Proposals](images/0.3.2/proposals.png)
 
+<a id="agent-onboarding"></a>
+
+### 4.1 Connect an agent for the first time
+
+Create or open the working project in HAICoMo first. The app generates the collaboration guide and protocol files inside that project's hidden `.haicomo/` folder. The required directory is the project being worked on, not the HAICoMo application's source repository. The agent must be able to read and write that directory within the authorised task scope; sending a local path to a chat without local file access does not grant access.
+
+Choose either route:
+
+1. **Start in HAICoMo:** create or select a task, open **Handoff**, and review the task, project path and prompt. Use **Copy prompt** and paste it into the agent's conversation for that project. Alternatively, detect and sign into a supported local client, then use the background-send option when available. The default prompt points to the project guide. In 0.3.3, custom handoff text replaces that default: preserve or prepend the guide instructions below before sending. Opening a client or copying a prompt does not itself deliver it to a conversation.
+2. **Start in an existing agent conversation:** open the same working directory in a client with local file access, replace the path placeholder in the connection instructions below, and send them. Ask the agent to identify the project and current tasks before assigning work. For a new conversation or a different project, provide the appropriate instructions again; do not assume that another conversation's context was retained.
+
+File collaboration needs no dedicated HAICoMo plugin or additional HAICoMo Node.js installation; the selected agent client has its own requirements. Installing HAICoMo does not register a global `hcm` command, configure MCP, or notify other clients automatically. The optional developer CLI/MCP setup is documented in [PROTOCOL](PROTOCOL.md); it is not required for the following workflow.
+
+<a id="agent-connection-prompt"></a>
+
+### 4.2 Copyable connection instructions
+
+Replace the entire path placeholder with the actual working project's absolute path. The slash-separated file names below are relative to that directory on both macOS and Windows. Preserve existing project instructions; this guide does not expand the agent's file permissions.
+
+```text
+This project uses HAICoMo for task management and human review.
+Project directory: <absolute path to the working project folder>
+
+Read these files in order:
+1. .haicomo/AGENTS.md — collaboration rules and authority boundaries
+2. .haicomo/manifest.json — current project identity and epoch
+3. .haicomo/snapshot.json — saved tasks, IDs and entity revisions
+4. .haicomo/protocol.schema.json — proposal structure and allowed task fields
+5. .haicomo/proposal-example.json — a project-specific example
+
+Read current IDs, epoch and revisions from these files; never invent or reuse
+values from another project. New proposals and new tasks need fresh unique IDs.
+Submit task, progress and deliverable-record changes as proposals for human review.
+Edit actual code and deliverable files only within the authorised task scope.
+Never write the HAICoMo database, manifest, snapshot, receipts or generated guide.
+Do not approve proposals, accept deliveries or change human-configured relays.
+Follow the file protocol: finish the JSON first, then write its exact-byte
+SHA-256 .ready marker last. Check the receipt for the same proposal ID;
+a missing receipt means unknown, not success.
+First summarise the project and relevant tasks. If no task is assigned, await one.
+```
+
+<a id="agent-walkthrough"></a>
+
+### 4.3 Synthetic walkthrough: propose, review and accept
+
+Use a new empty local folder with a disposable project named **Agent onboarding demo**. No model account is needed to verify the file protocol with a local test fixture; choosing a real agent client instead uses that client's existing login and permissions.
+
+1. Send the connection instructions through the existing-conversation route. The agent should identify the demo project and report that it has no tasks. This confirms file access, not a completed task.
+2. Send the task-creation request below. The agent reads the generated example, uses the actual project identity/epoch, fresh proposal/task IDs, and `expectedRevision: null` for task creation. It writes a proposal and its matching `.ready` file under `.haicomo/inbox/`.
+3. Keep the project open, or reopen it after offline submission. In **Proposals**, inspect the new task and choose **Approve**. The task then appears in the task list. The agent reads the original proposal's receipt and waits for `applied` before treating that change as applied.
+4. From the new task, use **Handoff** for the delivery request below, retaining the connection instructions. This exercises the HAICoMo-started route. After authorisation, the agent creates `demo-notes.md` in the working folder, rereads the task revision, and submits a new update proposal with `status: "delivered"` and an artifact object `{ "id": "demo-notes", "label": "Demo notes", "path": "demo-notes.md" }`.
+5. Inspect and approve that update proposal. Its receipt becomes `applied`, but the task still awaits human acceptance. Open the actual file, check its contents, then choose **Accept delivery** on the task. The agent can reread the snapshot to observe acceptance; the proposal receipt alone does not certify it.
+
+Task-creation request:
+
+```text
+Propose a task named "Write demo notes", with status todo and no prerequisites.
+Its deliverable will be demo-notes.md containing three brief points about the
+synthetic project. Submit only the task-creation proposal, report its proposal ID,
+and wait for human approval. Do not create the deliverable yet.
+```
+
+Delivery request, after the creation proposal is applied:
+
+```text
+Work on the approved "Write demo notes" task. Create demo-notes.md in the project
+folder with the three synthetic points. Reread the saved task and its revision,
+then submit a new proposal recording the file as an artifact object and marking
+the task delivered. Report the new proposal ID. Do not accept the delivery.
+```
+
+### 4.4 Markers, receipts and troubleshooting
+
+- Write each proposal as UTF-8 JSON with exclusive creation, flush and close it, then write `.haicomo/inbox/<proposalId>.ready` last. Its contents are the lowercase SHA-256 hex digest of the exact JSON bytes. A JSON file without a marker is not ready; a marker is not approval.
+- Read `.haicomo/receipts/<proposalId>.json`: `pending` means received and awaiting review, `applied` means approved changes were applied, and `rejected` means the proposal was rejected. Missing means unknown; check the project, marker and app state, then query the same ID. Never issue a new proposal merely because a receipt is missing.
+- Preserve submitted JSON and markers. The same ID with identical bytes is an idempotent retry; changed contents require a fresh ID. If a revision conflict occurs, reread the task and bring it to human review; do not overwrite the original submission.
+- A delivery record is a file reference, not a copy of the file. Human proposal approval applies management changes; human delivery acceptance follows inspection of the actual work. Neither is granted by agent completion or animation.
+- If the guide is missing or inaccessible, check the project folder and open it in HAICoMo; do not recreate a database or guess project IDs. Review and remove private content from prompts, paths and files before sharing diagnostics publicly.
+
 ## 5. Timeline, dependency graph and mind map
 
 The timeline shows task dates. Drag a bar to move it or an edge to resize it; keyboard controls are described on the timeline. Changes retain revision checks.

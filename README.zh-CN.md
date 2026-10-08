@@ -57,6 +57,15 @@ Get-FileHash "$HOME\Downloads\HAICoMo-0.3.4-windows-x64-setup.exe" -Algorithm SH
 
 点击 logo 返回首页，不增加标签；原项目页面与草稿保留。收起侧栏后保留正常尺寸的文件夹与终端按钮。活动摘要使用简短角色，展开详情保留完整身份。0.3.3 和 0.3.4 沿用 0.3.1 的项目格式 v5。
 
+## 连接智能体
+
+先在 HAICoMo 中创建或打开工作项目，再选择以下任一方式：
+
+1. **从 HAICoMo 发起：** 打开任务的“交接”，检查并复制提示词，粘贴到智能体的项目会话；也可通过受支持的本地客户端后台发送。
+2. **从已有智能体会话接入：** 在支持本地文件访问的客户端中打开同一项目目录，再发送手册中的[接入说明](docs/USER-MANUAL-0.3.3.zh-CN.md#agent-connection-prompt)。
+
+智能体需要访问工作项目的文件；只向网页聊天发送本机路径不能完成连接。安装不会自动注册全局 `hcm` 命令或配置 MCP。0.3.3 使用自定义交接内容时，须保留读取 `.haicomo/AGENTS.md` 的指引。手册提供[两种方式的具体步骤](docs/USER-MANUAL-0.3.3.zh-CN.md#agent-onboarding)与[完整演练](docs/USER-MANUAL-0.3.3.zh-CN.md#agent-walkthrough)。文件协作无需专属插件；CLI／MCP 是可选开发者接入方式。
+
 ## 功能
 
 以下图片来自独立的合成 “HAICoMo Demo” 项目，包含 10 个任务、50 个子任务，不含真实工作内容或账号对话。截图界面使用英文。
