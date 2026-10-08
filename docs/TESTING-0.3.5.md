@@ -13,3 +13,6 @@ Native release gates:
 - Publication: independent trusted platform run IDs may be supplied; application build inputs and versions must agree. Evidence hashes must match the original artifacts. Missing upgrade or fresh-account evidence blocks publication.
 
 Immutable original brief SHA-256: `da6a5edbdbe69b600080d9e76d40e4795e2938d7226267c69cf6c13cc0af41c8`.
+
+
+Candidate follow-up: the Windows 24.21.0 run passed all 99 unit tests after correcting the test assertion for JSON-escaped Windows paths. Its desktop run passed 26 scenarios and exposed one outdated handoff-field locator, now updated while retaining clipboard and native-tray assertions. A subsequent application review added a revision guard to saved handoff drafts so a concurrent task edit cannot be silently overwritten; a new desktop test verifies the conflict and preserves the draft. Candidates built before this guard are retired and will not be published. Both native builds must run again from the updated application inputs.

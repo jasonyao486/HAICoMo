@@ -132,3 +132,30 @@ test("0.3.5 cancelled save and invalid title create no project data", async () =
     expect(fs.readdirSync(directory)).toEqual([]);
   } finally { await closeTestApp(app); await removeTestDirectory(root); }
 });
+
+test("0.3.5 handoff drafts cannot overwrite another window's newer task revision", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-handoff-conflict-")), directory = path.join(root, "project"); fs.mkdirSync(directory);
+  const store = new ProjectStore(directory, "Conflict sample");
+  store.command({ id: randomUUID(), type: "change", payload: { entity: "task", operation: "create", id: "conflict-task", expectedRevision: null, values: { title: "Conflict task", handoff: "Original content" } } });
+  store.close();
+  const app = await launch(root, directory), page = await app.firstWindow(), frame = current(page);
+  try {
+    await app.evaluate(({ app }, file) => app.emit("open-file", { preventDefault() {} }, file), path.join(directory, "HAICoMo.haicomo"));
+    await frame.getByRole("button", { name: "Conflict task", exact: true }).click();
+    await frame.locator("dialog.modal").getByRole("button", { name: "交接", exact: true }).click();
+    const dialog = frame.locator("dialog.modal");
+    await dialog.getByLabel("自定义交接内容").fill("Draft based on the old revision");
+    await page.evaluate(async () => {
+      const b = await window.haicomo.request("bootstrap"), binding = b.projects[0].binding;
+      const w = await window.haicomo.request("project.view", { binding });
+      await window.haicomo.request("project.command", { binding, id: crypto.randomUUID(), type: "change", payload: { entity: "task", operation: "update", id: "conflict-task", expectedRevision: w.state.tasks[0].revision, values: { handoff: "New content from the other window", description: "New task context from another window" } } });
+    });
+    // Let the UI observe the newer task, proving it cannot silently adopt that
+    // revision number for a draft written against the previous one.
+    await expect(dialog.getByLabel("接入说明")).toContainText("New task context from another window");
+    await dialog.getByRole("button", { name: "保存修改", exact: true }).click();
+    await expect(dialog.locator(".error-box")).toContainText(dictionaries["zh-CN"].errRevisionConflict);
+    expect(readSnapshot(directory).tasks[0].handoff).toBe("New content from the other window");
+    await expect(dialog.getByLabel("自定义交接内容")).toHaveValue("Draft based on the old revision");
+  } finally { await closeTestApp(app); await removeTestDirectory(root); }
+});

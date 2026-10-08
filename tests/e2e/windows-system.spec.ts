@@ -38,11 +38,14 @@ test("Windows manual client discovery, truthful handoff and background tray rest
     await expect(dialog.locator("p.muted.full")).toContainText("Available");
     await expect(dialog.locator("p.muted.full")).not.toContainText("Not found");
     await expect(dialog.getByRole("button", { name: "Send in background", exact: true })).toBeDisabled();
-    await page.getByLabel("Handoff prompt", { exact: true }).fill("Synthetic cursor handoff");
+    await page.getByLabel("Custom handoff content", { exact: true }).fill("Synthetic cursor handoff");
     await page.getByRole("button", { name: "Open client & copy prompt", exact: true }).click();
     await expect(dialog.locator(".notice")).toContainText("Sending is not confirmed");
     expect(await app.evaluate(() => (globalThis as any).__openedClient)).toBe(appPath);
-    expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe("Synthetic cursor handoff");
+    const preview = await dialog.getByLabel("Connection instructions").inputValue();
+    expect(preview).toContain("Synthetic cursor handoff");
+    expect(preview).toContain("agent-guide.md");
+    expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe(preview);
     await page.screenshot({ path: test.info().outputPath("windows-handoff.png") });
 
     const binding = await page.evaluate(async () => (await window.haicomo.request("bootstrap")).projects[0].binding);

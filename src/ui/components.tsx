@@ -1046,6 +1046,7 @@ export function HandoffDialog({
     [info, setInfo] = useState("");
   const [custom, setCustom] = useState(task.handoff);
   const [savedCustom, setSavedCustom] = useState(task.handoff);
+  const [savedRevision, setSavedRevision] = useState(task.revision);
   const text = connectionText(t.locale);
   const currentTask = workspace.state.tasks.find((item) => item.id === task.id);
   const prompt = currentTask ? composeAgentPrompt(workspace.directory, workspace.state, t.locale, task.id, custom) : "";
@@ -1083,12 +1084,13 @@ export function HandoffDialog({
     ],
   );
   const saveCustom = async () => {
-    await command("change", {
+    const updated: Workspace = await command("change", {
       entity: "task", operation: "update", id: task.id,
-      expectedRevision: currentTask?.revision ?? task.revision,
+      expectedRevision: savedRevision,
       values: { handoff: custom },
     });
     setSavedCustom(custom);
+    setSavedRevision(updated.state.tasks.find(item => item.id === task.id)!.revision);
     onComplete();
   };
   useDirty(custom !== savedCustom, saveCustom);
