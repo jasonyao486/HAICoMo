@@ -1,20 +1,32 @@
 # 0.3.5 verification status
 
-Status: candidate; not yet accepted or published. Both platforms must pass before release. No previous fresh-account acceptance is reused.
+Status: both native automated release gates passed; fresh-account Mac browser first-open acceptance is still pending. Version 0.3.5 remains a candidate and is not publicly released. No previous version's first-open result is reused.
 
-Application changes cover new-project entry filenames, protected generated guides, four-language agent connection and shared handoff/relay prompt composition. Database v5, entry v2 and proposal v1/v2 remain unchanged.
+New-project entry filenames, protected generated guides, four-language agent connection and shared handoff/relay prompts are implemented. Database v5, entry v2 and proposal v1/v2 remain unchanged. Synthetic projects and fixture CLIs exercise proposal submission, human approval, delivery registration and separate human acceptance without real model accounts.
 
-Local macOS ARM64 type checking, 99 unit tests and all 86 runtime asset checks passed. Public-source scanning passed for 297 files, including relative Markdown links. All 25 local native Electron scenarios passed, including the complete proposal/delivery flow and four locales in both themes. Two Windows-only scenarios and the separately invoked installed-version upgrade scenario were skipped locally; these remain explicit native CI gates. The installed local Node is 24.12.0; downloading the documented 24.21.0 runtime encountered DNS/timeouts, so supported-runtime acceptance remains the native CI run on 24.21.0. Tests use synthetic projects, isolated Electron profiles and fixture CLIs, with no real model account. Evidence is retained in ignored `validation/0.3.5/` and CI artifacts. Screenshots contain only synthetic data and disposable paths; no personal workspace is used.
+| Platform | Native verification | Application/build provenance |
+|---|---|---|
+| Mac Apple Silicon | [Run 37794633164](https://github.com/jasonyao486/HAICoMo/actions/runs/37794633164), successful job `113370763592` | `9609deebc775248445837f1b9197d6bca7ceaf5f` |
+| Windows x64 | [Run 37793086209](https://github.com/jasonyao486/HAICoMo/actions/runs/37793086209), successful Windows job `113365326186` | `45749ad20e236536a0e8e2f50352e3f819fc331c` |
 
-Native release gates:
+The commits differ only in tests and documentation. The release source check confirms identical application build inputs. The unrelated Mac job in the Windows run failed on an asynchronous clipboard test assertion; the independent successful Mac run contains its correction. Publication verifies the selected platform job, version, source inputs and original artifact hashes rather than accepting an unrelated job's result.
 
-- Mac Apple Silicon: source and packaged suites, 0.3.3 installed-app upgrade preserving project identity/rules/settings, Developer ID signing, notarisation, stapling, strict signature and Gatekeeper. A browser download in a fresh macOS account must then open without Open Anyway using this candidate's exact DMG hash.
-- Windows x64: source and packaged suites; actual standard-user token; fresh install, launch, reinstall, 0.3.4 → 0.3.5 upgrade, user associations/shortcuts and uninstall retaining settings/project/delivery data. An administrator CI installation alone is insufficient.
-- Publication: independent trusted platform run IDs may be supplied; application build inputs and versions must agree. Evidence hashes must match the original artifacts. Missing upgrade or fresh-account evidence blocks publication.
+Both platforms passed type checking on Node 24.21.0. Mac passed all 99 unit cases; Windows passed 97, with two Mac artifact-cleanup cases platform-skipped. Mac source, signed-candidate and final packaged Electron suites each passed 26 scenarios; two Windows-only scenarios and the separately invoked upgrade scenario were skipped in those general suites. Windows source and packaged suites each passed 28 scenarios, with the dedicated upgrade scenario invoked separately. Tests cover four locales, both themes, narrow windows, optional task context, exact clipboard content and failures, concurrent handoff edits, custom-content preservation, repeated opening, proposal/delivery flow and separate project contexts.
+
+Mac App, DMG and ZIP-contained App passed strict Developer ID signatures, Hardened Runtime, notarisation tickets and Gatekeeper. App notarisation: `9e9c511b-5d8a-4432-8b8e-241f29eb6b45`; DMG notarisation: `016db23a-1186-4c77-ba64-b0e847cc5a2a`. The actual 0.3.3 app seeded a project and settings; 0.3.5 reopened them with the same identity, epoch, tasks, custom rule bytes and delivery file. Both upgrade stages passed. Temporary signing-keychain cleanup passed.
+
+Windows installed-app checks also ran under an actual non-administrator token, with a protected registry write denied. Seven installed desktop scenarios passed. Fresh installation, launch, reinstall, current-user associations/shortcuts and uninstall passed. Separate old/new app stages verified 0.3.4 → 0.3.5 upgrade, project identity, settings, rules, association and retained project/database/delivery/settings files after uninstall. The synthetic machine-wide installation remained unchanged. An administrator installation was not used as proof of the permission guarantee. SmartScreen remains distinct from elevation.
+
+Candidate installer hashes:
+
+```text
+3d499484fd5861cf09747f04337337137308c114fed0934c8cbe5e50dc9a08d5  HAICoMo-0.3.5-arm64.dmg
+21e4713e8825485473472288b7bc5496394fd6e92c2e7f5a485c4106359b4ea0  HAICoMo-0.3.5-arm64-mac.zip
+6e8a16470660edb28d8643a865dc2b8c3f326afdf9420f42cb55dccf424beaac  HAICoMo-0.3.5-windows-x64-setup.exe
+```
+
+The downloaded platform reports match their SHA-256 manifests. Source privacy/link scanning passed for 297 tracked files; all 86 runtime assets and packaged resource/license/privacy checks passed. Mac and Windows synthetic connection screenshots were visually inspected. Evidence stays in ignored `validation/0.3.5/` and CI artifacts; no real project or account data was used. The installed local Node is 24.12.0; supported-runtime acceptance comes from the native CI runs on 24.21.0.
+
+Remaining release gates: browser download and first launch in a fresh macOS standard account using the exact candidate DMG above; then publication of both platforms together and anonymous public-download hash verification. [Mac candidate artifact](https://github.com/jasonyao486/HAICoMo/actions/runs/37794633164/artifacts/11559885139) requires GitHub sign-in. No unnotarised temporary release is provided. Earlier candidates lacking the handoff revision guard are retired.
 
 Immutable original brief SHA-256: `da6a5edbdbe69b600080d9e76d40e4795e2938d7226267c69cf6c13cc0af41c8`.
-
-
-Candidate follow-up: the Windows 24.21.0 run passed all 99 unit tests after correcting the test assertion for JSON-escaped Windows paths. Its desktop run passed 26 scenarios and exposed one outdated handoff-field locator, now updated while retaining clipboard and native-tray assertions. A subsequent application review added a revision guard to saved handoff drafts so a concurrent task edit cannot be silently overwritten; a new desktop test verifies the conflict and preserves the draft. Candidates built before this guard are retired and will not be published. Both native builds must run again from the updated application inputs.
-
-The next Mac source run passed the new revision-conflict scenario but exposed an older clipboard assertion that read immediately after a click, before asynchronous project validation finished. The test now waits for the copy completion and exact clipboard bytes, retaining the simulated failure checks. All four affected local multi-project scenarios passed. This correction changes tests only; application inputs remain those of `45749ad`.

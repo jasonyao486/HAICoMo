@@ -12,7 +12,7 @@
 
 Mac 正式下载要求 Developer ID 签名、Apple 公证、票据、Gatekeeper 与本版本干净账户首次打开验收通过。可能出现普通“打开”确认，无需 Open Anyway。Windows 安装、升级和卸载仅限当前用户，不主动请求管理员权限；未签名 EXE 仍可能出现 SmartScreen 提示，两者不同。
 
-English: new projects derive their default entry filename from the project name. The new **Connect an agent** dialog offers project or task context in four languages. Manual handoffs, terminal copies and relays retain automatic protocol instructions alongside separately saved custom content. Existing project rules are preserved; conflicting custom guides block connection with an explicit error. Project format v5 and the proposal protocol are unchanged. No client configuration or agent approval authority is added.
+English: new projects derive their default entry filename from the project name. The new **Connect an agent** dialog offers project or task context in four languages. Manual handoffs, terminal copies and relays retain automatic protocol instructions alongside separately saved custom content. Existing project rules are preserved; conflicting custom guides block connection with an explicit error. Database schema v5 and the entry/proposal protocols are unchanged. No client configuration or agent approval authority is added.
 
 Further downloads: [Mac ZIP](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.5/HAICoMo-0.3.5-arm64-mac.zip), [Mac SHA-256](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.5/SHA256SUMS-darwin-arm64.txt), [Windows SHA-256](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.5/SHA256SUMS-win32-x64.txt). Verification reports accompany these files.
 
