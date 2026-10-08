@@ -1,6 +1,6 @@
-import { artifactPromptPath } from "./artifact-path";
+import { composeAgentPrompt } from "./agent-prompt";
 import { z } from "zod";
-import { idSchema, type ProjectState, type Session, type Task } from "./domain";
+import { idSchema, type ProjectState, type Session, type Settings } from "./domain";
 
 /**
  * A relay is an automated handoff: once an optional predecessor run has
@@ -50,7 +50,7 @@ export const relayValuesSchema = z
     handoff: relayHandoffSchema,
     taskId: idSchema,
     referenceTaskId: idSchema.nullable().default(null),
-    prompt: z.string().trim().min(1).max(100000),
+    prompt: z.string().max(100000),
   })
   .strict();
 export type RelayValues = z.infer<typeof relayValuesSchema>;
@@ -160,24 +160,11 @@ export function relayPredecessorCandidates(state: ProjectState, relays: Relay[],
   );
 }
 /** The exact prompt sent at fire time; deliverable references are resolved then, not when the relay was saved. */
-export function composeRelayPrompt(relay: Pick<Relay, "prompt" | "referenceTaskId" | "afterSessionId" | "taskId">, state: ProjectState): string {
+export function composeRelayPrompt(relay: Pick<Relay, "prompt" | "referenceTaskId" | "afterSessionId" | "taskId">, state: ProjectState, directory: string, locale: Settings["locale"] = "en-GB"): string {
   const predecessor = relayPredecessor(relay, state);
-  // Explicit reference → the predecessor's task → the target task's own deliverables.
   const referenceId = relay.referenceTaskId ?? predecessor?.taskIds[0] ?? relay.taskId;
-  const reference: Task | undefined = referenceId ? state.tasks.find((t) => t.id === referenceId) : undefined;
-  const lines = [relay.prompt.trim()];
-  if (reference) {
-    lines.push("", "--- Reference deliverables (recorded in HAICoMo; verify the files yourself) ---", `Task: ${reference.title} (${reference.id})`);
-    if (reference.description.trim()) lines.push(`Description: ${reference.description.trim().slice(0, 4000)}`);
-    if (reference.artifacts.length)
-      lines.push("Deliverables (paths relative to the working directory):", ...reference.artifacts.map((a) => `- ${a.label || a.path}: ${artifactPromptPath(a.path)}`));
-    else lines.push("Deliverables: none recorded.");
-    if (reference.handoff.trim()) lines.push("Handoff notes from the previous assignment:", reference.handoff.trim().slice(0, 4000));
-  }
-  if (predecessor)
-    lines.push(
-      "",
-      `Previous run: ${predecessor.harnessId ?? predecessor.provider} · ${predecessor.model}${predecessor.threadId ? ` · session ${predecessor.threadId}` : ""}${predecessor.endedAt ? ` · ended ${predecessor.endedAt}` : ""}`,
-    );
-  return lines.join("\n");
+  const reference = state.tasks.find((t) => t.id === referenceId);
+  if (!reference) throw new Error("TASK_NOT_FOUND");
+  return composeAgentPrompt(directory, state, locale, relay.taskId, relay.prompt, reference,
+    predecessor ? `${predecessor.harnessId ?? predecessor.provider} · ${predecessor.model}${predecessor.threadId ? ` · session ${predecessor.threadId}` : ""}${predecessor.endedAt ? ` · ended ${predecessor.endedAt}` : ""}` : undefined);
 }

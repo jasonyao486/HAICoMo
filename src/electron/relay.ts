@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { assertTaskRunnable, sessionAvatar, type ProjectState, type Workspace } from "../shared/domain";
+import { assertTaskRunnable, sessionAvatar, type ProjectState, type Workspace, type Settings } from "../shared/domain";
 import { composeRelayPrompt, relayDecision, relayPredecessor, type Relay } from "../shared/relay";
 
 export type RelayStartResult = { runId: string; threadId?: string; to: string };
@@ -13,6 +13,7 @@ export type SchedulerHooks = {
   /** Capability checks and the actual background start; throws on any refusal. */
   start: (directory: string, relay: Relay, state: ProjectState, prompt: string) => Promise<RelayStartResult>;
   now?: () => number;
+  locale?: () => Settings["locale"];
   warn?: (directory: string, message: string) => void;
 };
 /**
@@ -86,6 +87,15 @@ export class RelayScheduler {
           .map((r) => ({ directory, relayId: r.id, title: r.title, status: r.status, dueAt: r.dueAt ?? relayDecision(r, view.state, this.now(), this.aliveSince).dueAt, taskId: r.taskId, provider: r.handoff.provider })),
       );
       if (view.entryError) continue;
+      if (view.agentGuideError) {
+        for (const relay of view.state.relays.filter(r => r.status === "scheduled" || r.status === "firing")) {
+          await this.hooks.command(directory, relay.status === "firing" ? "relay.failed" : "relay.blocked", {
+            relayId: relay.id, expectedRevision: relay.revision,
+            ...(relay.status === "firing" ? { error: view.agentGuideError } : { reason: view.agentGuideError }),
+          }).catch(error => this.hooks.warn?.(directory, String(error)));
+        }
+        continue;
+      }
       for (const relay of view.state.relays) {
         try {
           if (relay.status === "firing" && relay.statusReason === "manual") {
@@ -115,7 +125,7 @@ export class RelayScheduler {
       const task = state.tasks.find((t) => t.id === relay.taskId);
       if (!task) throw new Error("TASK_NOT_FOUND");
       assertTaskRunnable(task, state.tasks);
-      const prompt = composeRelayPrompt(relay, state);
+      const prompt = composeRelayPrompt(relay, state, directory, this.hooks.locale?.());
       const result = await this.hooks.start(directory, relay, state, prompt);
       const predecessor = relayPredecessor(relay, state);
       await this.hooks.command(directory, "handoff.record", {

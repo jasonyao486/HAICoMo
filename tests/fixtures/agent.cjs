@@ -47,7 +47,7 @@ if (args[0] === "app-server") {
     if (m.method === "turn/start") {
       if (!Array.isArray(m.params.input[0].text_elements))
         return send({ id: m.id, error: { message: "missing text_elements" } });
-      mode = m.params.input[0].text;
+      mode = m.params.input[0].text.split(/\r?\n/).find(line => ["approve", "cancel", "cancelQueued", "cancelWithoutCompletion"].includes(line)) ?? m.params.input[0].text;
       send({ id: m.id, result: { turn: { id: "turn-fixture" } } });
       const started = () => { turnStarted = true; send({
         method: "turn/started",

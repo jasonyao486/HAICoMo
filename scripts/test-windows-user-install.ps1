@@ -8,8 +8,8 @@ if (!$Child) {
   $NodePath = (Get-Command node).Source
   $TestRoot = Join-Path $env:RUNNER_TEMP 'haicomo-standard-user'
   New-Item -ItemType Directory -Path $TestRoot | Out-Null
-  $baseline = 'HAICoMo-0.3.3-windows-x64-setup.exe'
-  $baseUrl = 'https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.3'
+  $baseline = 'HAICoMo-0.3.4-windows-x64-setup.exe'
+  $baseUrl = 'https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.4'
   Invoke-WebRequest "$baseUrl/$baseline" -OutFile "$TestRoot/previous-setup.exe"
   $manifest = (Invoke-WebRequest "$baseUrl/SHA256SUMS-win32-x64.txt").Content
   if ($manifest -is [byte[]]) { $manifest = [Text.Encoding]::UTF8.GetString($manifest) }
@@ -41,7 +41,7 @@ if (!$Child) {
     $process.Refresh()
     $evidence = "validation/$version/standard-user"
     New-Item -ItemType Directory -Force $evidence | Out-Null
-    foreach ($name in @('stdout.txt','stderr.txt','result.json','screens','regression','playwright')) {
+    foreach ($name in @('stdout.txt','stderr.txt','result.json','screens','regression','playwright','upgrade')) {
       if (Test-Path "$TestRoot/$name") { Copy-Item "$TestRoot/$name" $evidence -Recurse -Force }
     }
     if ($process.ExitCode -ne 0) {
@@ -107,7 +107,7 @@ Set-Content $sentinel 'Synthetic retained settings'
 $env:HAICOMO_PACKAGED_EXECUTABLE = $executable
 $env:HAICOMO_SCREENSHOT_DIR = Join-Path $TestRoot 'screens'
 $env:HAICOMO_EVIDENCE_DIR = Join-Path $TestRoot 'regression'
-& $NodePath node_modules/@playwright/test/cli.js test tests/e2e/v031.spec.ts tests/e2e/v032.spec.ts --output="$TestRoot/playwright"
+& $NodePath node_modules/@playwright/test/cli.js test tests/e2e/v031.spec.ts tests/e2e/v032.spec.ts tests/e2e/v035.spec.ts --output="$TestRoot/playwright"
 if ($LASTEXITCODE -ne 0) { throw 'Installed application tests failed under standard user' }
 Invoke-Installer $Installer @('/S')
 if (!(Test-Path $sentinel)) { throw 'Upgrade removed user settings' }
@@ -120,11 +120,22 @@ if (Test-Path $entry.PSPath) { throw 'Uninstall registration was retained' }
 if (!(Test-Path $sentinel)) { throw 'Uninstall removed user settings' }
 # Exercise an actual previous-version upgrade, not only a same-version reinstall.
 Invoke-Installer "$TestRoot/previous-setup.exe" @('/S', '/currentuser')
+$env:HAICOMO_UPGRADE_ROOT = Join-Path $TestRoot 'upgrade'
+$env:HAICOMO_UPGRADE_STAGE = 'seed'
+& $NodePath node_modules/@playwright/test/cli.js test tests/e2e/upgrade.spec.ts --output="$TestRoot/upgrade-seed-playwright"
+if ($LASTEXITCODE -ne 0) { throw 'Previous version could not seed upgrade data' }
 Invoke-Installer $Installer @('/S')
 $entry = Find-Install
 if ($entry.DisplayVersion -ne $version -or !(Test-Path $sentinel)) { throw 'Previous-version upgrade failed or removed data' }
+$env:HAICOMO_UPGRADE_STAGE = 'check'
+& $NodePath node_modules/@playwright/test/cli.js test tests/e2e/upgrade.spec.ts --output="$TestRoot/upgrade-check-playwright"
+if ($LASTEXITCODE -ne 0) { throw 'Upgraded application did not retain usable project and settings' }
+$upgrade = Get-Content "$TestRoot/upgrade/result.json" | ConvertFrom-Json
+if ($upgrade.fromVersion -ne '0.3.4' -or $upgrade.toVersion -ne $version -or !$upgrade.project -or !$upgrade.settings -or !$upgrade.rules -or !$upgrade.launch) { throw 'Upgrade verification evidence is incomplete' }
+if (!(Test-Path 'HKCU:\Software\Classes\.haicomo') -or !(Test-Path (Join-Path $env:APPDATA 'Microsoft/Windows/Start Menu/Programs/HAICoMo.lnk'))) { throw 'Upgrade lost association or shortcut' }
 if ($entry.UninstallString -notmatch '^"([^"\r\n]+)" /currentuser$') { throw 'Unexpected upgraded uninstaller command' }
 Invoke-Installer $Matches[1] @('/S', "_?=$($entry.InstallLocation)")
 if (Test-Path (Join-Path $entry.InstallLocation 'HAICoMo.exe')) { throw 'Upgraded application uninstall failed' }
+foreach ($file in @("$sentinel", "$TestRoot/upgrade/project/retained.txt", "$TestRoot/upgrade/project/.haicomo/project.sqlite", "$TestRoot/upgrade/profile/settings.json")) { if (!(Test-Path $file)) { throw 'Upgraded uninstall removed user data' } }
 $hash = (Get-FileHash -Algorithm SHA256 $Installer).Hash.ToLowerInvariant()
-@{ version = $version; result = 'passed'; admin = $false; protectedWriteDenied = $true; install = $true; launch = $true; reinstall = $true; previousVersionUpgrade = '0.3.3'; uninstall = $true; retainedData = $true; installerSha256 = $hash } | ConvertTo-Json | Set-Content "$TestRoot/result.json"
+@{ version = $version; result = 'passed'; admin = $false; protectedWriteDenied = $true; install = $true; launch = $true; reinstall = $true; previousVersionUpgrade = '0.3.4'; upgradeLaunch = $true; upgradeProject = $true; upgradeSettings = $true; upgradeAssociation = $true; upgradeRetainedData = $true; sourceCommit = $env:GITHUB_SHA; uninstall = $true; retainedData = $true; installerSha256 = $hash } | ConvertTo-Json | Set-Content "$TestRoot/result.json"

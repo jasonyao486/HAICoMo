@@ -3,9 +3,13 @@ on:
   workflow_dispatch:
     inputs:
       verification_run:
-        description: Successful Verify and package run ID
+        description: Successful Mac verification run ID
         type: string
         required: true
+      windows_verification_run:
+        description: Windows verification run ID (defaults to Mac run; Windows job must pass)
+        type: string
+        required: false
       first_open_dmg_sha256:
         description: Exact DMG SHA-256 after browser first-open acceptance in a fresh macOS account
         type: string
@@ -22,6 +26,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       VERIFY_RUN_ID: ${{ inputs.verification_run }}
+      WINDOWS_VERIFY_RUN_ID: ${{ inputs.windows_verification_run }}
       FIRST_OPEN_DMG_SHA256: ${{ inputs.first_open_dmg_sha256 }}
     steps:
       - uses: actions/checkout@v4

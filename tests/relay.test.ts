@@ -84,8 +84,8 @@ test("relay decisions: timers, predecessor delivery, missed windows and blocking
   assert.throws(() => validateRelay(values(taskId, { handoff: { ...values(taskId).handoff, provider: "codex", continueThread: true }, afterSessionId: "run-a" }), view.state, []), /RELAY_THREAD_PROVIDER_MISMATCH/);
   validateRelay(values(taskId, { handoff: { ...values(taskId).handoff, provider: "claude", continueThread: true }, afterSessionId: "run-a" }), view.state, []);
   assert.ok(relayPredecessorCandidates(view.state, withResult).every((s) => s.sessionId !== "run-a"));
-  const prompt = composeRelayPrompt({ prompt: "Go", referenceTaskId: null, afterSessionId: "run-a", taskId }, view.state);
-  assert.match(composeRelayPrompt({ prompt: "Solo", referenceTaskId: null, afterSessionId: null, taskId }, view.state), /README\.md/);
+  const prompt = composeRelayPrompt({ prompt: "Go", referenceTaskId: null, afterSessionId: "run-a", taskId }, view.state, store.directory);
+  assert.match(composeRelayPrompt({ prompt: "Solo", referenceTaskId: null, afterSessionId: null, taskId }, view.state, store.directory), /README\.md/);
   assert.match(prompt, /README\.md/);
   assert.match(prompt, /Keep the API stable/);
   assert.match(prompt, /Previous run: claude/);

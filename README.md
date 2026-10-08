@@ -59,12 +59,11 @@ Full manuals: [UK English](docs/USER-MANUAL-0.3.3.en-GB.md) · [US English](docs
 
 ## Connect an agent
 
-Create or open the working project in HAICoMo, then choose either route:
+For the published 0.3.3/0.3.4 apps, use a task's **Handoff** or send the [manual connection instructions](docs/USER-MANUAL-0.3.3.en-GB.md#agent-connection-prompt) in an existing conversation. Retain the project-guide instruction when customising those versions' handoff text.
 
-1. **From HAICoMo:** open a task's **Handoff**, review and copy the prompt into the agent's project conversation, or send it in the background through a supported local client.
-2. **From an existing agent conversation:** open the same project directory in a client with local file access, then send the [connection instructions](docs/USER-MANUAL-0.3.3.en-GB.md#agent-connection-prompt).
+The **0.3.5 candidate** adds **Connect an agent → Copy connection instructions** at the top of an open project. Leave the task empty to read and summarise the project first, or select a task for its context and deliverable references. Paste the instructions into an existing conversation opened in the same project directory. Task handoff and relay also retain the automatic guide instructions alongside custom content.
 
-The agent needs access to the working project's files; a local path alone does not connect a web chat. Installation does not register a global `hcm` command or configure MCP. With custom handoff text in 0.3.3, keep the instruction to read `.haicomo/AGENTS.md`. See the manual for [both routes](docs/USER-MANUAL-0.3.3.en-GB.md#agent-onboarding) and a [complete walkthrough](docs/USER-MANUAL-0.3.3.en-GB.md#agent-walkthrough). File collaboration needs no dedicated plugin; CLI/MCP remain optional developer integrations.
+The agent needs local access to that project directory. Installation does not register a global `hcm` command, configure MCP or start an agent. [0.3.5 manual: both routes, copyable instructions and complete walkthrough](docs/USER-MANUAL-0.3.5.en-GB.md#agent-onboarding).
 
 ## Features
 

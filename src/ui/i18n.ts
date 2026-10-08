@@ -1198,7 +1198,7 @@ const tw: Record<Key, string> = {
 };
 export function translator(locale: Settings["locale"]) {
   const dictionary = dictionaries[locale];
-  return (key: Key) => dictionary[key];
+  return Object.assign((key: Key) => dictionary[key], { locale });
 }
 export type Translate = ReturnType<typeof translator>;
 export function formatDate(value: string, locale: string) {

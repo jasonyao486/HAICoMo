@@ -261,6 +261,7 @@ export type AuditPerson = { kind: "human" | "model" | "system"; name: string; fa
 export type AuditTask = { id: string; path: { id: string; title: string }[] };
 export type AuditContext = { actor: AuditPerson; reviewer?: AuditPerson; modified?: boolean; decision?: "approve" | "reject"; proposalId?: string; tasks: AuditTask[] };
 export type Workspace = {
+  agentGuideError?: "AGENT_GUIDE_CONFLICT" | "AGENT_GUIDE_UNAVAILABLE";
   directory: string;
   entryPath?: string;
   binding?: string;

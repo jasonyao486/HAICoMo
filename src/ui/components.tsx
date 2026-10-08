@@ -1,3 +1,4 @@
+import { assertAgentConnection, composeAgentPrompt, connectionText } from "../shared/agent-prompt";
 import { artifactPromptPath, externalArtifactPath, portableArtifactPath } from "../shared/artifact-path";
 import { useEffect, useRef, useState, useId, type ReactNode } from "react";
 import {
@@ -151,11 +152,13 @@ export function Modal({
   onClose,
   children,
   wide = false,
+  closeLabel = "Close",
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   wide?: boolean;
+  closeLabel?: string;
 }) {
   const tab = useTab();
   const ref = useRef<HTMLDialogElement>(null);
@@ -191,7 +194,7 @@ export function Modal({
       >
         <div className="modal-title">
           <h2>{title}</h2>
-          <button className="icon-button" aria-label="Close" onClick={onClose}>
+          <button className="icon-button" aria-label={closeLabel} onClick={onClose}>
             <X size={20} />
           </button>
         </div>
@@ -1041,10 +1044,19 @@ export function HandoffDialog({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [info, setInfo] = useState("");
-  const [prompt, setPrompt] = useState(
-    (task.handoff ||
-      `Read .haicomo/AGENTS.md and .haicomo/snapshot.json in ${workspace.directory}.\nWork on task ${task.id}: ${task.title}.\n${task.description}\nSubmit changes as a proposal. Report deliverables for human acceptance.`) + (task.artifacts.length ? "\n\nDeliverables (verify files before accepting):\n" + task.artifacts.map(a => `${a.label}: ${artifactPromptPath(a.path)}`).join("\n") : ""),
-  );
+  const [custom, setCustom] = useState(task.handoff);
+  const [savedCustom, setSavedCustom] = useState(task.handoff);
+  const text = connectionText(t.locale);
+  const currentTask = workspace.state.tasks.find((item) => item.id === task.id);
+  const prompt = currentTask ? composeAgentPrompt(workspace.directory, workspace.state, t.locale, task.id, custom) : "";
+  const checkContext = async () => {
+    const fresh: Workspace = await api("project.view");
+    assertAgentConnection(fresh, task.id);
+    if (composeAgentPrompt(fresh.directory, fresh.state, t.locale, task.id, custom) !== prompt) {
+      onComplete();
+      throw new Error("AGENT_CONTEXT_CHANGED");
+    }
+  };
   useEffect(() => {
     void api("providers.detect")
       .then(setCaps)
@@ -1070,25 +1082,22 @@ export function HandoffDialog({
       prompt,
     ],
   );
-  useDirty(
-    prompt !==
-      (task.handoff ||
-        `Read .haicomo/AGENTS.md and .haicomo/snapshot.json in ${workspace.directory}.\nWork on task ${task.id}: ${task.title}.\n${task.description}\nSubmit changes as a proposal. Report deliverables for human acceptance.`),
-    async () => {
-      await command("change", {
-        entity: "task",
-        operation: "update",
-        id: task.id,
-        expectedRevision: task.revision,
-        values: { handoff: prompt },
-      });
-    },
-  );
+  const saveCustom = async () => {
+    await command("change", {
+      entity: "task", operation: "update", id: task.id,
+      expectedRevision: currentTask?.revision ?? task.revision,
+      values: { handoff: custom },
+    });
+    setSavedCustom(custom);
+    onComplete();
+  };
+  useDirty(custom !== savedCustom, saveCustom);
   const copy = async (kind: "prompt" | "command") => {
     setCopied(null);
     setInfo("");
     setError("");
     try {
+      await checkContext();
       await api("clipboard", {
         text: kind === "prompt" ? prompt : commandText,
       });
@@ -1127,6 +1136,7 @@ export function HandoffDialog({
     setCopied(null);
     setInfo("");
     try {
+      await checkContext();
       if (mode === "background") {
         const result = await api("providers.start", {
           provider,
@@ -1260,7 +1270,7 @@ export function HandoffDialog({
         </label>
         <div className="full">
           <div className="copy-heading">
-            <label htmlFor={promptId}>{t("prompt")}</label>
+            <label htmlFor={promptId}>{text.custom}</label>
             <button
               type="button"
               className="button small"
@@ -1273,10 +1283,11 @@ export function HandoffDialog({
           <textarea
             id={promptId}
             rows={8}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            value={custom}
+            onChange={(e) => setCustom(e.target.value)}
           />
         </div>
+        <label className="full">{text.preview}<textarea readOnly rows={8} value={prompt} /></label>
         {["codex", "claude"].includes(provider) && (
           <div className="full">
             <div className="copy-heading">
@@ -1306,6 +1317,7 @@ export function HandoffDialog({
         {info && <div className="notice full">{info}</div>}
       </div>
       <div className="modal-footer">
+        <button className="button" disabled={busy || custom === savedCustom} onClick={() => void saveCustom().catch(e => setError(errorText(e, t)))}>{t("save")}</button>
         <button
           className="button"
           disabled={busy || !cap}

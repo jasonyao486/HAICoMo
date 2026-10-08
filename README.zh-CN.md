@@ -59,12 +59,11 @@ Get-FileHash "$HOME\Downloads\HAICoMo-0.3.4-windows-x64-setup.exe" -Algorithm SH
 
 ## 连接智能体
 
-先在 HAICoMo 中创建或打开工作项目，再选择以下任一方式：
+已发布的 0.3.3／0.3.4 可使用任务“交接”，或在已有会话中发送[手册接入说明](docs/USER-MANUAL-0.3.3.zh-CN.md#agent-connection-prompt)。这些版本编辑自定义交接内容时，须保留读取项目指南的指引。
 
-1. **从 HAICoMo 发起：** 打开任务的“交接”，检查并复制提示词，粘贴到智能体的项目会话；也可通过受支持的本地客户端后台发送。
-2. **从已有智能体会话接入：** 在支持本地文件访问的客户端中打开同一项目目录，再发送手册中的[接入说明](docs/USER-MANUAL-0.3.3.zh-CN.md#agent-connection-prompt)。
+**0.3.5 候选版**在已打开项目顶部增加“连接智能体 → 复制接入说明”。不选任务时先读取并概述项目；选择任务后加入任务上下文及交付物引用。将说明粘贴到已打开同一项目目录的会话中。任务交接与接力也会在保留自定义内容的同时，自动加入接入指引。
 
-智能体需要访问工作项目的文件；只向网页聊天发送本机路径不能完成连接。安装不会自动注册全局 `hcm` 命令或配置 MCP。0.3.3 使用自定义交接内容时，须保留读取 `.haicomo/AGENTS.md` 的指引。手册提供[两种方式的具体步骤](docs/USER-MANUAL-0.3.3.zh-CN.md#agent-onboarding)与[完整演练](docs/USER-MANUAL-0.3.3.zh-CN.md#agent-walkthrough)。文件协作无需专属插件；CLI／MCP 是可选开发者接入方式。
+智能体须具有该项目目录的本机访问权限。安装不会注册全局 `hcm` 命令、配置 MCP 或启动智能体。[0.3.5 手册：两种方式、可复制说明与完整演练](docs/USER-MANUAL-0.3.5.zh-CN.md#agent-onboarding)。
 
 ## 功能
 

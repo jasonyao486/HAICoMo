@@ -84,3 +84,11 @@ See [Windows functional evidence and limitations](TESTING-WINDOWS-2026-10-07.md)
 | PUB-034 | Keep historical downloads and separate platform recommendations | Publication 37677874919 passed; anonymous downloads match installed SHA-256, and all 8 v0.3.3 attachments retain names/sizes/digests. Windows recommendation is 0.3.4; signed/notarised Mac remains 0.3.3 |
 
 See [0.3.4 Windows acceptance, failure analysis and screenshot](TESTING-0.3.4-WINDOWS.md). Remaining provider limitations and unobserved native mouse interactions remain explicit.
+
+
+## 0.3.5 candidate: entry names and agent onboarding
+
+- New GUI projects derive a portable default entry filename from the validated title; the dialog remains editable. Old entries/title edits are not renamed. Shared filename cases plus lifecycle/e2e tests cover Unicode, reserved names, length, conflict, cancellation and reopening.
+- Project-level connection and optional task context use four-language prompts. Handoff and relay share composition while storing only custom content. Agent authority remains submit-only, never approve/accept.
+- The complete English guide is `.haicomo/agent-guide.md`; existing project rules and `.haicomo/AGENTS.md` are preserved. Conflicts and access failures prevent claiming successful connection.
+- Evidence: `tests/agent-onboarding.test.ts`, `tests/e2e/v035.spec.ts`, `tests/e2e/upgrade.spec.ts`, `tests/mac-release.test.ts`; [candidate verification](TESTING-0.3.5.md). Native platform and fresh-account release gates remain pending until recorded there.

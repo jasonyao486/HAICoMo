@@ -1,3 +1,4 @@
+import { connectionText } from "../shared/agent-prompt";
 import { errorData } from "../shared/errors";
 import type { Translate, Key } from "./i18n";
 const keys: Record<string, Key> = {
@@ -18,6 +19,8 @@ const keys: Record<string, Key> = {
   ENTRY_ALREADY_EXISTS: "entryExists",
   PROJECT_ALREADY_EXISTS: "entryExists",
   PROJECT_REPLACED: "projectReplaced",
+  PROJECT_BINDING_EXPIRED: "projectReplaced",
+  NO_PROJECT: "projectReplaced",
   ENTRY_IDENTITY_MISMATCH: "projectReplaced",
   PROJECT_HAS_ACTIVE_RUNS: "activeBlocksCreate",
   REVISION_CONFLICT: "errRevisionConflict",
@@ -63,6 +66,9 @@ const keys: Record<string, Key> = {
 const structured = new Set(["PROJECT_LOCKED_OTHER_HOST", "PROJECT_LOCKED"]);
 export function errorText(error: unknown, t: Translate) {
   const data = errorData(error);
+  const copy = connectionText(t.locale);
+  const connectionErrors: Record<string, string> = { AGENT_GUIDE_CONFLICT: copy.conflict, AGENT_GUIDE_UNAVAILABLE: copy.unavailable, AGENT_CONTEXT_CHANGED: copy.changed, CLIPBOARD_FAILED: copy.clipboard };
+  if (connectionErrors[data.code]) return connectionErrors[data.code];
   if (!keys[data.code]) return data.message;
   const details = data.details && !structured.has(data.code) && !data.details.startsWith("{") ? `\n${data.details}` : "";
   return `${t(keys[data.code])}${details}`;

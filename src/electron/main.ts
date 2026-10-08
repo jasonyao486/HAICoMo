@@ -1,3 +1,5 @@
+import { assertAgentConnection } from "../shared/agent-prompt";
+import { projectFilename } from "../shared/project-filename";
 import { resolveArtifactPath } from "../core/artifact-path";
 import { portableArtifactPath } from "../shared/artifact-path";
 import {
@@ -498,6 +500,7 @@ async function prepareStart(provider: "codex" | "claude", model: string | undefi
   return cap;
 }
 const scheduler = new RelayScheduler({
+  locale: () => settings().locale,
   directories: () => [...openedDirectories.keys()],
   view: (directory) => request("view", directory),
   command: (directory, type, payload) => request("command", directory, { id: randomUUID(), type, payload }),
@@ -876,16 +879,20 @@ else {
             break;
           }
           case "project.create": {
-            const picked = testing
+            const title = z.string().trim().min(1).max(300).parse(payload.title);
+            const defaultPath = projectFilename(title);
+            const picked = testing && process.env.HAICOMO_TEST_CANCEL_SAVE === "1"
+              ? { canceled: true, filePath: undefined }
+              : testing
               ? {
                   canceled: false,
                   filePath: path.join(
                     process.env.HAICOMO_TEST_DIRECTORY!,
-                    "HAICoMo.haicomo",
+                    defaultPath,
                   ),
                 }
               : await dialog.showSaveDialog(win, {
-                  defaultPath: "HAICoMo.haicomo",
+                  defaultPath: defaultPath,
                   filters: [{ name: "HAICoMo", extensions: ["haicomo"] }],
                 });
             if (picked.canceled || !picked.filePath) {
@@ -903,7 +910,7 @@ else {
             try {
               const entry = await request("create", directory, {
                 entryPath: picked.filePath,
-                title: z.string().trim().min(1).max(300).parse(payload.title),
+                title,
               });
               openedDirectories.delete(directory);
               scheduler.forget(directory);
@@ -1178,6 +1185,7 @@ else {
               )
                 throw new Error("PROJECT_REPLACED");
               const state: Workspace = await projectRequest("view");
+              assertAgentConnection(state, data.taskId);
               if (!state.state.tasks.some((t) => t.id === data.taskId))
                 throw new Error("TASK_NOT_FOUND");
               assertTaskRunnable(
@@ -1247,10 +1255,15 @@ else {
             );
             result = true;
             break;
-          case "clipboard":
-            clipboard.writeText(z.string().max(1000000).parse(payload.text));
+          case "clipboard": {
+            const text = z.string().max(1000000).parse(payload.text);
+            try {
+              await clipboard.writeText(text);
+              if (await clipboard.readText() !== text) throw new Error("CLIPBOARD_FAILED");
+            } catch { throw new Error("CLIPBOARD_FAILED"); }
             result = true;
             break;
+          }
           case "terminal.open": {
             if (!dir) throw new Error("NO_PROJECT");
             if (process.platform === "darwin")

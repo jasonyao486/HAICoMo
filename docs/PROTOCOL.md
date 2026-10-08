@@ -1,6 +1,6 @@
 # Agent file protocol v2 (v1 compatible)
 
-The app writes `.haicomo/AGENTS.md`, `protocol.schema.json` and a project-specific `proposal-example.json` automatically. These are the agent's entry point. The envelope schema is generated from the ingestion Zod validator; `$defs.taskValues` describes task values, which are strictly validated when approval is applied.
+The app maintains `.haicomo/agent-guide.md`, `protocol.schema.json` and a project-specific `proposal-example.json` automatically. Read applicable project rules and `.haicomo/AGENTS.md` first. Existing rule files are preserved; only a missing `.haicomo/AGENTS.md` receives a pointer to the full English guide. A conflicting custom `agent-guide.md` is preserved and reported instead of overwritten. These files are the agent's entry point. The envelope schema is generated from the ingestion Zod validator; `$defs.taskValues` describes task values, which are strictly validated when approval is applied.
 
 ## Read
 

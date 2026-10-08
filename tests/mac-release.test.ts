@@ -1,3 +1,4 @@
+import { verifyPlatformRun } from '../scripts/release-provenance.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -84,10 +85,10 @@ test('lost upload responses recover only the exact hash and never repeat submiss
   await submitNotarization(item,hooks); assert.equal(submitted,1);
   assert.equal(isSubmissionId('-'.repeat(36)),false);
 });
-test('publication requires exact formal files and fresh-account first-open evidence', () => {
+for (const version of ['0.3.3','0.3.5']) test(`publication ${version} requires exact formal files and fresh-account first-open evidence`, () => {
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'haicomo-publish-gate-'));
   try {
-    const version='0.3.3', source='1'.repeat(40), reference='2'.repeat(40);
+    const source='1'.repeat(40), reference='2'.repeat(40);
     const mac=path.join(dir,`haicomo-${version}-mac-arm64`), win=path.join(dir,`haicomo-${version}-windows-x64`);
     fs.mkdirSync(mac);fs.mkdirSync(win);fs.writeFileSync(path.join(dir,'package.json'),JSON.stringify({version}));
     const dmg=`HAICoMo-${version}-arm64.dmg`, zip=`HAICoMo-${version}-arm64-mac.zip`, exe=`HAICoMo-${version}-windows-x64-setup.exe`;
@@ -104,6 +105,14 @@ test('publication requires exact formal files and fresh-account first-open evide
     };
     assert.match(check().stderr,/first-open acceptance is missing/);
     m.firstOpen={method:'browser-download-fresh-macos-account',dmgSha256:hashes[dmg]};
+    if (version === '0.3.5') {
+      assert.match(check().stderr,/Windows 0.3.4 upgrade evidence/);
+      Object.assign(w,{previousVersionUpgrade:'0.3.4',upgradeLaunch:true,upgradeProject:true,upgradeSettings:true,upgradeAssociation:true,upgradeRetainedData:true,sourceCommit:source});
+      assert.match(check().stderr,/Mac 0.3.3 upgrade evidence/);
+      Object.assign(m,{previousVersionUpgrade:'0.3.3',upgradeProject:true,upgradeSettings:true});
+      w.sourceCommit=reference; assert.match(check().stderr,/Windows 0.3.4 upgrade evidence/); w.sourceCommit=source;
+      w.previousVersionUpgrade='0.3.3'; assert.notEqual(check().status,0); w.previousVersionUpgrade='0.3.4';
+    }
     assert.equal(check().status,0);
     m.firstOpen.dmgSha256='a'.repeat(64);assert.notEqual(check().status,0);m.firstOpen.dmgSha256=hashes[dmg];
     w.admin=true;assert.match(check().stderr,/Windows standard-user/);w.admin=false;
@@ -111,4 +120,18 @@ test('publication requires exact formal files and fresh-account first-open evide
     m.buildCommit='unknown';assert.notEqual(check().status,0);m.buildCommit=source;
     fs.appendFileSync(path.join(mac,dmg),'tampered');assert.match(check().stderr,/differs from release/);
   } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+
+test('independent platform runs require trusted main jobs and never accept an unverified platform', () => {
+  const repository='example/project', sha='1'.repeat(40);
+  const run={status:'completed',conclusion:'success',head_branch:'main',event:'workflow_dispatch',path:'.github/workflows/verify.yml',head_repository:{full_name:repository},head_sha:sha};
+  const jobs=[{name:'desktop (windows-2025, windows, x64)',conclusion:'success'}];
+  verifyPlatformRun({...run,conclusion:'failure'},jobs,'windows',repository);
+  assert.throws(()=>verifyPlatformRun({...run,conclusion:'failure'},jobs,'mac',repository));
+  assert.throws(()=>verifyPlatformRun({...run,event:'pull_request'},jobs,'windows',repository));
+  assert.throws(()=>verifyPlatformRun({...run,head_branch:'feature'},jobs,'windows',repository));
+  assert.throws(()=>verifyPlatformRun(run,jobs,'windows','different/repository'));
+  assert.throws(()=>verifyPlatformRun(run,[{...jobs[0],conclusion:'failure'}],'windows',repository));
+  assert.throws(()=>verifyPlatformRun({...run,conclusion:'cancelled'},jobs,'windows',repository));
 });

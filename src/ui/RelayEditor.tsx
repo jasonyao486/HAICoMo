@@ -1,3 +1,4 @@
+import { assertAgentConnection, connectionText } from "../shared/agent-prompt";
 import { useEffect, useMemo, useState } from "react";
 import { Check, RotateCw } from "lucide-react";
 import {
@@ -33,7 +34,7 @@ const defaultAt = () => toLocalInput(new Date(Date.now() + 3600000).toISOString(
 export function defaultRelayPrompt(workspace: Workspace, taskId: string) {
   const task = workspace.state.tasks.find((t) => t.id === taskId);
   if (task?.handoff.trim()) return task.handoff;
-  return `Read .haicomo/AGENTS.md and .haicomo/snapshot.json in ${workspace.directory}.\nContinue task ${taskId}: ${task?.title ?? ""}.\n${task?.description ?? ""}\nStart from the reference deliverables listed below. Submit changes as a proposal and report deliverables for human acceptance.`;
+  return "";
 }
 export function RelayEditor({ relay, workspace, settings, t, onClose, onSaved }: { relay: Relay | null; workspace: Workspace; settings: Settings; t: Translate; onClose: () => void; onSaved: (w: Workspace) => void }) {
   const { api, command } = useApi();
@@ -82,7 +83,7 @@ export function RelayEditor({ relay, workspace, settings, t, onClose, onSaved }:
   const dirty = snapshot !== original;
   let preview = "";
   try {
-    preview = composeRelayPrompt({ prompt, referenceTaskId: referenceTaskId || null, afterSessionId: afterSessionId || null, taskId }, state);
+    preview = composeRelayPrompt({ prompt, referenceTaskId: referenceTaskId || null, afterSessionId: afterSessionId || null, taskId }, state, workspace.directory, settings.locale);
   } catch {
     preview = prompt;
   }
@@ -90,6 +91,7 @@ export function RelayEditor({ relay, workspace, settings, t, onClose, onSaved }:
     setBusy(true);
     setError("");
     try {
+      assertAgentConnection(await api("project.view"), taskId);
       const v = values();
       validateRelay(v, state, state.relays, relay?.id ?? null);
       const next = relay
@@ -207,7 +209,7 @@ export function RelayEditor({ relay, workspace, settings, t, onClose, onSaved }:
           </select>
         </label>
         <label className="full">
-          {t("relayPrompt")}
+          {connectionText(settings.locale).custom}
           <textarea rows={6} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
         </label>
         <details className="full relay-preview">
@@ -219,8 +221,8 @@ export function RelayEditor({ relay, workspace, settings, t, onClose, onSaved }:
       </div>
       <div className="modal-footer">
         <button type="button" className="button" disabled={busy} onClick={() => void api("providers.detect").then(setCaps)}><RotateCw size={14} /> {t("detect")}</button>
-        <button type="button" className="button" disabled={busy || !prompt.trim() || !taskId} onClick={() => void save(false)}>{t("relaySaveDisabled")}</button>
-        <button type="button" className="button primary" disabled={busy || !prompt.trim() || !taskId || !cap?.background} onClick={() => void save(true)}><Check size={15} /> {t("relaySaveEnable")}</button>
+        <button type="button" className="button" disabled={busy || !taskId} onClick={() => void save(false)}>{t("relaySaveDisabled")}</button>
+        <button type="button" className="button primary" disabled={busy || !taskId || !cap?.background} onClick={() => void save(true)}><Check size={15} /> {t("relaySaveEnable")}</button>
       </div>
     </Modal>
   );

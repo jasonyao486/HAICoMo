@@ -2242,3 +2242,11 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .audit-people { margin: 16px 0; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
 .audit-people dt { color: var(--muted); }
 .audit-people dd { margin: 0 0 8px; white-space: pre-wrap; }
+
+.connection-form { display: grid; gap: 16px; }
+.connection-form label { display: grid; gap: 6px; min-width: 0; }
+.connection-form textarea { width: 100%; resize: vertical; }
+@media (max-width: 800px) {
+  .topbar { flex-wrap: wrap; gap: 8px; height: auto; padding-block: 10px; }
+  .topbar-actions { flex-wrap: wrap; }
+}

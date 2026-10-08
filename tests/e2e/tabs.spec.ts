@@ -189,14 +189,15 @@ test("single window tabs retain drafts, route background permissions and keep cl
     await current(page)
       .getByRole("button", { name: "交接", exact: true })
       .click();
-    const prompt = current(page).locator("textarea");
+    const prompt = current(page).locator("textarea:not([readonly])");
     await prompt.fill("cancel");
     await current(page)
       .getByRole("button", { name: "复制提示词", exact: true })
       .click();
-    expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe(
-      "cancel",
-    );
+    const composed = await current(page).locator("textarea[readonly]").inputValue();
+    expect(composed).toContain("agent-guide.md");
+    expect(composed).toContain("\ncancel\n");
+    expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe(composed);
     await current(page)
       .getByRole("button", { name: "复制命令", exact: true })
       .click();
@@ -216,7 +217,7 @@ test("single window tabs retain drafts, route background permissions and keep cl
       .getByRole("button", { name: "复制提示词", exact: true })
       .click();
     await expect(current(page).locator(".error-box")).toContainText(
-      "fixture clipboard failure",
+      "无法写入剪贴板，请重新复制。",
     );
     await app.evaluate(({ clipboard }) => {
       clipboard.writeText = (globalThis as any).__copy;
@@ -454,8 +455,8 @@ test("deleted entry stays missing in recents; same-directory recreation has new 
   let app = await launch(root, dirs[0]);
   let page = await app.firstWindow();
   try {
-    const file = path.join(dirs[0], "HAICoMo.haicomo"),
-      oldId = resolveEntry(file).id;
+    let file = path.join(dirs[0], "HAICoMo.haicomo");
+    const oldId = resolveEntry(file).id;
     await emitOpen(app, file);
     await expect(
       current(page).getByRole("heading", { name: "Alpha", exact: true }),
@@ -490,6 +491,8 @@ test("deleted entry stays missing in recents; same-directory recreation has new 
     await expect(
       current(page).getByRole("heading", { name: "Fresh", exact: true }),
     ).toBeVisible();
+    expect(fs.existsSync(file)).toBe(false);
+    file = path.join(dirs[0], "Fresh.haicomo");
     expect(resolveEntry(file).id).not.toBe(oldId);
     expect(readSnapshot(dirs[0]).tasks).toHaveLength(0);
     const stale = await page.evaluate(async (binding) => {

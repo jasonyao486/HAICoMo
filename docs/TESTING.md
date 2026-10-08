@@ -19,3 +19,8 @@ All tests use temporary projects and isolated Electron profiles. Fixtures impers
 - Local macOS ARM64 validation on the installed Node 24.12.0 passed type checking, all 92 unit tests, and 23 Electron scenarios. Two Windows-only scenarios were skipped. The build verified all 86 public runtime assets. Node 24.21+ remains the documented development baseline; this local run is not new native package acceptance.
 - All 27 existing public image files retain their SHA-256 values. The original brief still matches `da6a5edbdbe69b600080d9e76d40e4795e2938d7226267c69cf6c13cc0af41c8`. Public-source privacy and relative-link checks cover the new capture and documentation; local capture scripts and logs remain ignored.
 - Contributor and agent instructions now require fetching before work and again before pushing, preserving both machines' changes, ordinary pushes and post-push ancestry checks. Application code, dependencies, project format, version and published downloads are unchanged by this documentation update.
+
+
+## 0.3.5 candidate
+
+See [0.3.5 verification](TESTING-0.3.5.md) for filename/onboarding regressions, platform-specific upgrade gates and pending first-open acceptance. Current public downloads remain unchanged until both platforms pass.

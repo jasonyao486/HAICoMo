@@ -139,6 +139,17 @@ jobs:
       - name: Package Windows x64
         if: runner.os == 'Windows'
         run: npx electron-builder --win --x64 --publish never
+      - name: Verify actual macOS 0.3.3 upgrade
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          node scripts/prepare-mac-upgrade.mjs
+          export HAICOMO_UPGRADE_ROOT="$PWD/validation/${{ env.HAICOMO_VERSION }}/mac-upgrade/test"
+          export HAICOMO_PACKAGED_EXECUTABLE="$PWD/validation/${{ env.HAICOMO_VERSION }}/mac-upgrade/previous/HAICoMo.app/Contents/MacOS/HAICoMo"
+          HAICOMO_UPGRADE_STAGE=seed npx playwright test tests/e2e/upgrade.spec.ts
+          export HAICOMO_PACKAGED_EXECUTABLE="$PWD/release/${{ env.HAICOMO_VERSION }}/mac-arm64/HAICoMo.app/Contents/MacOS/HAICoMo"
+          HAICOMO_UPGRADE_STAGE=check npx playwright test tests/e2e/upgrade.spec.ts
+          node scripts/record-mac-upgrade.mjs
       - name: Test packaged macOS application
         if: runner.os == 'macOS'
         shell: bash

@@ -1,3 +1,5 @@
+import { ConnectAgent } from "./ConnectAgent";
+import { connectionText } from "../shared/agent-prompt";
 import { useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard,
@@ -100,6 +102,7 @@ type Editor =
   | { kind: "handoff"; task: Task }
   | { kind: "agent"; family: string }
   | { kind: "project" }
+  | { kind: "connect" }
   | { kind: "permission"; data: any }
   | { kind: "legacy"; data: any }
   | { kind: "recovery" }
@@ -357,6 +360,7 @@ export function App() {
           <div className="topbar-actions">
             {workspace && (
               <>
+                <button className="button small" onClick={() => setEditor({ kind: "connect" })}>{connectionText(settings.locale).connect}</button>
                 <span className="saved-indicator">
                   <i />
                   {t(workspace.entryError ? "readOnly" : "healthy")}
@@ -393,7 +397,7 @@ export function App() {
           )}
           {workspace?.warnings.map((w, i) => (
             <div className="notice warning" key={i}>
-              {w}
+              {errorText(new Error(w), t)}
             </div>
           ))}
           {(view === "settings" || (tab.homeNavigation > 0 && settingsVisited)) && (
@@ -925,6 +929,7 @@ export function App() {
           }}
         />
       )}
+      {workspace && editor?.kind === "connect" && <ConnectAgent workspace={workspace} t={t} onClose={() => setEditor(null)} />}
       {workspace && editor?.kind === "handoff" && (
         <HandoffDialog
           task={editor.task}
