@@ -129,6 +129,7 @@ test('independent platform runs require trusted main jobs and never accept an un
   const jobs=[{name:'desktop (windows-2025, windows, x64)',conclusion:'success'}];
   verifyPlatformRun({...run,conclusion:'failure'},jobs,'windows',repository);
   assert.throws(()=>verifyPlatformRun({...run,conclusion:'failure'},jobs,'mac',repository));
+  verifyPlatformRun({...run,conclusion:'failure'},[{name:'desktop (macos-15, mac, arm64)',conclusion:'success'}],'mac',repository);
   assert.throws(()=>verifyPlatformRun({...run,event:'pull_request'},jobs,'windows',repository));
   assert.throws(()=>verifyPlatformRun({...run,head_branch:'feature'},jobs,'windows',repository));
   assert.throws(()=>verifyPlatformRun(run,jobs,'windows','different/repository'));

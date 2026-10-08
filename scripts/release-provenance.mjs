@@ -1,7 +1,7 @@
-/** Permit an independent Windows success when only the Mac job timed out. */
+/** A platform job must pass; an unrelated job may have failed in the same run. */
 export function verifyPlatformRun(run, jobs, platform, repository) {
   const windows = platform === 'windows';
-  if (run.status !== 'completed' || !(windows ? ['success','failure'] : ['success']).includes(run.conclusion)
+  if (run.status !== 'completed' || !['success','failure'].includes(run.conclusion)
       || run.head_branch !== 'main' || !['push','workflow_dispatch'].includes(run.event)
       || run.path !== '.github/workflows/verify.yml' || run.head_repository?.full_name !== repository
       || !/^[a-f0-9]{40}$/.test(run.head_sha ?? '')) throw new Error(`Trusted completed ${platform} verification required`);

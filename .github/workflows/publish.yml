@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       verification_run:
-        description: Successful Mac verification run ID
+        description: Run ID with a successful Mac verification job
         type: string
         required: true
       windows_verification_run:
