@@ -88,10 +88,11 @@ test("four-language connection and relay prompts share instructions without pers
     const prompt = composeAgentPrompt(dir, state, locale, taskId, custom);
     assert.equal(composeRelayPrompt({ taskId, prompt: custom, afterSessionId: null, referenceTaskId: null }, state, dir, locale), prompt);
     assert.ok(prompt.includes(custom));
-    for (const text of [dir, taskId, "Synthetic task", "Task context", "out/result.txt", "agent-guide.md", "manifest.json", "snapshot.json", "protocol.schema.json", "proposal-example.json", "SHA-256", ".ready"]) assert.ok(prompt.includes(text));
+    for (const text of [JSON.stringify(dir), taskId, "Synthetic task", "Task context", "out/result.txt", "agent-guide.md", "manifest.json", "snapshot.json", "protocol.schema.json", "proposal-example.json", "SHA-256", ".ready"]) assert.ok(prompt.includes(text));
     assert.equal(prompt.split(custom).length, 2);
     assert.ok(!composeAgentPrompt(dir, state, locale).includes(taskId));
-    assert.ok(!composeAgentPrompt("other-project", state, locale).includes(dir));
+    assert.ok(!composeAgentPrompt("other-project", state, locale).includes(JSON.stringify(dir)));
+    assert.equal(JSON.parse(prompt.split("\n")[1].slice(prompt.split("\n")[1].indexOf(": ") + 2)), dir);
   }
   assert.equal(store.state().tasks[0].handoff, custom);
   assert.throws(() => composeAgentPrompt(dir, state, "en-GB", "removed"), /TASK_NOT_FOUND/);

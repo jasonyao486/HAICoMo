@@ -113,8 +113,8 @@ test("0.3.5 named creation, four-language connection, task proposals, custom han
     await app.evaluate(({ app }, file) => app.emit("open-file", { preventDefault() {} }, file), path.join(other, "HAICoMo.haicomo"));
     await expect(frame.getByRole("heading", { name: "Other project", exact: true })).toBeVisible();
     await frame.getByRole("button", { name: "Connect an agent", exact: true }).click();
-    await expect(dialog.getByLabel("Connection instructions")).toContainText(other);
-    expect(await dialog.getByLabel("Connection instructions").inputValue()).not.toContain(directory);
+    await expect(dialog.getByLabel("Connection instructions")).toContainText(JSON.stringify(other));
+    expect(await dialog.getByLabel("Connection instructions").inputValue()).not.toContain(JSON.stringify(directory));
     fs.writeFileSync(path.join(other, ".haicomo/agent-guide.md"), "Custom guide must survive.");
     await dialog.getByRole("button", { name: "Copy connection instructions" }).click();
     await expect(dialog.getByRole("alert")).toContainText("Original files were preserved");
