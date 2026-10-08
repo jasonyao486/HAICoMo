@@ -1,6 +1,6 @@
 # 0.3.5 verification status
 
-Status: both native automated release gates passed. On 2026-10-08, the maintainer confirmed that the requested acceptance checks for this version passed and authorised publication of both platforms. This records human confirmation of fresh-account browser first-open acceptance for the exact DMG below; it is separate from the automated gates and local installation. No previous version's first-open result is reused. Publication and anonymous download verification are the remaining delivery steps.
+Status: both native automated release gates passed. On 2026-10-08, the maintainer confirmed that the requested acceptance checks for this version passed and authorised publication of both platforms. This records human confirmation of fresh-account browser first-open acceptance for the exact DMG below; it is separate from the automated gates and local installation. No previous version's first-open result is reused. Both platforms are publicly available in [v0.3.5](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.5); publication and anonymous download verification passed in [run 37809739155](https://github.com/jasonyao486/HAICoMo/actions/runs/37809739155).
 
 New-project entry filenames, protected generated guides, four-language agent connection and shared handoff/relay prompts are implemented. Database v5, entry v2 and proposal v1/v2 remain unchanged. Synthetic projects and fixture CLIs exercise proposal submission, human approval, delivery registration and separate human acceptance without real model accounts.
 
@@ -17,7 +17,7 @@ Mac App, DMG and ZIP-contained App passed strict Developer ID signatures, Harden
 
 Windows installed-app checks also ran under an actual non-administrator token, with a protected registry write denied. Seven installed desktop scenarios passed. Fresh installation, launch, reinstall, current-user associations/shortcuts and uninstall passed. Separate old/new app stages verified 0.3.4 → 0.3.5 upgrade, project identity, settings, rules, association and retained project/database/delivery/settings files after uninstall. The synthetic machine-wide installation remained unchanged. An administrator installation was not used as proof of the permission guarantee. SmartScreen remains distinct from elevation.
 
-Candidate installer hashes:
+Published installer hashes (unchanged from the accepted candidates):
 
 ```text
 3d499484fd5861cf09747f04337337137308c114fed0934c8cbe5e50dc9a08d5  HAICoMo-0.3.5-arm64.dmg
@@ -25,9 +25,11 @@ Candidate installer hashes:
 6e8a16470660edb28d8643a865dc2b8c3f326afdf9420f42cb55dccf424beaac  HAICoMo-0.3.5-windows-x64-setup.exe
 ```
 
-The downloaded platform reports match their SHA-256 manifests. Source privacy/link scanning passed for 297 tracked files; all 86 runtime assets and packaged resource/license/privacy checks passed. Mac and Windows synthetic connection screenshots were visually inspected. Evidence stays in ignored `validation/0.3.5/` and CI artifacts; no real project or account data was used. The installed local Node is 24.12.0; supported-runtime acceptance comes from the native CI runs on 24.21.0.
+The downloaded platform reports match their SHA-256 manifests. Source privacy/link scanning passed for 300 tracked files; all 86 runtime assets and packaged resource/license/privacy checks passed. Mac and Windows synthetic connection screenshots were visually inspected. Evidence stays in ignored `validation/0.3.5/` and CI artifacts; no real project or account data was used. The installed local Node is 24.12.0; supported-runtime acceptance comes from the native CI runs on 24.21.0.
 
-Remaining delivery steps: publication of both platforms together and anonymous public-download hash verification. The maintainer's acceptance covers the requested new-account browser download, first launch without Open Anyway, named project entry, connection instructions and reopening. [Mac candidate artifact](https://github.com/jasonyao486/HAICoMo/actions/runs/37794633164/artifacts/11559885139) requires GitHub sign-in. No unnotarised temporary release is provided. Earlier candidates lacking the handoff revision guard are retired.
+Publication completed on 2026-10-08 from release-maintenance commit `75c3005addf7ec9b44be271a881159c0586f4252`; the version tag points to the exact Mac build commit `9609deebc775248445837f1b9197d6bca7ceaf5f`. The selected Windows build has identical application inputs. The maintainer's acceptance covers the requested new-account browser download, first launch without Open Anyway, named project entry, connection instructions and reopening. The published Mac verification report records this attestation against the exact DMG hash. The report and its checksum were updated at publication; the DMG, ZIP and Windows installer were not rebuilt or modified.
+
+The release contains eight uploaded assets: Mac DMG, ZIP, verification report and SHA-256 manifest; Windows Setup, blockmap, verification report and SHA-256 manifest. GitHub additionally generates two source archives. The publication job anonymously downloaded and verified every checksum-listed file. Previous v0.3.3 and v0.3.4 asset identities, sizes, digests and update timestamps remained unchanged. Ten release-gate regression cases and the public privacy/link scan passed before publication. No unnotarised temporary package is offered.
 
 The current development Mac was upgraded from 0.3.2 to this same 0.3.5 app. Strict signing, tickets and Gatekeeper passed locally; an isolated installed-app smoke check verified named project creation and agent connection. Existing user settings were unchanged, the old app was archived for rollback, and only the canonical installed app remains registered. This local update does not substitute for the separately confirmed fresh-account acceptance.
 

@@ -1,14 +1,12 @@
 # HAICoMo 0.3.5 — User manual (US English)
 
-> Candidate documentation: 0.3.5 is not published until both platforms pass acceptance. Current downloads remain linked from the README.
-
 This is a complete guide to version 0.3.5. Interface translations: UK English, US English, Simplified Chinese and Traditional Chinese. Examples and screenshots are synthetic. Platform evidence is recorded separately in [the compatibility report](TESTING-0.3.5.md).
 
 ## 1. Install and update
 
 Open [GitHub Releases](https://github.com/jasonyao486/HAICoMo/releases), choose v0.3.5 and expand Assets. Apple Silicon Mac users download the arm64 DMG; Windows x64 users download the windows-x64-setup.exe. Source-code ZIPs are not installers. Intel Mac, Windows ARM64 and Linux are not verified release targets.
 
-On macOS, open the DMG, drag the app to Applications, eject the image and start the installed app. The formal package is Developer ID signed, notarized by Apple and stapled. A normal downloaded-app Open confirmation may appear; Publication requires fresh-account acceptance without Open Anyway. On Windows, setup installs automatically for the current user; installation, upgrade and uninstall do not request administrator permissions. Existing machine-wide installations require separate handling. The unsigned package may trigger SmartScreen, which is separate from administrator permissions; check the source and checksum before proceeding.
+On macOS, open the DMG, drag the app to Applications, eject the image and start the installed app. The formal package is Developer ID signed, notarized by Apple and stapled. A normal downloaded-app Open confirmation may appear; fresh-account first launch passed without Open Anyway. On Windows, setup installs automatically for the current user; installation, upgrade and uninstall do not request administrator permissions. Existing machine-wide installations require separate handling. The unsigned package may trigger SmartScreen, which is separate from administrator permissions; check the source and checksum before proceeding.
 
 Task management requires no Node.js, Git or AI subscription. Background AI work requires an installed, signed-in client. Updates are manual: stop agents, quit HAICoMo, keep project folders, and replace/reinstall the app. Settings includes Downloads and releases, GitHub feedback and a separate diagnostic export. Diagnostic export does not send anything automatically. The optional custom update-source field is for a separately configured, verified update channel; it is not needed for this release.
 
