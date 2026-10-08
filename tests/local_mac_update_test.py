@@ -1,4 +1,5 @@
 import hashlib
+import json
 from pathlib import Path
 import stat
 import subprocess
@@ -27,7 +28,8 @@ class LocalMacUpdate(unittest.TestCase):
                     archive.writestr(link, b'app.asar')
                     archive.writestr('__MACOSX/HAICoMo.app/Contents/._app.asar', b'old metadata' if file == old else b'new metadata')
             expected = hashlib.sha256(new.read_bytes()).hexdigest()
-            common = ['--baseline', str(old), '--expected', expected]
+            blocks = root / 'blocks'
+            common = ['--baseline', str(old), '--expected', expected, '--blocks', str(blocks)]
             def run(*args):
                 return subprocess.run([sys.executable, str(SCRIPT), *args, *common], capture_output=True, text=True)
             self.assertEqual(run('create', '--candidate', str(new), '--output', str(output)).returncode, 0)
@@ -36,8 +38,16 @@ class LocalMacUpdate(unittest.TestCase):
             alternate = root / 'alternate.zip'
             with zipfile.ZipFile(old) as source, zipfile.ZipFile(alternate, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
                 for item in source.infolist():
-                    archive.writestr(item.filename, source.read(item))
+                    data = source.read(item)
+                    if item.filename.endswith('/app.asar'):
+                        data = b'local build prefix' + data
+                    elif item.filename.endswith('/unchanged'):
+                        data = b'different local metadata'
+                    archive.writestr(item.filename, data)
             alternate.replace(old)
+            plan = root / 'needed.json'
+            self.assertEqual(run('needed', '--input', str(output), '--output', str(plan)).returncode, 0)
+            self.assertEqual(len(json.loads(plan.read_text())), 1)
             self.assertEqual(run('apply', '--input', str(output), '--output', str(restored)).returncode, 0)
             with zipfile.ZipFile(new) as accepted, zipfile.ZipFile(restored) as actual:
                 self.assertEqual(accepted.namelist(), actual.namelist())
@@ -45,6 +55,11 @@ class LocalMacUpdate(unittest.TestCase):
                     self.assertEqual(accepted.read(name), actual.read(name))
                     for attribute in ['external_attr', 'internal_attr', 'create_system', 'extra', 'comment', 'date_time']:
                         self.assertEqual(getattr(accepted.getinfo(name), attribute), getattr(actual.getinfo(name), attribute))
+            needed_block = blocks / (json.loads(plan.read_text())[0] + '.bin')
+            saved = needed_block.read_bytes()
+            needed_block.write_bytes(b'corrupted block')
+            self.assertNotEqual(run('apply', '--input', str(output), '--output', str(root/'bad-block.zip')).returncode, 0)
+            needed_block.write_bytes(saved)
             payload = next(output.glob('*.bin'))
             payload.write_bytes(b'corrupted')
             self.assertNotEqual(run('apply', '--input', str(output), '--output', str(root/'bad.zip')).returncode, 0)

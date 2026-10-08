@@ -55,10 +55,16 @@ jobs:
         run: |
           zstd --version
           python3 tests/local_mac_update_test.py
-          python3 scripts/local-mac-update.py create --baseline "baseline/HAICoMo-$BASELINE_VERSION-arm64-mac.zip" --candidate "candidate/HAICoMo-$VERSION-arm64-mac.zip" --expected "$CANDIDATE_SHA" --output local-update
+          python3 scripts/local-mac-update.py create --baseline "baseline/HAICoMo-$BASELINE_VERSION-arm64-mac.zip" --candidate "candidate/HAICoMo-$VERSION-arm64-mac.zip" --expected "$CANDIDATE_SHA" --output local-update --blocks baseline-blocks
       - uses: actions/upload-artifact@v4
         with:
           name: local-mac-update-${{ env.VERSION }}
           path: local-update/
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: local-mac-baseline-blocks-${{ env.VERSION }}
+          path: baseline-blocks/
           if-no-files-found: error
           retention-days: 7
