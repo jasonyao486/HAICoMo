@@ -77,7 +77,9 @@ def apply(args):
     if manifest['schema'] != 1 or manifest['candidateZipSha256'] != args.expected:
         raise ValueError('Wrong accepted candidate provenance')
     if file_digest(args.baseline) != manifest['baselineZipSha256']:
-        raise ValueError('Baseline ZIP checksum mismatch')
+        # Local ZIP timestamps/compression may differ. Never trust that base:
+        # each restored entry must still match the accepted candidate SHA-256.
+        print('Baseline ZIP wrapper differs; checking every restored entry against the accepted candidate.')
     output = Path(args.output)
     if output.exists():
         raise ValueError('Output already exists')

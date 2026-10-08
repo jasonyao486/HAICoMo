@@ -31,6 +31,13 @@ class LocalMacUpdate(unittest.TestCase):
             def run(*args):
                 return subprocess.run([sys.executable, str(SCRIPT), *args, *common], capture_output=True, text=True)
             self.assertEqual(run('create', '--candidate', str(new), '--output', str(output)).returncode, 0)
+            # A locally archived baseline can have different ZIP compression
+            # while supplying the same exact entry bytes for reconstruction.
+            alternate = root / 'alternate.zip'
+            with zipfile.ZipFile(old) as source, zipfile.ZipFile(alternate, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+                for item in source.infolist():
+                    archive.writestr(item.filename, source.read(item))
+            alternate.replace(old)
             self.assertEqual(run('apply', '--input', str(output), '--output', str(restored)).returncode, 0)
             with zipfile.ZipFile(new) as accepted, zipfile.ZipFile(restored) as actual:
                 self.assertEqual(accepted.namelist(), actual.namelist())
