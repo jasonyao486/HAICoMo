@@ -16,4 +16,4 @@ English: new projects derive their default entry filename from the project name.
 
 Further downloads: [Mac ZIP](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.5/HAICoMo-0.3.5-arm64-mac.zip), [Mac SHA-256](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.5/SHA256SUMS-darwin-arm64.txt), [Windows SHA-256](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.5/SHA256SUMS-win32-x64.txt). Verification reports accompany these files.
 
-Manuals: [简体中文](USER-MANUAL-0.3.5.zh-CN.md) · [繁體中文](USER-MANUAL-0.3.5.zh-TW.md) · [UK English](USER-MANUAL-0.3.5.en-GB.md) · [US English](USER-MANUAL-0.3.5.en-US.md). [Verification status](TESTING-0.3.5.md).
+Manuals: [简体中文](https://github.com/jasonyao486/HAICoMo/blob/main/docs/USER-MANUAL-0.3.5.zh-CN.md) · [繁體中文](https://github.com/jasonyao486/HAICoMo/blob/main/docs/USER-MANUAL-0.3.5.zh-TW.md) · [UK English](https://github.com/jasonyao486/HAICoMo/blob/main/docs/USER-MANUAL-0.3.5.en-GB.md) · [US English](https://github.com/jasonyao486/HAICoMo/blob/main/docs/USER-MANUAL-0.3.5.en-US.md). [Verification status](https://github.com/jasonyao486/HAICoMo/blob/main/docs/TESTING-0.3.5.md).

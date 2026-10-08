@@ -197,14 +197,17 @@ test("single window tabs retain drafts, route background permissions and keep cl
     const composed = await current(page).locator("textarea[readonly]").inputValue();
     expect(composed).toContain("agent-guide.md");
     expect(composed).toContain("\ncancel\n");
-    expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe(composed);
+    // Copy validates the latest project through worker IPC before writing. Wait
+    // for completion; a click alone does not imply the async write has finished.
+    await expect(current(page).getByRole("button", { name: "已复制", exact: true })).toBeVisible();
+    await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText())).toBe(composed);
     await current(page)
       .getByRole("button", { name: "复制命令", exact: true })
       .click();
     const command = await current(page)
       .locator(".command-preview")
       .textContent();
-    expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe(
+    await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText())).toBe(
       command,
     );
     await app.evaluate(({ clipboard }) => {

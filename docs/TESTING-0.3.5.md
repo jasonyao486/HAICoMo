@@ -16,3 +16,5 @@ Immutable original brief SHA-256: `da6a5edbdbe69b600080d9e76d40e4795e2938d722626
 
 
 Candidate follow-up: the Windows 24.21.0 run passed all 99 unit tests after correcting the test assertion for JSON-escaped Windows paths. Its desktop run passed 26 scenarios and exposed one outdated handoff-field locator, now updated while retaining clipboard and native-tray assertions. A subsequent application review added a revision guard to saved handoff drafts so a concurrent task edit cannot be silently overwritten; a new desktop test verifies the conflict and preserves the draft. Candidates built before this guard are retired and will not be published. Both native builds must run again from the updated application inputs.
+
+The next Mac source run passed the new revision-conflict scenario but exposed an older clipboard assertion that read immediately after a click, before asynchronous project validation finished. The test now waits for the copy completion and exact clipboard bytes, retaining the simulated failure checks. All four affected local multi-project scenarios passed. This correction changes tests only; application inputs remain those of `45749ad`.
