@@ -35,6 +35,12 @@ If only behind, fast-forward with `git merge --ff-only origin/main`. If both sid
 
 Fetch again immediately before pushing. Integrate any newly arrived changes and repeat checks affected by the integration. If an ordinary push is rejected because the remote advanced, repeat this process instead of forcing it. After pushing, verify the remote commit and that both machines' relevant commits are ancestors of the result; report the final commit and any remaining difference. Synchronisation covers the complete cross-platform source and tags, not installation of the other platform's binaries. These rules also apply to feature branches using their actual remote counterpart.
 
+### Deliver updates to the current development computer
+
+After implementing and verifying a new application version, upgrade the installed HAICoMo on the current development computer as part of delivery. Downloading/installing the verified native package is the agent's responsibility; do not leave the user on an older app or require a manual repository download for ordinary local updates. Use the exact accepted candidate/release artifact for this operating system and architecture, verifying its hash and platform signing requirements. A candidate may be installed locally before public release; identify its candidate status explicitly and retain the independent publication gates.
+
+Preserve projects, settings and databases, keep a verified recoverable backup of the replaced app, and never force-quit active work. If an active session, account authentication or OS permission blocks installation, identify the precise remaining user action. After replacement, verify the installed path/version and launch it with an isolated synthetic profile; do not run tests against real projects. Clean up expanded build/test apps and obsolete registrations so only the intended installed copy remains in the application list. Report source-push status, public-release status and the actual locally installed version separately. A fresh-account browser first-open acceptance test remains distinct from this local update and must not be claimed from installation alone.
+
 ### Build and verification
 
 Node 24.21+ and npm. `npm ci`; `npm run dev`; `npm test`; `npm run typecheck`; `npm run test:e2e`; `npm run pack`.

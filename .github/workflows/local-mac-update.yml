@@ -1,0 +1,64 @@
+name: Prepare verified local Mac update
+on:
+  workflow_dispatch:
+    inputs:
+      verification_run:
+        description: Successful trusted Mac verification run
+        required: true
+        type: string
+      baseline_version:
+        description: Previously published Mac ZIP available on the development computer
+        required: true
+        default: '0.3.2'
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  transfer:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERIFY_RUN_ID: ${{ inputs.verification_run }}
+      BASELINE_VERSION: ${{ inputs.baseline_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check provenance and retrieve accepted artifacts
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import {execFileSync} from 'node:child_process';
+          import {verifyPlatformRun} from './scripts/release-provenance.mjs';
+          import {assertApplicationSource} from './scripts/check-release-source.mjs';
+          const {version}=JSON.parse(fs.readFileSync('package.json','utf8'));
+          const id=process.env.VERIFY_RUN_ID, baseline=process.env.BASELINE_VERSION;
+          if(!/^\d+$/.test(id)||!/^\d+\.\d+\.\d+$/.test(baseline))throw new Error('Invalid input');
+          const api=route=>JSON.parse(execFileSync('gh',['api',`repos/${process.env.GH_REPO}/${route}`],{encoding:'utf8'}));
+          const run=api(`actions/runs/${id}`), jobs=api(`actions/runs/${id}/jobs?per_page=100`).jobs;
+          verifyPlatformRun(run,jobs,'mac',process.env.GH_REPO);
+          assertApplicationSource(run.head_sha);
+          execFileSync('gh',['run','download',id,'-n',`haicomo-${version}-mac-arm64`,'-D','candidate'],{stdio:'inherit'});
+          execFileSync('sha256sum',['-c','SHA256SUMS-darwin-arm64.txt'],{cwd:'candidate',stdio:'inherit'});
+          for(const file of [`HAICoMo-${baseline}-arm64-mac.zip`,'SHA256SUMS-darwin-arm64.txt'])execFileSync('gh',['release','download',`v${baseline}`,'-p',file,'-D','baseline'],{stdio:'inherit'});
+          const report=JSON.parse(fs.readFileSync('candidate/mac-release-verification.json','utf8'));
+          if(report.version!==version||report.sourceCommit!==run.head_sha||!['developerId','notarized','stapled','gatekeeper'].every(k=>report[k]===true))throw new Error('Formal Mac evidence missing');
+          fs.appendFileSync(process.env.GITHUB_ENV,`VERSION=${version}\nCANDIDATE_SHA=${report.hashes[`HAICoMo-${version}-arm64-mac.zip`]}\n`);
+          JS
+          cd baseline
+          grep 'arm64-mac.zip$' SHA256SUMS-darwin-arm64.txt | sha256sum -c -
+      - name: Prepare compact transport without rebuilding the application
+        run: |
+          zstd --version
+          python3 tests/local_mac_update_test.py
+          python3 scripts/local-mac-update.py create --baseline "baseline/HAICoMo-$BASELINE_VERSION-arm64-mac.zip" --candidate "candidate/HAICoMo-$VERSION-arm64-mac.zip" --expected "$CANDIDATE_SHA" --output local-update
+      - uses: actions/upload-artifact@v4
+        with:
+          name: local-mac-update-${{ env.VERSION }}
+          path: local-update/
+          if-no-files-found: error
+          retention-days: 7

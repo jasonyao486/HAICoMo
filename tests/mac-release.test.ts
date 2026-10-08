@@ -68,8 +68,8 @@ test('missing credentials and failed operations preserve cleanup and do not expo
   cleaned=false; await withCleanup(async()=>{},async()=>{cleaned=true;}); assert.equal(cleaned,true);
 });
 test('supplements allow release infrastructure, but never application changes', () => {
-  for (const name of ['scripts/release-mac.mjs','.github/workflows/verify.yml','tests/e2e/tabs.spec.ts','docs/TESTING-0.3.3.md']) assert.equal(isReleaseMaintenance(name),true);
-  for (const name of ['src/ui/Views.tsx','package.json','package-lock.json','build/installer.nsh','scripts/build.mjs','assets/runtime/logo.svg']) assert.equal(isReleaseMaintenance(name),false);
+  for (const name of ['AGENTS.md','scripts/local-mac-update.py','scripts/release-mac.mjs','.github/workflows/verify.yml','tests/e2e/tabs.spec.ts','docs/TESTING-0.3.3.md']) assert.equal(isReleaseMaintenance(name),true);
+  for (const name of ['AGENTS.md.js','src/ui/Views.tsx','package.json','package-lock.json','build/installer.nsh','scripts/build.mjs','assets/runtime/logo.svg']) assert.equal(isReleaseMaintenance(name),false);
 });
 test('lost upload responses recover only the exact hash and never repeat submission', async () => {
   const item: {sha256:string; id?:string; status?:string; submissionStartedAt?:string} = {sha256:'a'.repeat(64)};
