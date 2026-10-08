@@ -86,9 +86,9 @@ See [Windows functional evidence and limitations](TESTING-WINDOWS-2026-10-07.md)
 See [0.3.4 Windows acceptance, failure analysis and screenshot](TESTING-0.3.4-WINDOWS.md). Remaining provider limitations and unobserved native mouse interactions remain explicit.
 
 
-## 0.3.5 candidate: entry names and agent onboarding
+## 0.3.5: entry names and agent onboarding
 
 - New GUI projects derive a portable default entry filename from the validated title; the dialog remains editable. Old entries/title edits are not renamed. Shared filename cases plus lifecycle/e2e tests cover Unicode, reserved names, length, conflict, cancellation and reopening.
 - Project-level connection and optional task context use four-language prompts. Handoff and relay share composition while storing only custom content. Agent authority remains submit-only, never approve/accept.
 - The complete English guide is `.haicomo/agent-guide.md`; existing project rules and `.haicomo/AGENTS.md` are preserved. Conflicts and access failures prevent claiming successful connection.
-- Evidence: `tests/agent-onboarding.test.ts`, `tests/e2e/v035.spec.ts`, `tests/e2e/upgrade.spec.ts`, `tests/mac-release.test.ts`; [candidate verification](TESTING-0.3.5.md). Both native automated release gates have passed; the exact new Mac DMG still requires fresh-account browser first-open acceptance before both platforms are published.
+- Evidence: `tests/agent-onboarding.test.ts`, `tests/e2e/v035.spec.ts`, `tests/e2e/upgrade.spec.ts`, `tests/mac-release.test.ts`; [version verification](TESTING-0.3.5.md). Both native automated release gates passed; the maintainer confirmed this version's requested fresh-account browser first-open acceptance on 2026-10-08 and authorised joint publication.

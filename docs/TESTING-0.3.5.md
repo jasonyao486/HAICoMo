@@ -1,6 +1,6 @@
 # 0.3.5 verification status
 
-Status: both native automated release gates passed; fresh-account Mac browser first-open acceptance is still pending. Version 0.3.5 remains a candidate and is not publicly released. No previous version's first-open result is reused.
+Status: both native automated release gates passed. On 2026-10-08, the maintainer confirmed that the requested acceptance checks for this version passed and authorised publication of both platforms. This records human confirmation of fresh-account browser first-open acceptance for the exact DMG below; it is separate from the automated gates and local installation. No previous version's first-open result is reused. Publication and anonymous download verification are the remaining delivery steps.
 
 New-project entry filenames, protected generated guides, four-language agent connection and shared handoff/relay prompts are implemented. Database v5, entry v2 and proposal v1/v2 remain unchanged. Synthetic projects and fixture CLIs exercise proposal submission, human approval, delivery registration and separate human acceptance without real model accounts.
 
@@ -27,6 +27,8 @@ Candidate installer hashes:
 
 The downloaded platform reports match their SHA-256 manifests. Source privacy/link scanning passed for 297 tracked files; all 86 runtime assets and packaged resource/license/privacy checks passed. Mac and Windows synthetic connection screenshots were visually inspected. Evidence stays in ignored `validation/0.3.5/` and CI artifacts; no real project or account data was used. The installed local Node is 24.12.0; supported-runtime acceptance comes from the native CI runs on 24.21.0.
 
-Remaining release gates: browser download and first launch in a fresh macOS standard account using the exact candidate DMG above; then publication of both platforms together and anonymous public-download hash verification. [Mac candidate artifact](https://github.com/jasonyao486/HAICoMo/actions/runs/37794633164/artifacts/11559885139) requires GitHub sign-in. No unnotarised temporary release is provided. Earlier candidates lacking the handoff revision guard are retired.
+Remaining delivery steps: publication of both platforms together and anonymous public-download hash verification. The maintainer's acceptance covers the requested new-account browser download, first launch without Open Anyway, named project entry, connection instructions and reopening. [Mac candidate artifact](https://github.com/jasonyao486/HAICoMo/actions/runs/37794633164/artifacts/11559885139) requires GitHub sign-in. No unnotarised temporary release is provided. Earlier candidates lacking the handoff revision guard are retired.
+
+The current development Mac was upgraded from 0.3.2 to this same 0.3.5 app. Strict signing, tickets and Gatekeeper passed locally; an isolated installed-app smoke check verified named project creation and agent connection. Existing user settings were unchanged, the old app was archived for rollback, and only the canonical installed app remains registered. This local update does not substitute for the separately confirmed fresh-account acceptance.
 
 Immutable original brief SHA-256: `da6a5edbdbe69b600080d9e76d40e4795e2938d7226267c69cf6c13cc0af41c8`.
