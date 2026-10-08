@@ -68,13 +68,13 @@ Get-FileHash "$HOME\Downloads\HAICoMo-0.3.4-windows-x64-setup.exe" -Algorithm SH
 
 ## 功能
 
-以下图片来自独立的合成 “HAICoMo Demo” 项目，包含 10 个任务、50 个子任务，不含真实工作内容或账号对话。截图界面使用英文。
+以下图片展示空白首页，或独立的合成 “HAICoMo Demo” 项目（10 个任务、50 个子任务），不含真实工作内容或账号对话。双语 README 共用同一套英文界面截图。
 
 ### 首页与项目标签
 
 点击 logo 返回首页，保留各项目的页面与草稿。收起侧栏后仍可使用文件夹与终端入口。
 
-![首页](docs/images/0.3.2/home.png)
+![首页](docs/images/0.3.4/home-en-GB.png)
 
 ### 任务与子任务
 

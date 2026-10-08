@@ -20,8 +20,9 @@ Implementation and verification are separate. Current platform acceptance and te
 | LEGAL-01 | MIT source, separate characters/marks, dependency notices | Root LICENSE, ASSET-LICENSES, THIRD-PARTY-NOTICES, four-language Settings |
 | LINK-01 | GitHub Releases/Issues and separate diagnostics | Fixed shared allowlist, unit and offline Electron external-link tests |
 | DOC-01 | UK/US English, simplified/traditional Chinese full manuals | Four USER-MANUAL-0.3.3 files; aligned locale key test |
-| DOC-02 | Bilingual README, installation SOP, at least seven actual screenshots | README pair, synthetic demo and `docs/images/0.3.2` |
+| DOC-02 | Bilingual README, installation SOP, at least seven actual screenshots | README pair, shared English home capture in `docs/images/0.3.4`, retained synthetic demo images; [capture and source checks](TESTING.md#shared-english-home-screenshot-and-source-synchronisation--2026-10-08) |
 | DOC-03 | Two agent connection routes, copyable instructions and a reviewed-delivery walkthrough | Bilingual README links to four 0.3.3 manuals, sections 4.1–4.4; isolated file-protocol and desktop walkthrough verified on 2026-10-08; no automatic client configuration implied |
+| DEV-SYNC | Preserve Mac and Windows work in shared source history | AGENTS and CONTRIBUTING require start/pre-push fetch, integration without history rewriting, and post-push ancestry verification; Windows 0.3.4 source and tag confirmed locally on 2026-10-08 |
 | PUBLIC-01 | Clean public repository, no private history/data/keys | .gitignore, index/file scan, curated initial commit, clean clone |
 | RELEASE-01 | Native Mac ARM64 and Windows x64 package/automation | GitHub matrix; complete NSIS and DMG/ZIP; per-platform evidence |
 | RELEASE-02 | Manual pre-release, correct download choices and SHA-256 | Releases page, checksum script, compatibility report |

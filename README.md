@@ -68,13 +68,13 @@ The agent needs access to the working project's files; a local path alone does n
 
 ## Features
 
-All screenshots use an isolated, synthetic “HAICoMo Demo” project with 10 tasks and 50 subtasks. They contain no real user work or account conversations.
+Screenshots show either an empty home screen or an isolated, synthetic “HAICoMo Demo” project with 10 tasks and 50 subtasks. Both READMEs share the same English-interface images, with no real user work or account conversations.
 
 ### Home and project tabs
 
 Return home from the logo while retaining each open project’s page and drafts. The compact sidebar keeps its folder and terminal controls.
 
-![Home](docs/images/0.3.2/home.png)
+![Home](docs/images/0.3.4/home-en-GB.png)
 
 ### Tasks and subtasks
 

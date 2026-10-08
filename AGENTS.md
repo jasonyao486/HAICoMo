@@ -27,6 +27,16 @@
 
 ## Development
 
+### Synchronise work across macOS and Windows
+
+The two development machines share this repository. At the start of work, inspect the current branch, working tree and remote URL, then run `git fetch origin --prune --tags` and compare the local branch with its remote counterpart. Before starting changes for `main`, include the latest `origin/main`.
+
+If only behind, fast-forward with `git merge --ff-only origin/main`. If both sides have new commits, merge the remote changes and retain both sides' intent; ask only when a conflict leaves product behaviour unclear. Preserve existing uncommitted work before integrating changes. Do not use hard resets, force pushes or whole-file replacement to resolve divergence, and do not rewrite published commits or release tags.
+
+Fetch again immediately before pushing. Integrate any newly arrived changes and repeat checks affected by the integration. If an ordinary push is rejected because the remote advanced, repeat this process instead of forcing it. After pushing, verify the remote commit and that both machines' relevant commits are ancestors of the result; report the final commit and any remaining difference. Synchronisation covers the complete cross-platform source and tags, not installation of the other platform's binaries. These rules also apply to feature branches using their actual remote counterpart.
+
+### Build and verification
+
 Node 24.21+ and npm. `npm ci`; `npm run dev`; `npm test`; `npm run typecheck`; `npm run test:e2e`; `npm run pack`.
 SQLite uses the runtime's built-in `node:sqlite` with a single writer, FULL synchronous rollback-journal transactions. Do not enable WAL without reviewing runtime SQLite support and backup guarantees.
 
