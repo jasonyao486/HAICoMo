@@ -15,6 +15,7 @@ import {
   Tray,
   nativeImage,
   powerMonitor,
+  session,
   type UtilityProcess,
 } from "electron";
 import { launchWindowsTerminal } from "./windows-terminal";
@@ -22,6 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { randomUUID } from "node:crypto";
+import { execFile } from "node:child_process";
 import {
   atomicWrite,
   projectDirectory,
@@ -36,8 +38,10 @@ import { z } from "zod";
 import { detectClients, detectClient } from "../providers/registry";
 import { HARNESS_IDS } from "../shared/clients";
 import { InstallGate, resumeTabSchema, type ResumeWindow } from "../core/install";
-import { UpdateController } from "../core/updates";
-import { MacUpdater, NsisUpdater } from "electron-updater";
+import { UpdateController, type UpdateSource } from "../core/updates";
+import { createReleaseResolver, isOfficialTagFeed, OFFICIAL_RELEASES, releaseTarget, type HttpGet, type ReleaseOrigins } from "../core/release-feed";
+import { macPreflight, windowsPreflight } from "../core/update-preflight";
+import { CancellationToken, MacUpdater, NsisUpdater } from "electron-updater";
 import { errorData } from "../shared/errors";
 import { settingsSchema, defaultSettings, mergeSettings, applySettingsEdits } from "../shared/settings";
 import { openLegalLink } from "../shared/legal";
@@ -48,14 +52,16 @@ import { RelayScheduler } from "./relay";
 
 // This file is present only in separately named, locally signed upgrade fixtures.
 // It keeps their profile and debugging port stable across the native relaunch.
-let upgradeFixture: { userData: string; cdpPort: number } | undefined;
+let upgradeFixture: { userData: string; cdpPort: number; releaseOrigin?: string } | undefined;
 if (app.getName().toLowerCase().includes("upgrade")) {
-  try { upgradeFixture = z.object({ userData: z.string(), cdpPort: z.number().int().min(1024).max(65535) }).strict().parse(readJson(path.join(process.resourcesPath, "upgrade-fixture.json"))); } catch {}
+  try { upgradeFixture = z.object({ userData: z.string(), cdpPort: z.number().int().min(1024).max(65535), releaseOrigin: z.string().optional() }).strict().parse(readJson(path.join(process.resourcesPath, "upgrade-fixture.json"))); } catch {}
 }
 if (upgradeFixture) { app.setPath("userData", upgradeFixture.userData); app.commandLine.appendSwitch("remote-debugging-port", String(upgradeFixture.cdpPort)); }
 else if (process.env.HAICOMO_USER_DATA) app.setPath("userData", process.env.HAICOMO_USER_DATA);
 const testing = process.env.HAICOMO_TEST === "1";
 const upgradeIntegration = !!upgradeFixture;
+// A real installation from a test run (Windows CI in-app update scenario).
+const installIntegration = testing && process.env.HAICOMO_UPDATE_INSTALL_TEST === "1";
 let shutdownComplete = false, quitting = false;
 const updateRestores = new Map<number, Promise<any>>();
 let db: UtilityProcess;
@@ -176,12 +182,73 @@ const broadcast = (event: any) =>
   BrowserWindow.getAllWindows().forEach((w) =>
     w.webContents.send("haicomo:event", event),
   );
+// Tests use their own cache; installed builds (and signed upgrade fixtures) name theirs in app-update.yml.
+const updaterCacheName = () => {
+  if (testing && !installIntegration && !upgradeIntegration) return "haicomo-test-updater";
+  try { return /^updaterCacheDirName:\s*([A-Za-z0-9._-]+)\s*$/m.exec(fs.readFileSync(path.join(process.resourcesPath, "app-update.yml"), "utf8"))?.[1] ?? "haicomo-updater"; }
+  catch { return "haicomo-updater"; }
+};
+// electron-updater's download cache (see getCacheDirectory in electron-updater).
+const updaterCacheDir = () => process.platform === "darwin"
+  ? path.join(os.homedir(), "Library", "Caches", updaterCacheName())
+  : path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"), updaterCacheName());
+// Loopback release origins replace GitHub only in tests and locally signed upgrade fixtures.
+function releaseOrigins(): ReleaseOrigins | undefined {
+  const test = upgradeFixture?.releaseOrigin ?? (testing ? process.env.HAICOMO_TEST_RELEASE_ORIGIN : undefined);
+  if (test) {
+    try {
+      const url = new URL(test);
+      if (["http:", "https:"].includes(url.protocol) && ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname)) return { ...OFFICIAL_RELEASES, apiOrigin: url.origin, downloadOrigin: url.origin };
+    } catch {}
+    return undefined;
+  }
+  return testing ? undefined : OFFICIAL_RELEASES;
+}
+const releaseGet: HttpGet = async (url, headers) => {
+  const response = await session.fromPartition("haicomo-updates", { cache: false }).fetch(url, { headers, signal: AbortSignal.timeout(20000) });
+  if (Number(response.headers.get("content-length") ?? 0) > 4_000_000) throw new Error("UPDATE_RELEASE_LIST_INVALID");
+  const text = await response.text();
+  if (text.length > 4_000_000) throw new Error("UPDATE_RELEASE_LIST_INVALID");
+  return { status: response.status, header: (name) => response.headers.get(name), text };
+};
+let releaseResolver: ReturnType<typeof createReleaseResolver> | undefined;
+let releaseResolverOrigins: ReleaseOrigins | undefined;
+async function resolveRelease(current: string) {
+  const origins = releaseOrigins(), target = releaseTarget(process.platform, process.arch);
+  if (!origins || !target) return { kind: "none" as const };
+  if (!releaseResolver || JSON.stringify(releaseResolverOrigins) !== JSON.stringify(origins)) {
+    releaseResolver = createReleaseResolver(releaseGet, origins, `HAICoMo/${app.getVersion()}`);
+    releaseResolverOrigins = origins;
+  }
+  return releaseResolver(current, target);
+}
+async function updatePreflight(): Promise<string | undefined> {
+  if (!app.isPackaged || testing && !installIntegration && !upgradeIntegration) return undefined;
+  if (process.platform === "darwin") {
+    const bundle = path.resolve(process.execPath, "../../..");
+    let parentWritable = true;
+    try { fs.accessSync(path.dirname(bundle), fs.constants.W_OK); } catch { parentWritable = false; }
+    const codesign = await new Promise<string>((resolve) => execFile("/usr/bin/codesign", ["-dv", bundle], { timeout: 20000 }, (_error, stdout, stderr) => resolve(`${stderr}\n${stdout}`)));
+    return macPreflight({ bundle, parentWritable, codesign });
+  }
+  if (process.platform === "win32")
+    return windowsPreflight({ exe: process.execPath, localAppData: process.env.LOCALAPPDATA ?? "", uninstallerExists: fs.existsSync(path.join(path.dirname(process.execPath), "Uninstall HAICoMo.exe")) });
+  return undefined;
+}
 const updates = new UpdateController(
   app.getVersion(),
   () => {
     const updater =
       process.platform === "darwin" ? new MacUpdater() : new NsisUpdater();
     updater.forceDevUpdateConfig = testing && !app.isPackaged;
+    updater.disableWebInstaller = true;
+    // The notarised ZIP is rebuilt after signing, so no matching blockmap exists for it.
+    if (process.platform === "darwin") updater.disableDifferentialDownload = true;
+    if (updaterCacheName() === "haicomo-test-updater") {
+      const file = configFile("test-app-update.yml");
+      atomicWrite(file, `updaterCacheDirName: ${updaterCacheName()}\n`);
+      updater.updateConfigPath = file;
+    }
     if (process.platform === "darwin") Object.assign(updater, {
       prepareInstall: () => new Promise<void>((resolve, reject) => {
         // electron-updater has downloaded the ZIP; the native updater must still
@@ -201,10 +268,20 @@ const updates = new UpdateController(
     if (state.status === "error" && state.errorStage === "install" && shutdownComplete) void reopenAfterInstallFailure().catch((error) => broadcast({ event: "fatal", error: String(error) }));
   },
   testing || upgradeIntegration,
+  { resolve: resolveRelease, preflight: updatePreflight, token: () => new CancellationToken() },
 );
-function updateFeed() {
-  if (settings().updateFeed) return settings().updateFeed;
-  try { return readJson<{ url: string }>(path.join(process.resourcesPath, "release-channel.json")).url || ""; } catch { return ""; }
+/** Official GitHub releases unless a custom feed is configured; development runs never contact a server. */
+function updateSource(value: Settings = settings()): UpdateSource {
+  const feed = value.updateFeed.trim();
+  if (feed && !isOfficialTagFeed(feed)) return { kind: "custom", url: feed };
+  if (!releaseTarget(process.platform, process.arch)) return { kind: "none", reason: "unsupported-platform" };
+  if (!releaseOrigins()) return { kind: "none", reason: testing ? "test" : "development" };
+  if (!app.isPackaged && !testing) return { kind: "none", reason: "development" };
+  return { kind: "official" };
+}
+function cleanUpdateCache() {
+  // The installed payload is no longer needed; Windows keeps installer.exe for differential downloads.
+  try { fs.rmSync(path.join(updaterCacheDir(), "pending"), { recursive: true, force: true }); } catch {}
 }
 const updateJournal = () => configFile("pending-update.json");
 async function reopenAfterInstallFailure() {
@@ -280,6 +357,7 @@ function restoreAfterUpdate(first: BrowserWindow) {
       updates.restored(app.getVersion(), values.reduce((n, v) => n + v.failed, 0));
       atomicWrite(configFile("last-update.json"), JSON.stringify({ ...parsed, completedAt: new Date().toISOString(), restoredVersion: app.getVersion() }, null, 2));
       fs.rmSync(updateJournal(), { force: true });
+      cleanUpdateCache();
     }).catch(() => updates.restored(app.getVersion(), 1));
   } catch {
     updates.restored(app.getVersion(), 1);
@@ -756,16 +834,29 @@ else {
     configureMenu();
     scheduler.start(testing ? 2000 : 20000);
     powerMonitor.on("resume", () => scheduler.resume());
-    const automaticUpdateCheck = () => {
+    // A pasted per-version official folder (the 0.3.5 bootstrap path) must not pin later checks.
+    if (isOfficialTagFeed(settings().updateFeed)) writeSettings({ ...settings(), updateFeed: "" });
+    // Show the active source in Settings right away; no request is sent until a check.
+    try { updates.setSource(updateSource()); } catch (error) { broadcast({ event: "warning", error: String(error) }); }
+    // Automatic checks only look for a newer version; downloading and installing stay explicit.
+    let lastAutomaticCheck = 0;
+    const automaticUpdateCheck = (force = false) => {
+      if (!settings().autoCheckUpdates) return;
+      if (!force && Date.now() - lastAutomaticCheck < 12 * 60 * 60 * 1000) return;
+      lastAutomaticCheck = Date.now();
       try {
-        updates.configure(updateFeed());
-        void updates.check();
+        updates.setSource(updateSource());
+        void updates.check({ automatic: true });
       } catch (error) {
         broadcast({ event: "warning", error: String(error) });
       }
     };
-    setTimeout(automaticUpdateCheck, 3000).unref();
-    setInterval(automaticUpdateCheck, 12 * 60 * 60 * 1000).unref();
+    const firstAutomaticCheck = testing ? Number(process.env.HAICOMO_TEST_AUTO_CHECK_MS || 0) : 10000;
+    if (firstAutomaticCheck > 0) {
+      setTimeout(() => automaticUpdateCheck(true), firstAutomaticCheck).unref();
+      // Hourly ticks keep the 12-hour cadence across sleep and wake.
+      setInterval(() => automaticUpdateCheck(), 60 * 60 * 1000).unref();
+    }
     ipcMain.handle("haicomo:request", async (event, type, payload) => {
       try {
         const win = BrowserWindow.fromWebContents(event.sender);
@@ -1095,7 +1186,7 @@ else {
               : settingsSchema.parse(payload);
             value.codexPath = value.clientPaths.codex ?? "";
             value.claudePath = value.clientPaths.claude ?? "";
-            if (value.updateFeed !== settings().updateFeed) updates.configure(value.updateFeed);
+            updates.setSource(updateSource(value));
             const previous = settings();
             writeSettings(value);
             for (const id of ["codex", "claude"] as const)
@@ -1319,17 +1410,20 @@ else {
             result = updates.state;
             break;
           case "updates.check":
-            updates.configure(updateFeed());
+            updates.setSource(updateSource());
             result = await updates.check();
             break;
           case "updates.download":
             result = await updates.download();
             break;
+          case "updates.cancelDownload":
+            result = await updates.cancelDownload();
+            break;
           case "updates.install":
             if (runners.active().length || startingProjects.size) throw new Error("STOP_AGENTS_BEFORE_UPDATE");
             if (installGate.active) { result = true; break; }
             if (updates.state.status !== "downloaded") throw new Error("UPDATE_NOT_DOWNLOADED");
-            if (testing && !upgradeIntegration && process.env.HAICOMO_UPDATE_PREFLIGHT_TEST !== "1") {
+            if (testing && !upgradeIntegration && !installIntegration && process.env.HAICOMO_UPDATE_PREFLIGHT_TEST !== "1") {
               result = { verified: true, installed: false, reason: "TEST_MODE" }; break;
             }
             result = { ticket: installGate.start(BrowserWindow.getAllWindows().map((w) => w.id)) };

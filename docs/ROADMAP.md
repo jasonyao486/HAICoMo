@@ -5,7 +5,7 @@ HAICoMo 0.3.3 provides a local management and approval workspace, with backgroun
 The next release priorities are:
 
 1. Expand Windows consumer-device, managed-system and real CLI coverage beyond the accepted standard-user installation/run/upgrade/uninstall tests.
-2. Evaluate Windows publisher signing; Mac signing/notarisation is accepted. Verify automatic replacement and rollback before enabling an automatic-install channel.
+2. Evaluate Windows publisher signing so in-app updates can also verify an Authenticode publisher; Mac signing/notarisation is accepted and in-app updates shipped in 0.4.0. Consider a verified rollback path.
 3. Improve transcript inspection, long-running session recovery and the visibility of unknown/failed execution. Never turn missing telemetry into success.
 4. Add individual provider adapters when stable, supported APIs make start, permissions, cancellation and model capabilities observable. Keep GUI-only clients as manual handoffs until then.
 5. Evaluate local background scheduling separately from UI lifetime. Multi-step pipelines and automatic retries need an explicit product decision and stronger idempotency/recovery design.

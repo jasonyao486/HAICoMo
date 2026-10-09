@@ -73,7 +73,7 @@ V1 migration takes a consistent archive before writing a v2 transaction and reta
 
 Office geometry, navigation and seat ownership are presentation-only. Independent PNG furniture and character regions share depth ordering; a 1120×740 logical viewport scrolls a taller world and culls offscreen objects. Runtime statistics exclude decorative activity. Renderer loss leaves the status list and management usable.
 
-Updates are event-driven through a controller with injected backend. Download/install are distinct actions; auto-download, auto-install-on-quit and downgrade are disabled. HTTPS is required outside explicit loopback test mode. No configured public feed means not-configured, not success.
+Updates are event-driven through a controller with an injected backend and resolver. `src/core/release-feed.ts` picks the official GitHub release (previews included) whose platform metadata and package are uploaded, and builds the per-tag generic feed from constants; electron-updater then reads that release's `latest*.yml` and verifies SHA-512. One backend exists per process. Download and install are distinct user actions; auto-download, auto-install-on-quit and downgrade are disabled; downloads can be cancelled. Automatic checks only notify, can be disabled, and never surface background failures as errors. `src/core/update-preflight.ts` blocks installations that cannot replace themselves before a download. HTTPS is required outside explicit loopback test mode; development runs never contact a server and report no active source, not success.
 
 ## ADR-007: bound tabs and explicit file lifecycle (0.2.1)
 
@@ -101,4 +101,4 @@ Audit activity is a human-editable presentation history. The only former audit-d
 
 Pure graph layout functions are shared-testable and have no renderer imports. Hierarchical subtrees and topological dependency layers are packed by independent components. Explicit family assignments produce deduplicated company marks. The renderer controls zoom/pan without persisting presentation as business state.
 
-Only `assets/runtime` is a Vite public directory, checked against a hash manifest before build. Legal notices distinguish MIT application code, non-commercial character adaptations, CC environment artwork and marks. Manual GitHub downloads are the default release channel; updater infrastructure is not configured as a trusted automatic-install service.
+Only `assets/runtime` is a Vite public directory, checked against a hash manifest before build. Legal notices distinguish MIT application code, non-commercial character adaptations, CC environment artwork and marks. GitHub Releases are the release channel; from 0.4.0 the app checks them itself and installs only after explicit user choices.

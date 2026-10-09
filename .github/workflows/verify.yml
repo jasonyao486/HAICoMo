@@ -139,7 +139,19 @@ jobs:
       - name: Package Windows x64
         if: runner.os == 'Windows'
         run: npx electron-builder --win --x64 --publish never
-      - name: Verify actual macOS 0.3.3 upgrade
+      - name: Write Windows in-app update metadata
+        if: runner.os == 'Windows'
+        run: node scripts/update-metadata.mjs write release/${{ env.HAICOMO_VERSION }} win32
+      - name: Build next-version fixture for the in-app update test
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Never uploaded: it lives under validation/ and only feeds the loopback update source.
+          $next = node -e "const v=require('./package.json').version.split('.');v[2]=Number(v[2])+1;console.log(v.join('.'))"
+          npx electron-builder --win --x64 --publish never "-c.extraMetadata.version=$next" "-c.directories.output=validation/${{ env.HAICOMO_VERSION }}/inapp-fixture"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path "validation/${{ env.HAICOMO_VERSION }}/inapp-fixture/HAICoMo-$next-windows-x64-setup.exe")) { throw 'Next-version fixture installer is missing' }
+      - name: Verify actual macOS 0.3.5 upgrade
         if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
@@ -197,6 +209,7 @@ jobs:
             release/${{ env.HAICOMO_VERSION }}/*.blockmap
             release/${{ env.HAICOMO_VERSION }}/*-verification.json
             release/${{ env.HAICOMO_VERSION }}/SHA256SUMS*.txt
+            release/${{ env.HAICOMO_VERSION }}/latest*.yml
           if-no-files-found: error
           retention-days: 14
       - uses: actions/upload-artifact@v4

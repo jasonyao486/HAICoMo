@@ -18,9 +18,10 @@ export const settingsSchema = z.object({
   codexPath: z.string(), claudePath: z.string(),
   clientPaths: z.partialRecord(z.enum(HARNESS_IDS), z.string()).default({}),
   updateFeed: z.string().default(""),
+  autoCheckUpdates: z.boolean().default(true),
 }).strict();
-export const defaultSettings: Settings = { userName: "", avatarInitials: "", locale: "zh-CN", theme: "light", enhanced: false, reducedMotion: false, accent: "#347965", codexPath: "", claudePath: "", clientPaths: {}, updateFeed: "" };
-const preferenceKeys = ["userName", "avatarInitials", "locale", "theme", "enhanced", "reducedMotion", "accent", "updateFeed"] as const;
+export const defaultSettings: Settings = { userName: "", avatarInitials: "", locale: "zh-CN", theme: "light", enhanced: false, reducedMotion: false, accent: "#347965", codexPath: "", claudePath: "", clientPaths: {}, updateFeed: "", autoCheckUpdates: true };
+const preferenceKeys = ["userName", "avatarInitials", "locale", "theme", "enhanced", "reducedMotion", "accent", "updateFeed", "autoCheckUpdates"] as const;
 const editSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("preference"), key: z.enum(preferenceKeys), before: z.union([z.string(), z.boolean()]), after: z.union([z.string(), z.boolean()]) }).strict(),
   z.object({ kind: z.literal("path"), key: z.enum(HARNESS_IDS), before: z.string(), after: z.string() }).strict(),
@@ -33,7 +34,7 @@ export function settingsEdits(base: Settings, next: Settings): SettingsEdit[] {
   return edits;
 }
 export function applySettingsEdits(current: Settings, input: unknown) {
-  const edits = z.array(editSchema).max(18).parse(input), base = structuredClone(current), next = structuredClone(current), seen = new Set<string>();
+  const edits = z.array(editSchema).max(preferenceKeys.length + HARNESS_IDS.length).parse(input), base = structuredClone(current), next = structuredClone(current), seen = new Set<string>();
   for (const edit of edits) {
     const id = `${edit.kind}:${edit.key}`;
     if (seen.has(id)) throw new Error("SETTINGS_CONFLICT"); seen.add(id);

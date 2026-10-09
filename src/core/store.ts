@@ -8,6 +8,7 @@ import { zipSync, unzipSync } from "fflate";
 import { z } from "zod";
 import { modelMetrics, type ProposalLike } from "../shared/analytics";
 import { auditContext } from "../shared/audit";
+import { searchTerms } from "../shared/search";
 import type { AuditContext } from "../shared/domain";
 import { convertLegacy } from "./legacy";
 import {
@@ -425,10 +426,15 @@ export class ProjectStore {
       "EXISTS(SELECT 1 FROM json_each(json_extract(proposals.json,'$.proposal.changes')) c WHERE json_extract(c.value,'$.entity')='task' AND json_extract(c.value,'$.id')=?)",
       input.taskId,
     );
-    add(
-      "instr(lower(json_extract(json,'$.proposal.title') || ' ' || json_extract(json,'$.proposal.reason')),lower(?))>0",
-      input.search,
-    );
+    // Each term must match the title, reason, review note, author or a text value
+    // in the proposed changes (field values only, never JSON keys or entity ids).
+    for (const term of searchTerms(input.search)) {
+      clauses.push(
+        "(instr(lower(coalesce(json_extract(json,'$.proposal.title'),'') || ' ' || coalesce(json_extract(json,'$.proposal.reason'),'') || ' ' || coalesce(json_extract(json,'$.reviewNote'),'') || ' ' || coalesce(json_extract(json,'$.proposal.actor.name'),'')),lower(?))>0" +
+          " OR EXISTS(SELECT 1 FROM json_tree(proposals.json,'$.proposal.changes') c WHERE c.type='text' AND c.key NOT IN ('entity','operation','id') AND instr(lower(c.value),lower(?))>0))",
+      );
+      args.push(term, term);
+    }
     const where = clauses.length ? ` WHERE ${clauses.join(" AND ")}` : "";
     const total = Number(
       (

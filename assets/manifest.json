@@ -760,21 +760,21 @@
     },
     {
       "file": "local-assets/codebuddy-app.svg",
-      "bytes": 1144,
-      "sha256": "abe926f4acd9d56439bb5568a267d19d5a92201dbd69ad1cf179209b5ef79f91",
+      "bytes": 1589,
+      "sha256": "033d5da624460e686046f22b4e242b6b86484ad84ec4877e4efa15a9fb642b97",
       "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
       "creator": "LobeHub; trademarks belong to their owners",
       "license": "MIT",
-      "changes": "Unmodified vector icon."
+      "changes": "Unmodified colour vector icon (codebuddy-color.svg)."
     },
     {
-      "file": "local-assets/workbuddy-app.svg",
-      "bytes": 239,
-      "sha256": "b666e53706d2658aa8a2dc22847215d421229ebcfeed97b15464b304cf4c66bb",
-      "source": "HAICoMo generic client initial",
-      "creator": "HAICoMo contributors",
-      "license": "MIT",
-      "changes": "Generic W identifier; not an official company logo."
+      "file": "local-assets/workbuddy-app.png",
+      "bytes": 41088,
+      "sha256": "3d8401bc6b37cc114e7ec6b0c2cfc1a74f486341fa0b869e2d8c9d65d2bc6993",
+      "source": "Official WorkBuddy desktop application icon, WorkBuddy 5.4.7 for macOS (com.tencent.workbuddy.mac), Contents/Resources/icon.icns SHA-256 222fd607a9dadd54252724c44123acca508a5da9d419b7d6cc19dc539c0fe134",
+      "creator": "Tencent; trademarks belong to their owner",
+      "license": "Third-party trademark used only to identify the installed WorkBuddy client; not licensed under HAICoMo's MIT licence",
+      "changes": "Format conversion and downscaling to 256 x 256 PNG with macOS sips; artwork unmodified."
     }
   ]
 }

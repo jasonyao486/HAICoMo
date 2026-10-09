@@ -38,6 +38,7 @@ import {
 import { useApi, useTab, useDirty } from "./api";
 import { errorText, lockDetails } from "./errors";
 import { RelayPage } from "./Relay";
+import { useUpdates } from "./UpdatePanel";
 import { RelayEditor } from "./RelayEditor";
 import type { Relay } from "../shared/relay";
 import {
@@ -256,6 +257,9 @@ export function App() {
   useEffect(() => { tab.reportPage(view); }, [view]);
   const { collapsed, goHome } = tab;
   const [settingsVisited, setSettingsVisited] = useState(tab.initialPage === "settings");
+  const updateState = useUpdates();
+  // A visual hint only; the update banner carries the accessible announcement.
+  const updateReady = ["available", "downloaded"].includes(updateState.status) && !updateState.blocked;
   useEffect(() => { if (tab.homeNavigation) setView("overview"); }, [tab.homeNavigation]);
   const navigate = (next: string) => {
     if (next === "settings") setSettingsVisited(true);
@@ -344,6 +348,7 @@ export function App() {
           >
             <SettingsIcon size={18} />
             {!collapsed && <span>{t("settings")}</span>}
+            {updateReady && <span className="nav-dot" aria-hidden="true" title={t("updateAvailableDot")} />}
           </button>
 
         </div>
@@ -591,6 +596,8 @@ export function App() {
                   {...props!}
                   onNew={() => setEditor({ kind: "task", task: null })}
                   onNavigate={navigate}
+                  onOpenNote={(note) => setEditor({ kind: "note", note })}
+                  onOpenProposal={(record) => setEditor({ kind: "proposal", record })}
                 />
               )}
               {(view === "tasks" || view === "archive") && (

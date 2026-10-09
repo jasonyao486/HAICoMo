@@ -15,6 +15,16 @@ const keys: Record<string, Key> = {
   UPDATE_PREPARATION_FAILED: "updateSaveFailed",
   UPDATE_HTTPS_REQUIRED: "updateInvalidSource",
   UPDATE_IN_PROGRESS: "updateFrozen",
+  UPDATE_RATE_LIMITED: "updateRateLimited",
+  UPDATE_NETWORK: "updateNetworkError",
+  UPDATE_SOURCE_UNAVAILABLE: "updateNetworkError",
+  UPDATE_RELEASE_LIST_INVALID: "updateMetadataError",
+  UPDATE_METADATA_MISMATCH: "updateMetadataError",
+  UPDATE_APP_TRANSLOCATED: "updateBlockedTranslocated",
+  UPDATE_RUNNING_FROM_DISK_IMAGE: "updateBlockedDiskImage",
+  UPDATE_UNSIGNED_BUILD: "updateBlockedUnsigned",
+  UPDATE_UNSUPPORTED_LOCATION: "updateBlockedLocation",
+  UPDATE_UNMANAGED_INSTALL: "updateBlockedUnmanaged",
   ENTRY_NOT_FOUND: "entryNotFound",
   ENTRY_ALREADY_EXISTS: "entryExists",
   PROJECT_ALREADY_EXISTS: "entryExists",
@@ -78,4 +88,10 @@ export function lockDetails(error: unknown): { hostname?: string; pid?: number; 
   const data = errorData(error);
   if (!structured.has(data.code) || !data.details) return null;
   try { return JSON.parse(data.details); } catch { return null; }
+}
+/** Install-stage update failures: known codes keep their text; native signature or replacement errors get a plain explanation (details stay in Settings). */
+export function installFailureText(error: unknown, t: Translate) {
+  const data = errorData(error);
+  if (keys[data.code]) return errorText(error, t);
+  return t(/signature|code.?sign|sealed resource/i.test(data.message) ? "updateSignatureError" : "updateInstallError");
 }

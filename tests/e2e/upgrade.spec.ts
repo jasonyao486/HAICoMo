@@ -31,7 +31,7 @@ test("previous installed release preserves settings, project identity and rules 
         const after = await window.haicomo.request("project.command", { binding: w.binding, id: crypto.randomUUID(), type: "change", payload: { entity: "task", operation: "create", id: "upgrade-task", expectedRevision: null, values: { title: "Retained upgrade task", description: "Synthetic retained description", artifacts: [{ id: "retained-file", label: "Retained file", path: "retained.txt" }] } } });
         return { id: after.state.id, epoch: after.state.epoch, tasks: after.state.tasks, entry: w.entryPath.split(/[\\/]/).pop(), version: b.version };
       });
-      expect(seeded.version).toBe(process.platform === "darwin" ? "0.3.3" : "0.3.4");
+      expect(seeded.version).toBe("0.3.5");
       fs.writeFileSync(path.join(project, "retained.txt"), "Synthetic delivery survives upgrade and uninstall.\n");
       fs.writeFileSync(evidence, JSON.stringify(seeded));
     } else {

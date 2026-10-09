@@ -40,10 +40,13 @@ jobs:
         run: |
           if [ "$EXISTING_RELEASE" = "true" ]; then
             gh release upload v$HAICOMO_VERSION verified/*/*.dmg verified/*/*.zip verified/*/mac-release-verification.json verified/*/SHA256SUMS-darwin-arm64.txt
+            # The release is already public: metadata goes last, after the ZIP it describes.
+            gh release upload v$HAICOMO_VERSION verified/*/latest-mac.yml
             gh release edit v$HAICOMO_VERSION --notes-file docs/RELEASE-NOTES-$HAICOMO_VERSION.md
           else
             gh release create v$HAICOMO_VERSION --draft --prerelease --target "$SOURCE_SHA" --title "HAICoMo $HAICOMO_VERSION preview" --notes-file docs/RELEASE-NOTES-$HAICOMO_VERSION.md
             gh release upload v$HAICOMO_VERSION verified/*/*.dmg verified/*/*.zip verified/*/*.exe verified/*/*.blockmap verified/*/*-verification.json verified/*/SHA256SUMS*.txt
+            gh release upload v$HAICOMO_VERSION verified/*/latest*.yml
             gh release edit v$HAICOMO_VERSION --draft=false --prerelease
           fi
       - name: Verify anonymous public downloads

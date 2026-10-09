@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+// @ts-expect-error JavaScript release script without type declarations.
+import { writeUpdateMetadata } from '../scripts/update-metadata.mjs';
 // @ts-expect-error Native ESM release helpers are exercised by subprocess-free runtime tests.
 import { fileHash, isSubmissionId, submitNotarization, verifyArtifact, validateState, waitForAcceptance, requireEnvironment, withCleanup, isReleaseMaintenance, verifyPublishedMacBaseline } from '../scripts/mac-release-state.mjs';
 const id = '12345678-1234-1234-1234-123456789abc';
@@ -68,7 +70,7 @@ test('missing credentials and failed operations preserve cleanup and do not expo
   cleaned=false; await withCleanup(async()=>{},async()=>{cleaned=true;}); assert.equal(cleaned,true);
 });
 test('supplements allow release infrastructure, but never application changes', () => {
-  for (const name of ['AGENTS.md','scripts/local-mac-update.py','scripts/release-mac.mjs','.github/workflows/verify.yml','tests/e2e/tabs.spec.ts','docs/TESTING-0.3.3.md']) assert.equal(isReleaseMaintenance(name),true);
+  for (const name of ['AGENTS.md','scripts/local-mac-update.py','scripts/release-mac.mjs','scripts/update-metadata.mjs','.github/workflows/verify.yml','tests/e2e/tabs.spec.ts','docs/TESTING-0.3.3.md']) assert.equal(isReleaseMaintenance(name),true);
   for (const name of ['AGENTS.md.js','src/ui/Views.tsx','package.json','package-lock.json','build/installer.nsh','scripts/build.mjs','assets/runtime/logo.svg']) assert.equal(isReleaseMaintenance(name),false);
 });
 test('lost upload responses recover only the exact hash and never repeat submission', async () => {
@@ -85,7 +87,7 @@ test('lost upload responses recover only the exact hash and never repeat submiss
   await submitNotarization(item,hooks); assert.equal(submitted,1);
   assert.equal(isSubmissionId('-'.repeat(36)),false);
 });
-for (const version of ['0.3.3','0.3.5']) test(`publication ${version} requires exact formal files and fresh-account first-open evidence`, () => {
+for (const version of ['0.3.3','0.3.5','0.4.0']) test(`publication ${version} requires exact formal files and fresh-account first-open evidence`, async () => {
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'haicomo-publish-gate-'));
   try {
     const source='1'.repeat(40), reference='2'.repeat(40);
@@ -94,7 +96,9 @@ for (const version of ['0.3.3','0.3.5']) test(`publication ${version} requires e
     const dmg=`HAICoMo-${version}-arm64.dmg`, zip=`HAICoMo-${version}-arm64-mac.zip`, exe=`HAICoMo-${version}-windows-x64-setup.exe`;
     for(const name of [dmg,zip]) fs.writeFileSync(path.join(mac,name),name);
     fs.writeFileSync(path.join(win,exe),exe);
-    const hashes=Object.fromEntries([dmg,zip].map(name=>[name,fileHash(path.join(mac,name))]));
+    const inApp = version === '0.4.0';
+    if (inApp) { await writeUpdateMetadata(mac, version, 'darwin'); await writeUpdateMetadata(win, version, 'win32'); }
+    const hashes=Object.fromEntries([dmg,zip,...(inApp ? ['latest-mac.yml'] : [])].map(name=>[name,fileHash(path.join(mac,name))]));
     const m:any={version,sourceCommit:source,buildCommit:source,applicationReferenceCommit:reference,developerId:true,notarized:true,stapled:true,gatekeeper:true,notarization:{app:id,dmg:id},hashes};
     const w:any={version,result:'passed',admin:false,installerSha256:fileHash(path.join(win,exe))};
     for(const key of ['protectedWriteDenied','install','launch','reinstall','uninstall','retainedData'])w[key]=true;
@@ -105,6 +109,17 @@ for (const version of ['0.3.3','0.3.5']) test(`publication ${version} requires e
     };
     assert.match(check().stderr,/first-open acceptance is missing/);
     m.firstOpen={method:'browser-download-fresh-macos-account',dmgSha256:hashes[dmg]};
+    if (inApp) {
+      assert.match(check().stderr,/Windows 0.3.5 upgrade evidence/);
+      Object.assign(w,{previousVersionUpgrade:'0.3.5',upgradeLaunch:true,upgradeProject:true,upgradeSettings:true,upgradeAssociation:true,upgradeRetainedData:true,sourceCommit:source});
+      assert.match(check().stderr,/Mac 0.3.5 upgrade evidence/);
+      Object.assign(m,{previousVersionUpgrade:'0.3.5',upgradeProject:true,upgradeSettings:true});
+      assert.match(check().stderr,/Windows in-app update evidence/);
+      w.inAppUpdate={fromVersion:version,toVersion:'0.4.1',installed:true,restored:false}; assert.match(check().stderr,/Windows in-app update evidence/);
+      w.inAppUpdate.restored=true;
+      const yml=path.join(win,'latest.yml'), original=fs.readFileSync(yml,'utf8');
+      fs.writeFileSync(yml,original.replace(/size: \d+/,'size: 1')); assert.match(check().stderr,/In-app update metadata/); fs.writeFileSync(yml,original);
+    }
     if (version === '0.3.5') {
       assert.match(check().stderr,/Windows 0.3.4 upgrade evidence/);
       Object.assign(w,{previousVersionUpgrade:'0.3.4',upgradeLaunch:true,upgradeProject:true,upgradeSettings:true,upgradeAssociation:true,upgradeRetainedData:true,sourceCommit:source});

@@ -39,12 +39,13 @@ jobs:
         run: |
           gh run download "$VERIFY_RUN_ID" -n "haicomo-$HAICOMO_VERSION-windows-x64" -D verified
           (cd verified && sha256sum -c SHA256SUMS-win32-x64.txt)
+          node scripts/update-metadata.mjs verify verified win32
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           import { createHash } from 'node:crypto';
           const version = process.env.HAICOMO_VERSION;
           const w = JSON.parse(fs.readFileSync('verified/windows-user-verification.json', 'utf8'));
-          if (w.version !== version || w.result !== 'passed' || w.admin !== false || !['protectedWriteDenied', 'install', 'launch', 'reinstall', 'uninstall', 'retainedData'].every(key => w[key] === true) || w.previousVersionUpgrade !== '0.3.3') throw new Error('Standard-user acceptance evidence is missing');
+          if (w.version !== version || w.result !== 'passed' || w.admin !== false || !['protectedWriteDenied', 'install', 'launch', 'reinstall', 'uninstall', 'retainedData'].every(key => w[key] === true) || w.previousVersionUpgrade !== '0.3.5' || w.inAppUpdate?.installed !== true || w.inAppUpdate?.restored !== true) throw new Error('Standard-user acceptance evidence is missing');
           const hash = createHash('sha256').update(fs.readFileSync(`verified/HAICoMo-${version}-windows-x64-setup.exe`)).digest('hex');
           if (hash !== w.installerSha256) throw new Error('Installer differs from accepted artifact');
           NODE
@@ -57,6 +58,8 @@ jobs:
             gh release create v$HAICOMO_VERSION --draft --prerelease --target "$SOURCE_SHA" --title "HAICoMo $HAICOMO_VERSION preview" --notes-file docs/RELEASE-NOTES-$HAICOMO_VERSION.md
           fi
           gh release upload v$HAICOMO_VERSION verified/*.exe verified/*.blockmap verified/*-verification.json verified/SHA256SUMS*.txt
+          # Update metadata goes last, so a client never sees it before the installer exists.
+          gh release upload v$HAICOMO_VERSION verified/latest.yml
           gh release edit v$HAICOMO_VERSION --draft=false --prerelease
       - name: Verify anonymous downloads
         run: |

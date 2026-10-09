@@ -1,15 +1,16 @@
-param([switch]$Child, [string]$TestRoot, [string]$NodePath, [string]$Installer, [string]$Repo)
+param([switch]$Child, [string]$TestRoot, [string]$NodePath, [string]$Installer, [string]$Repo, [string]$Fixture)
 $ErrorActionPreference = 'Stop'
 if (!$IsWindows -or $env:GITHUB_ACTIONS -ne 'true') { throw 'Disposable Windows GitHub runner required' }
 if (!$Child) {
   $Repo = (Get-Location).Path
   $version = (Get-Content package.json | ConvertFrom-Json).version
   $Installer = (Get-Item "release/$version/*-setup.exe").FullName
+  $Fixture = (Get-Item "validation/$version/inapp-fixture/*-setup.exe").FullName
   $NodePath = (Get-Command node).Source
   $TestRoot = Join-Path $env:RUNNER_TEMP 'haicomo-standard-user'
   New-Item -ItemType Directory -Path $TestRoot | Out-Null
-  $baseline = 'HAICoMo-0.3.4-windows-x64-setup.exe'
-  $baseUrl = 'https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.4'
+  $baseline = 'HAICoMo-0.3.5-windows-x64-setup.exe'
+  $baseUrl = 'https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.5'
   Invoke-WebRequest "$baseUrl/$baseline" -OutFile "$TestRoot/previous-setup.exe"
   $manifest = (Invoke-WebRequest "$baseUrl/SHA256SUMS-win32-x64.txt").Content
   if ($manifest -is [byte[]]) { $manifest = [Text.Encoding]::UTF8.GetString($manifest) }
@@ -35,13 +36,13 @@ if (!$Child) {
     New-Item $machineKey | Out-Null
     Set-ItemProperty $machineKey InstallLocation $machineDirectory
     $credential = [pscredential]::new("$env:COMPUTERNAME\$username", $password)
-    $arguments = @('-NoProfile', '-File', "`"$Repo/scripts/test-windows-user-install.ps1`"", '-Child', '-TestRoot', "`"$TestRoot`"", '-NodePath', "`"$NodePath`"", '-Installer', "`"$Installer`"", '-Repo', "`"$Repo`"")
+    $arguments = @('-NoProfile', '-File', "`"$Repo/scripts/test-windows-user-install.ps1`"", '-Child', '-TestRoot', "`"$TestRoot`"", '-NodePath', "`"$NodePath`"", '-Installer', "`"$Installer`"", '-Repo', "`"$Repo`"", '-Fixture', "`"$Fixture`"")
     $process = Start-Process (Get-Command pwsh).Source -Credential $credential -LoadUserProfile -ArgumentList $arguments -PassThru -RedirectStandardOutput "$TestRoot/stdout.txt" -RedirectStandardError "$TestRoot/stderr.txt"
-    if (!$process.WaitForExit(600000)) { Stop-Process -Id $process.Id -Force; throw 'Standard-user test timed out' }
+    if (!$process.WaitForExit(1200000)) { Stop-Process -Id $process.Id -Force; throw 'Standard-user test timed out' }
     $process.Refresh()
     $evidence = "validation/$version/standard-user"
     New-Item -ItemType Directory -Force $evidence | Out-Null
-    foreach ($name in @('stdout.txt','stderr.txt','result.json','screens','regression','playwright','upgrade')) {
+    foreach ($name in @('stdout.txt','stderr.txt','result.json','screens','regression','playwright','upgrade','inapp-update')) {
       if (Test-Path "$TestRoot/$name") { Copy-Item "$TestRoot/$name" $evidence -Recurse -Force }
     }
     if ($process.ExitCode -ne 0) {
@@ -131,11 +132,32 @@ $env:HAICOMO_UPGRADE_STAGE = 'check'
 & $NodePath node_modules/@playwright/test/cli.js test tests/e2e/upgrade.spec.ts --output="$TestRoot/upgrade-check-playwright"
 if ($LASTEXITCODE -ne 0) { throw 'Upgraded application did not retain usable project and settings' }
 $upgrade = Get-Content "$TestRoot/upgrade/result.json" | ConvertFrom-Json
-if ($upgrade.fromVersion -ne '0.3.4' -or $upgrade.toVersion -ne $version -or !$upgrade.project -or !$upgrade.settings -or !$upgrade.rules -or !$upgrade.launch) { throw 'Upgrade verification evidence is incomplete' }
+if ($upgrade.fromVersion -ne '0.3.5' -or $upgrade.toVersion -ne $version -or !$upgrade.project -or !$upgrade.settings -or !$upgrade.rules -or !$upgrade.launch) { throw 'Upgrade verification evidence is incomplete' }
 if (!(Test-Path 'HKCU:\Software\Classes\.haicomo') -or !(Test-Path (Join-Path $env:APPDATA 'Microsoft/Windows/Start Menu/Programs/HAICoMo.lnk'))) { throw 'Upgrade lost association or shortcut' }
 if ($entry.UninstallString -notmatch '^"([^"\r\n]+)" /currentuser$') { throw 'Unexpected upgraded uninstaller command' }
 Invoke-Installer $Matches[1] @('/S', "_?=$($entry.InstallLocation)")
 if (Test-Path (Join-Path $entry.InstallLocation 'HAICoMo.exe')) { throw 'Upgraded application uninstall failed' }
 foreach ($file in @("$sentinel", "$TestRoot/upgrade/project/retained.txt", "$TestRoot/upgrade/project/.haicomo/project.sqlite", "$TestRoot/upgrade/profile/settings.json")) { if (!(Test-Path $file)) { throw 'Upgraded uninstall removed user data' } }
+# In-app update: install this version, then let the installed app update itself
+# to a next-version fixture served from a loopback release origin. The machine-wide
+# fixture registered by the parent proves the installer never stops at a dialog.
+Invoke-Installer $Installer @('/S')
+$entry = Find-Install
+if ($entry.DisplayVersion -ne $version) { throw 'In-app update baseline install failed' }
+Remove-Item Env:HAICOMO_UPGRADE_STAGE, Env:HAICOMO_UPGRADE_ROOT -ErrorAction SilentlyContinue
+$env:HAICOMO_PACKAGED_EXECUTABLE = Join-Path $entry.InstallLocation 'HAICoMo.exe'
+$env:HAICOMO_INAPP_UPDATE_FIXTURE = $Fixture
+$env:HAICOMO_INAPP_UPDATE_BASE_BLOCKMAP = "$Installer.blockmap"
+$env:HAICOMO_INAPP_UPDATE_GUID = $guid
+$env:HAICOMO_INAPP_UPDATE_DIR = Join-Path $TestRoot 'inapp-update'
+& $NodePath node_modules/@playwright/test/cli.js test tests/e2e/inapp-update.spec.ts --output="$TestRoot/inapp-update-playwright"
+if ($LASTEXITCODE -ne 0) { throw 'In-app update failed' }
+$inApp = Get-Content "$TestRoot/inapp-update/result.json" | ConvertFrom-Json
+$entry = Find-Install
+if ($inApp.fromVersion -ne $version -or $entry.DisplayVersion -ne $inApp.toVersion -or !$inApp.installed -or !$inApp.restored) { throw 'In-app update evidence is incomplete' }
+if ($entry.UninstallString -notmatch '^"([^"\r\n]+)" /currentuser$') { throw 'Unexpected in-app updated uninstaller command' }
+Invoke-Installer $Matches[1] @('/S', "_?=$($entry.InstallLocation)")
+if (Test-Path (Join-Path $entry.InstallLocation 'HAICoMo.exe')) { throw 'In-app updated application uninstall failed' }
 $hash = (Get-FileHash -Algorithm SHA256 $Installer).Hash.ToLowerInvariant()
-@{ version = $version; result = 'passed'; admin = $false; protectedWriteDenied = $true; install = $true; launch = $true; reinstall = $true; previousVersionUpgrade = '0.3.4'; upgradeLaunch = $true; upgradeProject = $true; upgradeSettings = $true; upgradeAssociation = $true; upgradeRetainedData = $true; sourceCommit = $env:GITHUB_SHA; uninstall = $true; retainedData = $true; installerSha256 = $hash } | ConvertTo-Json | Set-Content "$TestRoot/result.json"
+$inAppUpdate = @{ fromVersion = $inApp.fromVersion; toVersion = $inApp.toVersion; installed = $true; restored = $true; relaunchedByInstaller = [bool]$inApp.relaunchedByInstaller; differential = [bool]$inApp.differential }
+@{ version = $version; result = 'passed'; admin = $false; protectedWriteDenied = $true; install = $true; launch = $true; reinstall = $true; inAppUpdate = $inAppUpdate; previousVersionUpgrade = '0.3.5'; upgradeLaunch = $true; upgradeProject = $true; upgradeSettings = $true; upgradeAssociation = $true; upgradeRetainedData = $true; sourceCommit = $env:GITHUB_SHA; uninstall = $true; retainedData = $true; installerSha256 = $hash } | ConvertTo-Json | Set-Content "$TestRoot/result.json"

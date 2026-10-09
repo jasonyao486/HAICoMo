@@ -30,6 +30,8 @@ import {
   type Task,
   type Settings,
   type Capabilities,
+  type Note,
+  type ProposalRecord,
 } from "../shared/domain";
 import { ModelPortrait, Avatar, Badge, Empty, TaskList } from "./components";
 import { formatDate, formatDuration, type Translate } from "./i18n";
@@ -40,6 +42,7 @@ import { useApi, useTab, useDirty } from "./api";
 import { modelMetrics } from "../shared/analytics";
 import { characters } from "../shared/settings";
 import { UpdatePanel } from "./UpdatePanel";
+import { ProjectSearch } from "./ProjectSearch";
 import { LegalSection } from "./LegalSection";
 import { UserAvatar } from "./Identity";
 import { InitialsEditor, ThemeSelect } from "./SettingsControls";
@@ -59,7 +62,9 @@ export function Overview({
   onEdit,
   onNew,
   onNavigate,
-}: { onNew: () => void; onNavigate: (view: string) => void } & Base) {
+  onOpenNote,
+  onOpenProposal,
+}: { onNew: () => void; onNavigate: (view: string) => void; onOpenNote: (note: Note) => void; onOpenProposal: (record: ProposalRecord) => void } & Base) {
   const { api } = useApi();
   const tasks = workspace.state.tasks.filter((t) => !t.archived),
     done = tasks.filter((t) => t.acceptedAt).length,
@@ -115,6 +120,7 @@ export function Overview({
           </article>
         ))}
       </div>
+      <ProjectSearch workspace={workspace} t={t} onOpenTask={onEdit} onOpenNote={onOpenNote} onOpenProposal={onOpenProposal} />
       <div className="overview-grid">
         <div>
           <section className="panel">
@@ -365,6 +371,13 @@ export function SettingsView({
     catch (error) { if (String(error).includes("SETTINGS_CONFLICT")) setConflict(true); throw error; }
     baseline.current = saved; setSettings(saved);
   };
+  // Saved at once and on its own, so unrelated unsaved fields are left untouched.
+  const saveAutoCheck = async (after: boolean) => {
+    const before = baseline.current.autoCheckUpdates;
+    const saved: Settings = await api("settings.patch", { edits: [{ kind: "preference", key: "autoCheckUpdates", before, after }] });
+    baseline.current = { ...baseline.current, autoCheckUpdates: saved.autoCheckUpdates };
+    setSettings((s) => ({ ...s, autoCheckUpdates: saved.autoCheckUpdates }));
+  };
   const saveProject = async () => {
     if (
       workspace &&
@@ -554,7 +567,7 @@ export function SettingsView({
           </div>
         </section>
       )}
-      <UpdatePanel t={t} notify={notify} feed={settings.updateFeed} setFeed={(v) => set("updateFeed", v)} save={savePreferences} />
+      <UpdatePanel t={t} notify={notify} feed={settings.updateFeed} setFeed={(v) => set("updateFeed", v)} save={savePreferences} autoCheck={settings.autoCheckUpdates} setAutoCheck={saveAutoCheck} />
       <LegalSection t={t} notify={notify} />
     </div>
   );

@@ -18,6 +18,8 @@ assertApplicationSource(run.head_sha);
 const tag = `v${version}`;
 const existing = spawnSync('gh', ['release','view',tag,'--json','assets,isDraft'],{encoding:'utf8'});
 const hasRelease = existing.status === 0;
+// Releases before 0.4.0 carry no in-app update metadata.
+const hasUpdateMetadata = !/^0\.[0-3]\./.test(version);
 let reference = run.head_sha;
 let windowsSource = run.head_sha;
 const mac = path.resolve(`verified/haicomo-${version}-mac-arm64`);
@@ -36,7 +38,7 @@ if (hasRelease) {
   reference = execFileSync('git',['rev-parse',`${tag}^{commit}`],{encoding:'utf8'}).trim();
   assertApplicationSource(reference,run.head_sha);
   assertApplicationSource(reference,report.buildCommit);
-  const names = [`HAICoMo-${version}-windows-x64-setup.exe`,`HAICoMo-${version}-windows-x64-setup.exe.blockmap`,'windows-user-verification.json','SHA256SUMS-win32-x64.txt'];
+  const names = [`HAICoMo-${version}-windows-x64-setup.exe`,`HAICoMo-${version}-windows-x64-setup.exe.blockmap`,'windows-user-verification.json','SHA256SUMS-win32-x64.txt',...(hasUpdateMetadata ? ['latest.yml'] : [])];
   for (const name of names) gh(['release','download',tag,'-p',name,'-D',windows]);
   fs.writeFileSync('windows-before.json',JSON.stringify(Object.fromEntries(names.map(name=>[name,fileHash(path.join(windows,name))]))));
   if (version === '0.3.3') {
@@ -62,7 +64,7 @@ const acceptedHash = process.env.FIRST_OPEN_DMG_SHA256;
 if (!/^[a-f0-9]{64}$/.test(acceptedHash ?? '') || acceptedHash !== report.hashes?.[`HAICoMo-${version}-arm64.dmg`]) throw new Error('Provide the exact DMG hash after browser first-open acceptance in a fresh macOS account');
 report.firstOpen = {method:'browser-download-fresh-macos-account',dmgSha256:acceptedHash,recordedAt:new Date().toISOString()};
 fs.writeFileSync(reportPath,JSON.stringify(report,null,2)+'\n');
-const macNames=[`HAICoMo-${version}-arm64.dmg`,`HAICoMo-${version}-arm64-mac.zip`,'mac-release-verification.json'];
+const macNames=[`HAICoMo-${version}-arm64.dmg`,`HAICoMo-${version}-arm64-mac.zip`,'mac-release-verification.json',...(hasUpdateMetadata ? ['latest-mac.yml'] : [])];
 fs.writeFileSync(path.join(mac,'SHA256SUMS-darwin-arm64.txt'),macNames.map(name=>`${fileHash(path.join(mac,name))}  ${name}\n`).join(''));
 execFileSync(process.execPath,['scripts/check-release-evidence.mjs','verified',run.head_sha,reference,windowsSource],{stdio:'inherit'});
 fs.appendFileSync(process.env.GITHUB_ENV,`SOURCE_SHA=${run.head_sha}\nEXISTING_RELEASE=${hasRelease}\n`);

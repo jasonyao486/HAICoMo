@@ -294,6 +294,7 @@ export type Settings = {
   claudePath: string;
   clientPaths: Record<string, string>;
   updateFeed: string;
+  autoCheckUpdates: boolean;
 };
 export type Recent = {
   id: string;

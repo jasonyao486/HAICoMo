@@ -12,7 +12,7 @@ import { App } from "./App";
 import { api, TabContext, type DirtyGuard } from "./api";
 import type { Settings, Workspace } from "../shared/domain";
 import { translator } from "./i18n";
-import { errorText } from "./errors";
+import { errorText, installFailureText } from "./errors";
 type Tab = { id: string; workspace: Workspace | null; title: string; page?: string };
 const blank = (): Tab => ({
   id: crypto.randomUUID(),
@@ -108,7 +108,7 @@ export function Tabs() {
     document.addEventListener("visibilitychange", poll);
     const unsubscribe = window.haicomo.subscribe((e) => {
       if (e.event === "updates.prepare") void requestClose(latest.current.map((tab) => tab.id), false, e.ticket).catch((error) => { setError(errorText(error, liveT.current)); void api("updates.cancel", { ticket: e.ticket }); });
-      if (e.event === "updates.cancelled") { setUpdateLocked(false); setClosing(null); if (e.error) setError(errorText(e.error, liveT.current)); }
+      if (e.event === "updates.cancelled") { setUpdateLocked(false); setClosing(null); if (e.error) setError(installFailureText(e.error, liveT.current)); }
       if (e.event === "tab.new") newTab();
       if (e.event === "tab.close") void closeCurrent();
       if (e.event === "opened") attach(e.view);

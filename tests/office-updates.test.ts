@@ -92,10 +92,10 @@ test("updates require configured HTTPS, explicit download and separate explicit 
   assert.equal((await controller.check()).status, "not-configured");
   assert.throws(() => controller.configure("http://example.org"), /HTTPS/);
   controller.configure("https://example.org/releases/");
+  await Promise.all([controller.check(), controller.check()]);
   assert.equal(backend.autoDownload, false);
   assert.equal(backend.autoInstallOnAppQuit, false);
   assert.equal(backend.allowDowngrade, false);
-  await Promise.all([controller.check(), controller.check()]);
   assert.equal(backend.checks, 1);
   assert.equal(backend.downloads, 0);
   assert.throws(() => controller.install(), /NOT_DOWNLOADED/);
@@ -105,11 +105,12 @@ test("updates require configured HTTPS, explicit download and separate explicit 
   assert.equal(backend.installs, 0);
   controller.install();
   assert.equal(backend.installs, 1);
-  assert.throws(() => controller.configure(""), /UPDATE_BUSY/);
-  backend.emit("error", new Error("install failed"));
+  // Changing the source never discards an install in progress; it applies to the next check.
   controller.configure("");
-  backend.emit("error", new Error("old source"));
-  assert.equal(controller.state.status, "not-configured");
+  assert.equal(controller.state.status, "installing");
+  backend.emit("error", new Error("install failed"));
+  assert.equal(controller.state.status, "error");
+  assert.equal(controller.state.errorStage, "install");
 });
 test("update failure is visible and loopback HTTP is limited to explicit test mode", async () => {
   const b = new Backend();

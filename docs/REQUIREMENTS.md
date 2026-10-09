@@ -92,3 +92,18 @@ See [0.3.4 Windows acceptance, failure analysis and screenshot](TESTING-0.3.4-WI
 - Project-level connection and optional task context use four-language prompts. Handoff and relay share composition while storing only custom content. Agent authority remains submit-only, never approve/accept.
 - The complete English guide is `.haicomo/agent-guide.md`; existing project rules and `.haicomo/AGENTS.md` are preserved. Conflicts and access failures prevent claiming successful connection.
 - Evidence: `tests/agent-onboarding.test.ts`, `tests/e2e/v035.spec.ts`, `tests/e2e/upgrade.spec.ts`, `tests/mac-release.test.ts`; [version verification](TESTING-0.3.5.md). Both native automated release gates passed; the maintainer confirmed this version's requested fresh-account browser first-open acceptance on 2026-10-08 and authorised joint publication. [v0.3.5](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.5) is public on both platforms; the publication workflow passed anonymous download/hash verification.
+
+## 0.4.0: in-app updates, project search and client icons
+
+| ID | Requirement | Implementation / evidence |
+| --- | --- | --- |
+| UPD-01 | Built-in official source: GitHub releases including previews; choose the highest version whose platform metadata and package are both uploaded | `src/core/release-feed.ts` (constant feed URLs, ETag, Atom fallback on rate limits); `tests/v040.test.ts` selection/resolver cases |
+| UPD-02 | Explicit two-step update: download with progress, speed, remaining time and cancel; restart and install only on a second click | `src/core/updates.ts`, `src/ui/UpdatePanel.tsx`; controller cancel/verify cases; `tests/e2e/updates.spec.ts` official-source flow |
+| UPD-03 | Automatic checks (launch + 12 h) only notify and can be turned off; development runs never contact a server | `autoCheckUpdates` setting, `main.ts` scheduler; e2e banner and zero-request assertions |
+| UPD-04 | Explain installations that cannot replace themselves before downloading | `src/core/update-preflight.ts`; preflight table tests |
+| UPD-05 | Releases carry `latest-mac.yml`/`latest.yml` generated from the final signed files, uploaded last and gated by hash/size | `scripts/update-metadata.mjs`, release/publish scripts and workflows; `tests/mac-release.test.ts` 0.4.0 gate |
+| UPD-06 | Real replacement on both platforms | Windows: `tests/e2e/inapp-update.spec.ts` in the standard-user CI scenario (required publication evidence). Mac: local signed native trial; see [TESTING-0.4.0](TESTING-0.4.0.md) |
+| SEARCH-01 | Overview search spanning the three cards, above tasks/team, with four scopes (Everything also covers notes) | `src/ui/ProjectSearch.tsx`, `src/ui/search-model.ts`; `tests/e2e/v040.spec.ts` geometry, scopes, opening results, four locales, both themes |
+| SEARCH-02 | Revisions searched in the database across title, reason, review note, author and proposed text values, never JSON keys | `store.queryProposals` term clauses; `tests/v040.test.ts` |
+| ICON-01 | Official WorkBuddy application icon on macOS and Windows; CodeBuddy colour mark | `assets/manifest.json`, `clientIcon()`; asset check, unit and e2e image checks |
+

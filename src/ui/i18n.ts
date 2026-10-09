@@ -1,9 +1,11 @@
 import { en031, zh031, tw031 } from "./messages031";
+import { en040, zh040, tw040 } from "./messages040";
 import { en022, zh022, tw022, gb022 } from "./messages022";
 import type { Settings } from "../shared/domain";
 export const en = {
   ...en022,
   ...en031,
+  ...en040,
   newTab: "New tab",
   addTab: "New tab",
   closeTab: "Close current tab",
@@ -419,6 +421,7 @@ export type Key = keyof typeof en;
 const zh: Record<Key, string> = {
   ...zh022,
   ...zh031,
+  ...zh040,
   newTab: "新标签页",
   addTab: "新建标签页",
   closeTab: "关闭当前标签",
@@ -810,6 +813,7 @@ const tw: Record<Key, string> = {
   ...zh,
   ...tw022,
   ...tw031,
+  ...tw040,
   newTab: "新標籤頁",
   addTab: "新增標籤頁",
   closeTab: "關閉目前標籤",

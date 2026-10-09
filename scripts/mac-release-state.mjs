@@ -102,7 +102,7 @@ export function isReleaseMaintenance(file) {
   return /^(?:docs\/|tests\/|\.github\/workflows\/)/.test(file)
     || /^(?:README(?:\.zh-CN)?|AGENTS)\.md$/.test(file)
     || file === 'scripts/local-mac-update.py'
-    || /^scripts\/(?:release-mac|mac-release-state|check-release-source|check-release-evidence|restore-mac-candidate|mac-first-launch|prepare-mac-publish|prepare-mac-upgrade|record-mac-upgrade|release-provenance)\.mjs$/.test(file);
+    || /^scripts\/(?:release-mac|mac-release-state|check-release-source|check-release-evidence|restore-mac-candidate|mac-first-launch|prepare-mac-publish|prepare-mac-upgrade|record-mac-upgrade|release-provenance|update-metadata)\.mjs$/.test(file);
 }
 export async function withCleanup(work, cleanup) {
   try { return await work(); } finally { await cleanup(); }

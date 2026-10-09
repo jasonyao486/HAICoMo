@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { verifyUpdateMetadata, writeUpdateMetadata } from './update-metadata.mjs';
 import os from 'node:os';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -184,7 +185,10 @@ async function main() {
       if (fileHash(path.join(copy, 'Contents/Resources/app.asar')) !== state.archiveSha256) throw new Error('ZIP application differs from verified app');
     } finally { fs.rmSync(unpack, { recursive: true, force: true }); }
     for (const name of fs.readdirSync(root)) if (name.endsWith('.blockmap') || /^latest.*\.ya?ml$/.test(name)) fs.unlinkSync(path.join(root, name));
-    const hashes = Object.fromEntries([dmgName, zipName].map(name => [name, fileHash(path.join(root, name))]));
+    // In-app update metadata describes the final notarised ZIP, never electron-builder's earlier one.
+    await writeUpdateMetadata(root, pkg.version, 'darwin');
+    await verifyUpdateMetadata(root, pkg.version, 'darwin');
+    const hashes = Object.fromEntries([dmgName, zipName, 'latest-mac.yml'].map(name => [name, fileHash(path.join(root, name))]));
     fs.writeFileSync(path.join(root, 'mac-release-verification.json'), JSON.stringify({ version: pkg.version, sourceCommit: current, buildCommit: state.buildCommit, applicationReferenceCommit: state.applicationReferenceCommit, archiveSha256: state.archiveSha256, developerId: true, notarized: true, stapled: true, gatekeeper: true, notarization: { app: state.app.id, dmg: state.dmg.id }, hashes }, null, 2) + '\n');
     console.log('Final App, DMG and ZIP signatures, tickets and Gatekeeper verification passed.');
     return;

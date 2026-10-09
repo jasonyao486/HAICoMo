@@ -83,5 +83,11 @@ export const clientName = (id: string) =>
   CLIENTS.find((c) => c.id === id)?.name ?? id;
 export const clientActor = (id: string) => `client:${id}` as const;
 export const isClientActor = (id: string) => id.startsWith("client:");
+// Client marks shipped in assets/runtime/local-assets (see assets/manifest.json).
+const CLIENT_ICON_FILES: Record<string, string> = {
+  codex: "chatgpt-logo.svg",
+  claude: "claude-logo.svg",
+  workbuddy: "workbuddy-app.png",
+};
 export const clientIcon = (id: string) =>
-  `/local-assets/${id === "codex" ? "chatgpt-logo.svg" : id === "claude" ? "claude-logo.svg" : `${id}-app.svg`}`;
+  `/local-assets/${CLIENT_ICON_FILES[id] ?? `${id}-app.svg`}`;
