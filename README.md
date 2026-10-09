@@ -1,24 +1,24 @@
 # HAICoMo
 
-> [0.3.5 preview](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.5) for Apple Silicon Mac and Windows x64: project entry naming and agent onboarding. See [release notes](docs/RELEASE-NOTES-0.3.5.md).
+> [0.4.0 preview](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.4.0) for Apple Silicon Mac and Windows x64: in-app updates, project search and the official WorkBuddy icon. See [release notes](docs/RELEASE-NOTES-0.4.0.md).
 
 **English** · [简体中文](README.zh-CN.md)
 
 A local desktop app for project management, human review, and collaboration with multiple AI agents. Agents propose changes; human users approve proposals and accept deliveries. Project data stays in the selected working directory.
 
-The recommended preview is **0.3.5 for both platforms**: signed and notarised on Mac, installed per user on Windows. See [native verification](docs/TESTING-0.3.5.md). Historical versions and downloads remain available.
+The recommended preview is **0.4.0 for both platforms**: signed and notarised on Mac, installed per user on Windows. See [native verification](docs/TESTING-0.4.0.md). Historical versions and downloads remain available.
 
 ## Install and start
 
 Task management requires no Node.js, Git or model subscription.
 
-1. Open [Downloads and releases](https://github.com/jasonyao486/HAICoMo/releases). Select **v0.3.5 for either platform**, then expand **Assets**.
+1. Open [Downloads and releases](https://github.com/jasonyao486/HAICoMo/releases). Select **v0.4.0 for either platform**, then expand **Assets**.
 2. Choose the installer below. The “Source code” archives are for developers, not installers.
 
 | Computer system | Download |
 |---|---|
-| Mac with an Apple M-series chip | [HAICoMo-0.3.5-arm64.dmg](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.5/HAICoMo-0.3.5-arm64.dmg) |
-| Windows PC, System type “x64-based processor” | [HAICoMo-0.3.5-windows-x64-setup.exe](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.5/HAICoMo-0.3.5-windows-x64-setup.exe) |
+| Mac with an Apple M-series chip | [HAICoMo-0.4.0-arm64.dmg](https://github.com/jasonyao486/HAICoMo/releases/download/v0.4.0/HAICoMo-0.4.0-arm64.dmg) |
+| Windows PC, System type “x64-based processor” | [HAICoMo-0.4.0-windows-x64-setup.exe](https://github.com/jasonyao486/HAICoMo/releases/download/v0.4.0/HAICoMo-0.4.0-windows-x64-setup.exe) |
 | Intel Mac, Windows ARM64 or Linux | No verified installer in this release |
 
 On a Mac, find the chip under **Apple menu → About This Mac**. On Windows, open **Settings → System → About → System type**.
@@ -36,13 +36,13 @@ Download the matching `SHA256SUMS-darwin-arm64.txt` or `SHA256SUMS-win32-x64.txt
 Mac — open Terminal:
 
 ```sh
-shasum -a 256 ~/Downloads/HAICoMo-0.3.5-arm64.dmg
+shasum -a 256 ~/Downloads/HAICoMo-0.4.0-arm64.dmg
 ```
 
 Windows — open PowerShell:
 
 ```powershell
-Get-FileHash "$HOME\Downloads\HAICoMo-0.3.5-windows-x64-setup.exe" -Algorithm SHA256
+Get-FileHash "$HOME\Downloads\HAICoMo-0.4.0-windows-x64-setup.exe" -Algorithm SHA256
 ```
 
 The hash checks the download's integrity; it is not a publisher signature.
@@ -51,11 +51,11 @@ The hash checks the download's integrity; it is not a publisher signature.
 
 For AI collaboration, install and sign into a supported client. **Settings → Local agents → Detect** checks what is available. Codex and Claude Code support background handoff; other listed clients use foreground/file collaboration. Claude's current adapter cannot approve interactive write permissions inside HAICoMo or reliably confirm cancellation; see the [Windows functional evidence](docs/TESTING-WINDOWS-2026-10-07.md). HAICoMo does not provide subscriptions or switch to paid APIs.
 
-Updates are manual: quit HAICoMo, keep project folders, download the next release and replace/reinstall the application. Opening a pre-0.3.1 project migrates it to schema v5 after creating a backup. Older apps cannot reopen the migrated project; restore the pre-migration backup to an empty folder when reverting.
+From 0.4.0, HAICoMo updates itself: **Settings → HAICoMo → Check for updates**, then **Update now** (progress, speed and cancel), then **Restart and install** when you choose. Automatic checks only notify and can be turned off. Version 0.3.5 and earlier update once by download, or by entering `https://github.com/jasonyao486/HAICoMo/releases/download/v0.4.0` as their update source. Use **Search** on the project overview (⌘F / Ctrl+F) to find tasks, revisions, meetings and notes. Opening a pre-0.3.1 project migrates it to schema v5 after creating a backup. Older apps cannot reopen the migrated project; restore the pre-migration backup to an empty folder when reverting.
 
-Clicking the logo returns home without adding a tab. Project pages and drafts stay open. The collapsed sidebar keeps folder and terminal controls at their normal size. Activity summaries show short roles; expanded details retain full attribution. Version 0.3.5 uses the same v5 project format as 0.3.1.
+Clicking the logo returns home without adding a tab. Project pages and drafts stay open. The collapsed sidebar keeps folder and terminal controls at their normal size. Activity summaries show short roles; expanded details retain full attribution. Version 0.4.0 uses the same v5 project format as 0.3.1.
 
-Full manuals: [UK English](docs/USER-MANUAL-0.3.5.en-GB.md) · [US English](docs/USER-MANUAL-0.3.5.en-US.md) · [简体中文](docs/USER-MANUAL-0.3.5.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.3.5.zh-TW.md).
+Full manuals: [UK English](docs/USER-MANUAL-0.4.0.en-GB.md) · [US English](docs/USER-MANUAL-0.4.0.en-US.md) · [简体中文](docs/USER-MANUAL-0.4.0.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.4.0.zh-TW.md).
 
 ## Connect an agent
 
@@ -63,7 +63,7 @@ Use a task's **Handoff** to copy the prompt or send it to a supported background
 
 Version **0.3.5** adds **Connect an agent → Copy connection instructions** at the top of an open project. Leave the task empty to read and summarise the project first, or select a task for its context and deliverable references. Paste the instructions into an existing conversation opened in the same project directory. Task handoff and relay also retain the automatic guide instructions alongside custom content.
 
-The agent needs local access to that project directory. Installation does not register a global `hcm` command, configure MCP or start an agent. [0.3.5 manual: both routes, copyable instructions and complete walkthrough](docs/USER-MANUAL-0.3.5.en-GB.md#agent-onboarding).
+The agent needs local access to that project directory. Installation does not register a global `hcm` command, configure MCP or start an agent. [Manual: both routes, copyable instructions and complete walkthrough](docs/USER-MANUAL-0.4.0.en-GB.md#agent-onboarding).
 
 ## Features
 
@@ -150,4 +150,4 @@ npm run dev
 
 `npm test` runs unit tests; `npm run test:e2e` runs Electron tests with disposable data. `npm run dist` builds the current platform; `npm run dist:win` builds Windows x64. `npm run demo -- /absolute/empty/directory` creates synthetic demonstration data. See [contributing](CONTRIBUTING.md), [architecture](docs/ARCHITECTURE.md) and [file/CLI/MCP protocol](docs/PROTOCOL.md).
 
-[Report an issue](https://github.com/jasonyao486/HAICoMo/issues/new/choose). Remove personal paths, prompts and credentials before attaching diagnostics or screenshots. Current evidence: [0.3.5 verification](docs/TESTING-0.3.5.md), [remaining gaps](docs/GAP-ANALYSIS.md).
+[Report an issue](https://github.com/jasonyao486/HAICoMo/issues/new/choose). Remove personal paths, prompts and credentials before attaching diagnostics or screenshots. Current evidence: [0.4.0 verification](docs/TESTING-0.4.0.md), [remaining gaps](docs/GAP-ANALYSIS.md).

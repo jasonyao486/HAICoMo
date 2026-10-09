@@ -1,24 +1,24 @@
 # HAICoMo
 
-> [0.3.5 预览版](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.3.5)：Mac Apple Silicon 与 Windows x64 同步更新，新增项目入口命名与智能体接入。见[发布说明](docs/RELEASE-NOTES-0.3.5.md)。
+> [0.4.0 预览版](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.4.0)：Mac Apple Silicon 与 Windows x64 同步更新，新增应用内更新、项目总览搜索，并改用官方 WorkBuddy 图标。见[发布说明](docs/RELEASE-NOTES-0.4.0.md)。
 
 [English](README.md) · **简体中文**
 
 一个管理项目、人工审阅与多 AI 智能体协作的本地桌面应用。智能体提交修改提案，由人类用户决定是否批准及何时通过交付验收。项目数据保存在选定的工作目录中。
 
-当前双平台推荐预览版为 **0.3.5**。Mac 已签名、公证；Windows 仅当前用户安装。见[双平台验证记录](docs/TESTING-0.3.5.md)。历史版本与附件继续保留。
+当前双平台推荐预览版为 **0.4.0**。Mac 已签名、公证；Windows 仅当前用户安装。见[双平台验证记录](docs/TESTING-0.4.0.md)。历史版本与附件继续保留。
 
 ## 安装与开始使用
 
 使用任务管理功能不需要安装 Node.js、Git，也不需要购买模型订阅。
 
-1. 打开[下载与版本发布](https://github.com/jasonyao486/HAICoMo/releases)，两个平台均选择 **v0.3.5**，展开 **Assets**。
+1. 打开[下载与版本发布](https://github.com/jasonyao486/HAICoMo/releases)，两个平台均选择 **v0.4.0**，展开 **Assets**。
 2. 按电脑类型下载。页面上的 “Source code” 是开发者源码，不是安装包。
 
 | 电脑系统 | 下载文件 |
 |---|---|
-| 搭载 Apple M 系列芯片的 Mac | [HAICoMo-0.3.5-arm64.dmg](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.5/HAICoMo-0.3.5-arm64.dmg) |
-| 系统类型为“基于 x64 的处理器”的 Windows PC | [HAICoMo-0.3.5-windows-x64-setup.exe](https://github.com/jasonyao486/HAICoMo/releases/download/v0.3.5/HAICoMo-0.3.5-windows-x64-setup.exe) |
+| 搭载 Apple M 系列芯片的 Mac | [HAICoMo-0.4.0-arm64.dmg](https://github.com/jasonyao486/HAICoMo/releases/download/v0.4.0/HAICoMo-0.4.0-arm64.dmg) |
+| 系统类型为“基于 x64 的处理器”的 Windows PC | [HAICoMo-0.4.0-windows-x64-setup.exe](https://github.com/jasonyao486/HAICoMo/releases/download/v0.4.0/HAICoMo-0.4.0-windows-x64-setup.exe) |
 | Intel Mac、Windows ARM64、Linux | 本版暂不提供已验证安装包 |
 
 Mac 在“苹果菜单 → 关于本机”查看芯片；Windows 在“设置 → 系统 → 系统信息”查看系统类型。
@@ -36,13 +36,13 @@ Mac 在“苹果菜单 → 关于本机”查看芯片；Windows 在“设置 �
 Mac：打开“终端”运行：
 
 ```sh
-shasum -a 256 ~/Downloads/HAICoMo-0.3.5-arm64.dmg
+shasum -a 256 ~/Downloads/HAICoMo-0.4.0-arm64.dmg
 ```
 
 Windows：打开 PowerShell 运行：
 
 ```powershell
-Get-FileHash "$HOME\Downloads\HAICoMo-0.3.5-windows-x64-setup.exe" -Algorithm SHA256
+Get-FileHash "$HOME\Downloads\HAICoMo-0.4.0-windows-x64-setup.exe" -Algorithm SHA256
 ```
 
 校验值用于确认下载完整性，不等同于发布者签名。
@@ -51,11 +51,11 @@ Get-FileHash "$HOME\Downloads\HAICoMo-0.3.5-windows-x64-setup.exe" -Algorithm SH
 
 需要 AI 协作时，自行安装并登录相应客户端，然后在“设置 → 本地智能体 → 检测”查看能力。Codex、Claude Code 支持后台交接；其他列出的客户端使用前台或文件协作。当前 Claude 适配无法在 HAICoMo 内批准交互写入权限，也不能可靠确认取消结束，详见 [Windows 功能验证](docs/TESTING-WINDOWS-2026-10-07.md)。HAICoMo 不提供订阅，也不会自动转用另行收费的 API。
 
-更新采用手动下载安装：退出应用，保留项目文件夹，下载新版并替换或重新安装应用。0.3.1 之前的项目首次在新版中打开时，会先备份再迁移到 v5；早于 0.3.1 的应用不能打开已迁移项目。需要回退时，将迁移前备份恢复到空目录。
+自 0.4.0 起可在应用内更新：“设置 → HAICoMo → 检查更新”，点“立即更新”（显示进度、速度，可取消），准备好后再点“重启并安装”。自动检查只提示、不下载，可关闭。0.3.5 及更早版本需下载安装一次，或在其“更新源”中填入 `https://github.com/jasonyao486/HAICoMo/releases/download/v0.4.0`。在项目总览使用搜索（⌘F／Ctrl+F）可找回任务、修订、会议与备注。0.3.1 之前的项目首次在新版中打开时，会先备份再迁移到 v5；早于 0.3.1 的应用不能打开已迁移项目。需要回退时，将迁移前备份恢复到空目录。
 
-完整手册：[简体中文](docs/USER-MANUAL-0.3.5.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.3.5.zh-TW.md) · [UK English](docs/USER-MANUAL-0.3.5.en-GB.md) · [US English](docs/USER-MANUAL-0.3.5.en-US.md)。
+完整手册：[简体中文](docs/USER-MANUAL-0.4.0.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.4.0.zh-TW.md) · [UK English](docs/USER-MANUAL-0.4.0.en-GB.md) · [US English](docs/USER-MANUAL-0.4.0.en-US.md)。
 
-点击 logo 返回首页，不增加标签；原项目页面与草稿保留。收起侧栏后保留正常尺寸的文件夹与终端按钮。活动摘要使用简短角色，展开详情保留完整身份。0.3.5 沿用 0.3.1 的项目格式 v5。
+点击 logo 返回首页，不增加标签；原项目页面与草稿保留。收起侧栏后保留正常尺寸的文件夹与终端按钮。活动摘要使用简短角色，展开详情保留完整身份。0.4.0 沿用 0.3.1 的项目格式 v5。
 
 ## 连接智能体
 
@@ -63,7 +63,7 @@ Get-FileHash "$HOME\Downloads\HAICoMo-0.3.5-windows-x64-setup.exe" -Algorithm SH
 
 **0.3.5**在已打开项目顶部增加“连接智能体 → 复制接入说明”。不选任务时先读取并概述项目；选择任务后加入任务上下文及交付物引用。将说明粘贴到已打开同一项目目录的会话中。任务交接与接力也会在保留自定义内容的同时，自动加入接入指引。
 
-智能体须具有该项目目录的本机访问权限。安装不会注册全局 `hcm` 命令、配置 MCP 或启动智能体。[0.3.5 手册：两种方式、可复制说明与完整演练](docs/USER-MANUAL-0.3.5.zh-CN.md#agent-onboarding)。
+智能体须具有该项目目录的本机访问权限。安装不会注册全局 `hcm` 命令、配置 MCP 或启动智能体。[使用手册：两种方式、可复制说明与完整演练](docs/USER-MANUAL-0.4.0.zh-CN.md#agent-onboarding)。
 
 ## 功能
 
@@ -146,4 +146,4 @@ npm run dev
 
 `npm test` 执行单元测试；`npm run test:e2e` 使用临时数据执行 Electron 测试；`npm run dist` 构建当前平台安装包，`npm run dist:win` 构建 Windows x64；`npm run demo -- /绝对路径/空目录` 生成演示项目。维护说明见[贡献指南](CONTRIBUTING.md)、[架构](docs/ARCHITECTURE.md)及[文件、CLI、MCP 协议](docs/PROTOCOL.md)。
 
-[前往 GitHub 反馈](https://github.com/jasonyao486/HAICoMo/issues/new/choose)。附加诊断或截图前，请删除私人路径、提示词及凭据。当前证据见[0.3.5 验证记录](docs/TESTING-0.3.5.md)和[差距分析](docs/GAP-ANALYSIS.md)。
+[前往 GitHub 反馈](https://github.com/jasonyao486/HAICoMo/issues/new/choose)。附加诊断或截图前，请删除私人路径、提示词及凭据。当前证据见[0.4.0 验证记录](docs/TESTING-0.4.0.md)和[差距分析](docs/GAP-ANALYSIS.md)。

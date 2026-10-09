@@ -1,6 +1,6 @@
 # 0.4.0 verification status
 
-Status: local macOS verification and both native CI gates passed for commit `38adc20f0a1db5c0b57a4180ece41da2f5bd9579`. Fresh-account Mac first-open acceptance and publication are pending. Nothing in this record is claimed for Windows from a Mac run. Synthetic projects, fixture agents and loopback release servers are used throughout; no real project, account or conversation is touched, and no automated test contacts GitHub.
+Status: local macOS verification and both native CI gates passed for commit `38adc20f0a1db5c0b57a4180ece41da2f5bd9579`. On 2026-10-09 the maintainer confirmed fresh-account browser download and first launch of the exact DMG below. Both platforms are public in [v0.4.0](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.4.0); [publication run 38001128402](https://github.com/jasonyao486/HAICoMo/actions/runs/38001128402) passed the release gates and anonymous download verification. The tag points to `38adc20`. Nothing in this record is claimed for Windows from a Mac run. Synthetic projects, fixture agents and loopback release servers are used throughout; no real project, account or conversation is touched, and no automated test contacts GitHub.
 
 ## Scope
 
@@ -43,11 +43,18 @@ Final artifacts (verified again on the development Mac against their SHA-256 man
 90a3642d5c08a627d528c4126a71b311264b050e3a3c38d85aba68d974da24b2  latest.yml
 ```
 
+## Development Mac delivery
+
+The everyday installation `/Applications/HAICoMo.app` was upgraded from the published 0.3.5 to the published 0.4.0 **through 0.3.5's own in-app updater**, using the bootstrap source and an isolated synthetic profile: check, download from GitHub, restart and install, Squirrel validation of the Developer ID signature, replacement and native relaunch. This is the first replacement between two Developer ID–signed public releases. Afterwards the installed `app.asar` matched the release archive hash (`ba292d68…`), strict code signing and Gatekeeper passed, the update journal restored the synthetic tab as 0.4.0, and a check against the public GitHub releases reported “up to date”. A verified rollback archive of 0.3.5 is kept locally, the user's real settings and recent projects were not modified, only the canonical app remains registered, and the leftover cache copy written by 0.3.5's updater was removed. This local delivery does not substitute for the fresh-account acceptance above.
+
+The Windows development machine has to perform its own 0.3.5 → 0.4.0 update; it is not reachable from the Mac.
+
 ## Known limits
 
 - Windows installers are not publisher-signed; in-app updates rely on GitHub HTTPS and the SHA-512 in `latest.yml`.
 - Mac updates download the full ZIP (no blockmap for the re-created notarised ZIP).
 - WorkBuddy's Windows install location has not been observed on a real Windows machine; the icon itself is platform-independent.
 - Versions up to 0.3.5 need one manual download, or the bootstrap update source, to reach 0.4.0.
+- 0.3.5's updater leaves a full copy of the downloaded ZIP (`update.zip`) in its cache after updating a Mac; 0.4.0 itself does not create one. A later version should remove that leftover after a successful update.
 
 `prd_draft.md` SHA-256 remains `da6a5edbdbe69b600080d9e76d40e4795e2938d7226267c69cf6c13cc0af41c8`.
