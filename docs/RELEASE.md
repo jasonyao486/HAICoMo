@@ -51,7 +51,7 @@ Publication requires matching Mac signature/notarization evidence and Windows no
 1. Verify source version, four manuals, release notes and manifest.
 2. Complete native matrix checks and local Mac acceptance; record Windows human checks honestly as pending until performed.
 3. Inspect clean-clone outputs and packaged content for private information.
-4. Calculate SHA-256 of final files, publish the `v0.3.5` GitHub pre-release, and attach both native platform packages plus checksums.
+4. Calculate SHA-256 of final files, publish the `v<version>` GitHub pre-release, and attach both native platform packages, checksums and the in-app update metadata (`latest-mac.yml`, `latest.yml`, uploaded last).
 5. Verify anonymous public links, downloaded hashes, extracted contents and a fresh-profile launch.
 6. Preserve old local recovery material. Do not include private historical repositories or databases in the release.
 
