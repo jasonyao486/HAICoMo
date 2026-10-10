@@ -1,6 +1,6 @@
 # 0.4.1 verification status
 
-Status: local macOS verification passed; native CI, fresh-account first-open acceptance and publication pending. Nothing here is claimed for Windows from a Mac run. Synthetic projects and isolated profiles only.
+Status: published. Local macOS verification and both native CI gates passed for commit `6de059d2fd3931fa564cc284da31a4666d277ab4`; on 2026-10-10 the maintainer confirmed fresh-account browser download and first launch of the exact DMG below. [v0.4.1](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.4.1) is public on both platforms; [publication run 38091206691](https://github.com/jasonyao486/HAICoMo/actions/runs/38091206691) passed the release gates and anonymous download verification. The tag points to `6de059d`. Nothing here is claimed for Windows from a Mac run. Synthetic projects and isolated profiles only.
 
 ## Changes
 
@@ -19,8 +19,28 @@ Status: local macOS verification passed; native CI, fresh-account first-open acc
 | Local review package (`electron-builder --mac --arm64 --dir`, ad-hoc signature, not notarised) | `check-package.mjs` passed; scroll, search, update and update-safety specs 8/8 against the packaged executable |
 | Screenshots inspected | Settings end with a project, light and dark |
 
-## Pending
+## Native CI
 
-- Native CI on both platforms, including the Windows in-app update of the installed 0.4.1 to a next-version fixture.
-- Fresh-account browser first-open acceptance of the exact DMG, then publication.
-- The local review build is replaced by the published 0.4.1 bytes after publication.
+[Run 38075323328](https://github.com/jasonyao486/HAICoMo/actions/runs/38075323328) on `6de059d`.
+
+| Platform | Results |
+|---|---|
+| Mac Apple Silicon (job `114280980336`) | Unit 113/113. Electron suites from source, signed candidate and final package: each 30 passed, 4 skipped. Developer ID signature, App/DMG notarisation, stapling and Gatekeeper passed; installed upgrade 0.3.5 → 0.4.1 retained project and settings; `latest-mac.yml` matches the final ZIP |
+| Windows x64 (attempt 2, job `114291396033`) | Unit 111 passed, 2 Mac-only cases skipped. Electron suites passed; standard-user install, launch, reinstall, uninstall, retained data and 0.3.5 → 0.4.1 upgrade passed. Real in-app update of the installed 0.4.1 to a 0.4.2 fixture: differential download, installer relaunch, restore |
+
+Attempt 1 of the Windows job failed one test: in the packaged-app suite, the first scenario (`desktop.spec.ts`, real desktop flow) did not show the newly created project within 5 seconds on a cold runner, and closing the app then exceeded the 60-second limit. The same scenario had passed earlier in that job against the source build, in all Mac suites and in both 0.4.0 Windows runs, and 0.4.1 does not change project creation. Only the failed Windows job was re-run; it passed in full. The Mac job and its artifacts are unchanged from attempt 1. The cause of the slow cold start was not identified; it is recorded as a runner flake rather than proven.
+
+Final artifacts (verified on the development Mac against their manifests; `latest*.yml` match their payloads; the DMG passes `stapler validate` and `spctl` as “Notarized Developer ID”):
+
+```
+ee5cc543b8f22e7398ea32880c1357a1ad436894ef39a2d5295a3d47a0769caf  HAICoMo-0.4.1-arm64.dmg
+26fa730e51af27f5e8e9c1465f7d0d0caf55fd5c80809080549c2ba6ddf657aa  HAICoMo-0.4.1-arm64-mac.zip
+54fb04b34c6a00b70029e4aeef0c18d58157744138605cb861f9baa29c11e341  latest-mac.yml
+e36ec8a4f7508f1c3de20741e86eff41a30d918266405d2ba98b74a1c1771afc  HAICoMo-0.4.1-windows-x64-setup.exe
+```
+
+## Development Mac delivery
+
+`/Applications/HAICoMo.app` was updated from the published 0.4.0 to the published 0.4.1 **through the official GitHub source inside the app** (no custom source), with an isolated synthetic profile: check, download (about 19 minutes on this network), restart and install, Squirrel validation, replacement and native relaunch. This is the first end-to-end update through the built-in official source between public releases. Afterwards the installed `app.asar` matched the release archive hash, strict code signing and Gatekeeper passed, the synthetic tab was restored with the “已更新至 0.4.1” notice, a check against GitHub reported “up to date”, the Settings page ended at its last section with the window height equal to the viewport, and the updater cache was empty. The user's real settings and recent projects were not modified. At the user's request no local copy of 0.4.0 was kept (it remains downloadable from GitHub Releases); only `/Applications/HAICoMo.app` 0.4.1 is installed and registered. The unnotarised local review build was never installed and was removed. Old local build outputs, rollback archives, earlier test evidence, review packages and test caches (about 28.8 GB) were moved to the Trash, listed in the ignored `validation/cleanup-2026-10-10.json`.
+
+The Windows development machine updates itself from 0.4.0 in the app (Settings → HAICoMo → Check for updates); it is not reachable from the Mac.
