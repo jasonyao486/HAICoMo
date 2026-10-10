@@ -55,6 +55,7 @@ The Windows development machine has to perform its own 0.3.5 → 0.4.0 update; i
 - Mac updates download the full ZIP (no blockmap for the re-created notarised ZIP).
 - WorkBuddy's Windows install location has not been observed on a real Windows machine; the icon itself is platform-independent.
 - Versions up to 0.3.5 need one manual download, or the bootstrap update source, to reach 0.4.0.
-- 0.3.5's updater leaves a full copy of the downloaded ZIP (`update.zip`) in its cache after updating a Mac; 0.4.0 itself does not create one. A later version should remove that leftover after a successful update.
+- 0.3.5's updater leaves a full copy of the downloaded ZIP (`update.zip`, about 380 MB) in its cache after updating a Mac; 0.4.0 itself does not create one but does not remove it either. Fixed in [0.4.1](TESTING-0.4.1.md).
+- On the Settings page, screen-reader-only link labels stretched the window, leaving 2–4 screens of blank scrolling after the last section. Fixed in [0.4.1](TESTING-0.4.1.md).
 
 `prd_draft.md` SHA-256 remains `da6a5edbdbe69b600080d9e76d40e4795e2938d7226267c69cf6c13cc0af41c8`.

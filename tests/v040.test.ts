@@ -8,7 +8,7 @@ import { randomUUID } from "node:crypto";
 import { temporaryDirectory, beforeRemove } from "./temp-directory";
 import { compareVersions, parseVersion } from "../src/shared/version";
 import { createReleaseResolver, isOfficialTagFeed, OFFICIAL_RELEASES, releaseTarget, selectRelease, type HttpGet } from "../src/core/release-feed";
-import { UpdateController, updateErrorCode } from "../src/core/updates";
+import { UpdateController, updateCacheLeftovers, updateErrorCode } from "../src/core/updates";
 import { macPreflight, windowsPreflight } from "../src/core/update-preflight";
 import { applySettingsEdits, defaultSettings, settingsEdits, settingsSchema } from "../src/shared/settings";
 import { HARNESS_IDS, clientIcon } from "../src/shared/clients";
@@ -219,6 +219,12 @@ test("changing the source during a check never throws and discards the stale res
   assert.equal((await c.check()).status, "available");
   assert.equal(backend.feeds.at(-1).url, "https://example.org/feed/");
   assert.throws(() => c.setSource({ kind: "custom", url: "http://example.org/" }), /UPDATE_HTTPS_REQUIRED/);
+});
+
+test("after an update, the cache drops the installed payload and the old Mac ZIP copy but keeps the Windows installer", () => {
+  assert.deepEqual(updateCacheLeftovers("darwin"), ["pending", "update.zip"]);
+  assert.deepEqual(updateCacheLeftovers("win32"), ["pending"]);
+  assert.ok(!updateCacheLeftovers("win32").includes("installer.exe"));
 });
 
 test("install preflight explains locations and builds that cannot update themselves", () => {

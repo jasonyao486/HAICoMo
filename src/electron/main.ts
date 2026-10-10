@@ -38,7 +38,7 @@ import { z } from "zod";
 import { detectClients, detectClient } from "../providers/registry";
 import { HARNESS_IDS } from "../shared/clients";
 import { InstallGate, resumeTabSchema, type ResumeWindow } from "../core/install";
-import { UpdateController, type UpdateSource } from "../core/updates";
+import { UpdateController, updateCacheLeftovers, type UpdateSource } from "../core/updates";
 import { createReleaseResolver, isOfficialTagFeed, OFFICIAL_RELEASES, releaseTarget, type HttpGet, type ReleaseOrigins } from "../core/release-feed";
 import { macPreflight, windowsPreflight } from "../core/update-preflight";
 import { CancellationToken, MacUpdater, NsisUpdater } from "electron-updater";
@@ -280,8 +280,8 @@ function updateSource(value: Settings = settings()): UpdateSource {
   return { kind: "official" };
 }
 function cleanUpdateCache() {
-  // The installed payload is no longer needed; Windows keeps installer.exe for differential downloads.
-  try { fs.rmSync(path.join(updaterCacheDir(), "pending"), { recursive: true, force: true }); } catch {}
+  for (const entry of updateCacheLeftovers(process.platform))
+    try { fs.rmSync(path.join(updaterCacheDir(), entry), { recursive: true, force: true }); } catch {}
 }
 const updateJournal = () => configFile("pending-update.json");
 async function reopenAfterInstallFailure() {

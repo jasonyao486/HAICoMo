@@ -1924,6 +1924,11 @@ legend {
 .workspace-frame {
   height: 100vh;
   overflow-y: auto;
+  /* Each page scrolls inside its frame. Absolutely positioned descendants without a
+     nearer positioned ancestor (e.g. screen-reader-only labels) must use the frame,
+     not the window, or they stretch the window and leave blank scrolling. */
+  position: relative;
+  overscroll-behavior: contain;
 }
 
 /* 0.2.2: shared settings, readable activity and offline attribution. */

@@ -43,6 +43,15 @@ export function updateErrorCode(error: unknown): string | undefined {
   const message = (error instanceof Error ? error.message : String(error)).replace(/^(Error:\s*)+/, "");
   return /^((?:UPDATE|ERR)_[A-Z0-9_]+)/.exec(message)?.[1];
 }
+/**
+ * Updater cache entries that are useless once an update has been installed.
+ * macOS: HAICoMo disables differential downloads, but updaters up to 0.3.5 left a
+ * full copy of the downloaded ZIP (`update.zip`). Windows keeps `installer.exe`,
+ * which NSIS differential downloads need.
+ */
+export function updateCacheLeftovers(platform: string) {
+  return platform === "darwin" ? ["pending", "update.zip"] : ["pending"];
+}
 const sameSource = (a: UpdateSource, b: UpdateSource) =>
   a.kind === b.kind && (a.kind !== "custom" || a.url === (b as { url: string }).url) && (a.kind !== "none" || a.reason === (b as { reason: string }).reason);
 const sourceFields = (s: UpdateSource) => ({ source: s.kind, sourceReason: s.kind === "none" ? s.reason : undefined, sourceUrl: s.kind === "custom" ? s.url : undefined });

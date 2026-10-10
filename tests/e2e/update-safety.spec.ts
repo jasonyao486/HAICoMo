@@ -76,16 +76,25 @@ test("update-only restoration checks file identity, keeps missing entry deleted,
   const tabs = [directory, missing].map((dir) => ({ entryPath: path.join(dir, "HAICoMo.haicomo"), id: readSnapshot(dir).id, epoch: readSnapshot(dir).epoch, page: "history", active: dir === directory }));
   fs.unlinkSync(tabs[1].entryPath);
   fs.writeFileSync(path.join(profile, "pending-update.json"), JSON.stringify({ from: "0.2.1", target: currentVersion, at: new Date().toISOString(), windows: [{ tabs }] }));
+  // Leftovers of the installed update in the test updater cache (see updaterCacheDir in main.ts).
+  const cache = process.platform === "darwin" ? path.join(os.homedir(), "Library", "Caches", "haicomo-test-updater") : path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), "AppData", "Local"), "haicomo-test-updater");
+  const leftovers = { pending: path.join(cache, "pending", "HAICoMo-update.zip"), zip: path.join(cache, "update.zip"), installer: path.join(cache, "installer.exe") };
+  fs.mkdirSync(path.dirname(leftovers.pending), { recursive: true });
+  for (const file of Object.values(leftovers)) fs.writeFileSync(file, "synthetic cached update");
   let app = await launch(root), page = await app.firstWindow();
   try {
     await expect(current(page).locator(".history-panel")).toBeVisible();
     await expect(page.locator(".update-banner")).toContainText("恢复未完成");
     expect(fs.existsSync(tabs[1].entryPath)).toBe(false);
     expect(JSON.parse(fs.readFileSync(path.join(profile, "last-update.json"), "utf8")).restoredVersion).toBe(currentVersion);
+    // The installed payload goes; macOS also drops the old ZIP copy, Windows keeps installer.exe for differential downloads.
+    expect(fs.existsSync(path.dirname(leftovers.pending))).toBe(false);
+    expect(fs.existsSync(leftovers.zip)).toBe(process.platform !== "darwin");
+    expect(fs.existsSync(leftovers.installer)).toBe(true);
     expect((await page.evaluate(() => window.haicomo.request("bootstrap"))).projects).toHaveLength(1);
     await app.close(); app = await launch(root); page = await app.firstWindow();
     await expect(current(page).getByRole("button", { name: "新建项目", exact: true })).toBeVisible();
     expect((await page.evaluate(() => window.haicomo.request("bootstrap"))).projects).toHaveLength(0);
     expect(fs.existsSync(tabs[1].entryPath)).toBe(false);
-  } finally { await app.close().catch(() => {}); await removeTestDirectory(root); }
+  } finally { await app.close().catch(() => {}); await removeTestDirectory(root); for (const file of Object.values(leftovers)) fs.rmSync(file, { force: true }); }
 });

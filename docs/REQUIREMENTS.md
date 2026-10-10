@@ -107,3 +107,10 @@ See [0.3.4 Windows acceptance, failure analysis and screenshot](TESTING-0.3.4-WI
 | SEARCH-02 | Revisions searched in the database across title, reason, review note, author and proposed text values, never JSON keys | `store.queryProposals` term clauses; `tests/v040.test.ts` |
 | ICON-01 | Official WorkBuddy application icon on macOS and Windows; CodeBuddy colour mark | `assets/manifest.json`, `clientIcon()`; asset check, unit and e2e image checks |
 
+## 0.4.1: settings scrolling and update cache
+
+| ID | Requirement | Implementation / evidence |
+| --- | --- | --- |
+| UI-SCROLL-041 | Pages end at their last section: the window itself never scrolls and no element is positioned against it | `.workspace-frame` is the positioned, overscroll-contained scroll container; `tests/e2e/v041.spec.ts` checks every page, wheel scrolling past the end, keyboard focus on the last link and scrolling back up (fails without the fix) |
+| UPD-07 | After an installed update, macOS removes the payload and any `update.zip` left by older updaters; Windows keeps `installer.exe` for differential downloads | `updateCacheLeftovers()` in `src/core/updates.ts`; unit case and the journal-restore case in `tests/e2e/update-safety.spec.ts` (fails without the fix) |
+
