@@ -55,7 +55,7 @@ test("v1 migration backs up and keeps project identity, revisions and immutable 
   );
   const store = new ProjectStore(dir);
   beforeRemove(t, () => store.close());
-  assert.equal(store.state().schemaVersion, 5);
+  assert.equal(store.state().schemaVersion, 6);
   assert.equal(store.state().id, original.id);
   assert.equal(store.state().revision, original.revision);
   const record = store.proposals()[0];
@@ -104,17 +104,17 @@ test("failed backup leaves v1 intact; interrupted manifest publication resumes c
   }
   const store = new ProjectStore(dir);
   beforeRemove(t, () => store.close());
-  assert.equal(store.state().schemaVersion, 5);
+  assert.equal(store.state().schemaVersion, 6);
   assert.equal(
     JSON.parse(
       fs.readFileSync(path.join(dir, ".haicomo/manifest.json"), "utf8"),
     ).schemaVersion,
-    5,
+    6,
   );
   assert.equal(
     store.queryAudit().items.filter((a) => a.action === "schema.migrate")
       .length,
-    4,
+    5,
   );
 });
 test("client assignment, unknown model aggregation and model discovery preserve separate identities", (t) => {

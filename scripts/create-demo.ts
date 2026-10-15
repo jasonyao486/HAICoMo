@@ -51,7 +51,10 @@ export function createDemo(directory: string) {
     }
     store.ingest(true);
   command("change", { entity: "note", operation: "create", id: "demo-note", expectedRevision: null, values: { title: "Demo guide", body: "All tasks, proposals, people and runs in this project are synthetic. Try reviewing a proposal, locating a deliverable, and changing the visual mode.", kind: "note" } });
-  command("relay.create", { values: { title: "Draft a review summary", taskId: roots[2], referenceTaskId: roots[1], afterSessionId: null, trigger: { kind: "delay", ms: 60000 }, handoff: { provider: "codex", model: "gpt-6-astra", effort: "", mode: "", threadId: "", continueThread: false }, prompt: "Read the synthetic example notes and outline a short review. This paused demo never starts by itself." }, enabled: false });
+  command("relay.create", { values: { title: "Draft a review summary", afterSessionId: null, trigger: { kind: "delay", ms: 60000 }, stages: [
+    { steps: [{ provider: "codex", model: "gpt-6-astra", taskId: roots[2], referenceTaskId: roots[1], prompt: "Read the synthetic example notes and outline a short review. This paused demo never starts by itself." }] },
+    { steps: [{ provider: "claude", model: "claude-sonnet-4-6", taskId: roots[3], referenceTaskId: null, prompt: "Check the stage A outline against the synthetic notes. This paused demo never starts by itself." }] },
+  ] }, enabled: false });
   return path.join(directory, "HAICoMo.haicomo");
   } finally { store.close(); }
 }

@@ -30,21 +30,20 @@ test("README synthetic relay: Claude working, ChatGPT seated and waiting", async
       for (const r of w.state.relays) await window.haicomo.request("project.command", { binding, id: crypto.randomUUID(), type: "relay.delete", payload: { relayId: r.id, expectedRevision: r.revision } });
       const run = await window.haicomo.request("providers.start", { binding, provider: "claude", taskId: "demo-task-3-1", model: "claude-sonnet-4-6", prompt: "readme-relay-hold" });
       await window.haicomo.request("project.command", { binding, id: crypto.randomUUID(), type: "relay.create", payload: { enabled: false, values: {
-        title: "Synthetic demo: Claude working, ChatGPT waiting", taskId: "demo-task-3-1", referenceTaskId: "demo-task-2", afterSessionId: run.runId,
-        trigger: { kind: "delay", ms: 60000 }, handoff: { provider: "codex", model: "gpt-6-astra", effort: "", mode: "", threadId: "", continueThread: false },
-        prompt: "Synthetic demonstration only. This paused relay never starts a model account.",
+        title: "Synthetic demo: Claude working, ChatGPT waiting", afterSessionId: run.runId, trigger: { kind: "delay", ms: 60000 },
+        stages: [{ steps: [{ provider: "codex", model: "gpt-6-astra", taskId: "demo-task-3-1", referenceTaskId: "demo-task-2", prompt: "Synthetic demonstration only. This paused relay never starts a model account." }] }],
       } } });
       return run.runId;
     });
     await frame.locator(".sidebar nav").getByTitle(dictionaries["en-GB"].relay, { exact: true }).click();
     // The table exposes the observed runner state before switching to the scene.
-    await expect(frame.locator(".relay-table")).toContainText(dictionaries["en-GB"].running);
+    await expect(frame.locator(".relay-card .relay-flow-start")).toContainText(dictionaries["en-GB"].running);
     await frame.getByRole("button", { name: dictionaries["en-GB"].relayVisualView, exact: true }).click();
     await expect(frame.locator(".relay-row.visual")).toHaveAttribute("data-status", "paused");
     await expect(frame.locator(".relay-row.visual")).toHaveAttribute("data-pose", "sit");
     const worker = frame.locator(".workstation.enhanced .relay-actor"), waiting = frame.locator(".sofa.enhanced .relay-actor.seated");
     await expect(worker).toHaveAttribute("title", "Claude");
-    await expect(waiting).toHaveAttribute("title", "ChatGPT");
+    await expect(waiting).toHaveAttribute("title", /^A1 · ChatGPT · /);
     await expect(worker.locator(".figure-atlas img")).toHaveAttribute("src", /claude-atlas.png$/);
     await expect(waiting.locator(".figure-atlas img")).toHaveAttribute("src", /chatgpt-atlas.png$/);
     await expect.poll(() => page.evaluate(() => [...document.images].filter(i => !i.complete || !i.naturalWidth).length)).toBe(0);

@@ -14,8 +14,8 @@ Implementation and verification are separate. Current platform acceptance and te
 | GRAPH-02 | Zoom/pan/fit/reset, long titles, explicit owner companies | GraphView/brands; synthetic graph screenshots and assignment tests |
 | PATH-01 | Portable references, old Windows separators, external notice | Shared/core path resolver; Unicode and foreign-absolute tests |
 | RUN-01 | Truthful local runner states and identity-scoped permissions | Provider fixtures, tabs race/cancellation/background tests |
-| RELAY-01 | One-step, claim before start, missed/failed human recovery | Relay suites and Electron fixture execution |
-| ART-01 | Desk and sofa in existing style with user revisions | Manifest hashes, ART production record, actual relay light/dark captures |
+| RELAY-01 | Claim before start, missed/failed human recovery (the one-step limit was lifted in 0.5.0, see RELAY-02) | Relay suites and Electron fixture execution |
+| ART-01 | Desk and sofa in existing style with user revisions; 0.5.0: three-seat sofa at the desk's visible width | Manifest hashes, ART production record, actual relay light/dark captures; 0.5.0 sofa is a spliced placeholder pending a new painting |
 | ART-02 | Only release-cleared runtime materials packaged | `check-assets.mjs`, Vite publicDir, clean-clone and package content checks |
 | LEGAL-01 | MIT source, separate characters/marks, dependency notices | Root LICENSE, ASSET-LICENSES, THIRD-PARTY-NOTICES, four-language Settings |
 | LINK-01 | GitHub Releases/Issues and separate diagnostics | Fixed shared allowlist, unit and offline Electron external-link tests |
@@ -113,4 +113,17 @@ See [0.3.4 Windows acceptance, failure analysis and screenshot](TESTING-0.3.4-WI
 | --- | --- | --- |
 | UI-SCROLL-041 | Pages end at their last section: the window itself never scrolls and no element is positioned against it | `.workspace-frame` is the positioned, overscroll-contained scroll container; `tests/e2e/v041.spec.ts` checks every page, wheel scrolling past the end, keyboard focus on the last link and scrolling back up (fails without the fix) |
 | UPD-07 | After an installed update, macOS removes the payload and any `update.zip` left by older updaters; Windows keeps `installer.exe` for differential downloads | `updateCacheLeftovers()` in `src/core/updates.ts`; unit case and the journal-restore case in `tests/e2e/update-safety.spec.ts` (fails without the fix) |
+
+## 0.5.0: background agents, three-stage relays and unattended mode
+
+| ID | Requirement | Implementation / evidence |
+| --- | --- | --- |
+| AGENT-DETECT-05 | Detect Kimi (CLI + desktop), Grok Bot, DeepSeek Harness, Gemini CLI and Qwen Code next to the existing ten clients, with ids distinct from model families | `src/shared/clients.ts` (`kimi-code`, `grok-bot`, `deepseek-harness`, `gemini-cli`, `qwen-code`), reused LobeHub marks; `tests/adapters.test.ts`, `tests/e2e/tabs.spec.ts` (15 client rows) |
+| AGENT-BG-05 | Every client with a headless CLI can run in the background; enabled only when its own help names the flags; arguments are arrays; evidence level shown | `src/providers/adapters.ts` (`ADAPTERS`, `requiredHelp`, jsonl/text readers), `src/providers/local.ts`; `tests/adapters.test.ts` with Kimi, DeepSeek, Gemini and Copilot fixture dialects. Live: Kimi/DeepSeek/Cursor help and error paths captured on the development Mac; their success paths need the user's quota, API key or login (see TESTING-0.5.0) |
+| RELAY-02 | Up to 3 stages × 3 parallel tasks; next stage only after every run of the current one delivered; no review between stages; acceptance untouched; dependency exemption only for earlier stages of the same relay | `src/shared/relay.ts` (`relayProgress`, `relayNext`, `assertRelayStepRunnable`, `composeRelayStepPrompt`), store commands (`relay.claim/stepFired/stepFailed/stageFired/completed`), `src/electron/relay.ts`; `tests/relay-stages.test.ts`, `tests/e2e/v050.spec.ts` |
+| RELAY-03 | Stopped tasks block their stage; retry only the stopped tasks (optionally in the previous session) or mark handled; never automatic; interrupted claims never re-sent | `relay.retry`, `relay.overrideStep`, INTERRUPTED via `inFlight`; unit cases for cancel/retry, start failure, interrupt, needs-human; e2e cancel → blocked → retry button |
+| RELAY-04 | v5 → v6 migration: backup once, one stage of one step per old relay, honest status mapping, rollback on failure | `upgradeRelayV5`, store v6 block; migration case in `tests/relay-stages.test.ts`; schema assertions in v2/v031/lifecycle/agent-onboarding |
+| AUTO-01 | Unattended mode only with per-relay consent; clients' own autonomous flags; Codex questions answered with the recommended option, approvals accepted except destructive commands; human-only steps pause the relay with a notification | `src/shared/autonomy.ts`, `RunOptions.autonomous` guard, `main.ts` permission handler and `Notification`; `tests/autonomy` cases in `relay-stages.test.ts`, `tests/adapters.test.ts` consent guard, e2e auto-answer |
+| AUTO-02 | Decision record per relay: automatic answers, self-reported (unverified) decisions and human items, rebuilt from the database | `relayDecisionReport`, `.haicomo/relay-decisions/`, relay page dialog with open/export; unit and e2e checks |
+| RELAY-UI-05 | Text mode shows the whole flow; visual mode: desk and sofa equal width, desk = working stage, one three-seat sofa per waiting stage | `src/ui/Relay.tsx`, `src/ui/RelayEditor.tsx`, `src/ui/figures.tsx` (`FURNITURE_WIDTH`, `SLOT_FRACTIONS`); e2e 3×3 geometry checks and screenshots |
 

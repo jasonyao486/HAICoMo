@@ -35,9 +35,13 @@ function setup(t: any) {
     store.recordEvent({ id: randomUUID(), family: "claude", provider: "claude", model: "claude-opus-5-5", status: "running", source: "runner", at: new Date().toISOString(), message: "", lifecycle: "current", instanceId: "test", ...input } as RunEvent);
   return { dir, store, task, command, event };
 }
-const values = (taskId: string, extra: Partial<RelayValues> = {}): RelayValues => ({
-  title: "", afterSessionId: null, trigger: { kind: "delay", ms: 1000 }, handoff: { provider: "codex", model: "", effort: "", mode: "", threadId: "", continueThread: false }, taskId, referenceTaskId: null, prompt: "Continue the work", ...extra,
+type StepPatch = Partial<RelayValues["stages"][number]["steps"][number]>;
+const values = (taskId: string, extra: Partial<RelayValues> = {}, step: StepPatch = {}): RelayValues => ({
+  title: "", afterSessionId: null, trigger: { kind: "delay", ms: 1000 }, autonomy: { enabled: false, consentedAt: null },
+  stages: [{ steps: [{ provider: "codex", model: "", effort: "", mode: "", threadId: "", continueThread: false, taskId, referenceTaskId: null, prompt: "Continue the work", ...step }] }],
+  ...extra,
 });
+const firstStep = (r: Relay) => r.stages[0].steps[0];
 const until = async (check: () => boolean, ms = 6000) => {
   const deadline = Date.now() + ms;
   while (!check()) {
@@ -77,12 +81,12 @@ test("relay decisions: timers, predecessor delivery, missed windows and blocking
   assert.deepEqual(relayDecision(blocked, view.state, base + 90000).action, "blocked");
   assert.equal(relayDecision(blocked, view.state, base + 90000).reason, "PREDECESSOR_PERMISSION");
   // Chained relays are refused: a relay result cannot be a predecessor.
-  const withResult: Relay[] = [{ ...fresh, resultRunId: "run-a" }];
+  const withResult: Relay[] = [{ ...fresh, stages: [{ steps: [{ ...firstStep(fresh), runId: "run-a" }] }] }];
   assert.throws(() => validateRelay(values(taskId, { afterSessionId: "run-a" }), view.state, withResult), /RELAY_CHAIN_FORBIDDEN/);
   assert.throws(() => validateRelay(values(taskId, { trigger: { kind: "at", iso: new Date(base - 3600000).toISOString() } }), view.state, [], null, base), /RELAY_TIME_PAST/);
   assert.throws(() => validateRelay(values("missing"), view.state, []), /TASK_NOT_FOUND/);
-  assert.throws(() => validateRelay(values(taskId, { handoff: { ...values(taskId).handoff, provider: "codex", continueThread: true }, afterSessionId: "run-a" }), view.state, []), /RELAY_THREAD_PROVIDER_MISMATCH/);
-  validateRelay(values(taskId, { handoff: { ...values(taskId).handoff, provider: "claude", continueThread: true }, afterSessionId: "run-a" }), view.state, []);
+  assert.throws(() => validateRelay(values(taskId, { afterSessionId: "run-a" }, { provider: "codex", continueThread: true }), view.state, []), /RELAY_THREAD_PROVIDER_MISMATCH/);
+  validateRelay(values(taskId, { afterSessionId: "run-a" }, { provider: "claude", continueThread: true }), view.state, []);
   assert.ok(relayPredecessorCandidates(view.state, withResult).every((s) => s.sessionId !== "run-a"));
   const prompt = composeRelayPrompt({ prompt: "Go", referenceTaskId: null, afterSessionId: "run-a", taskId }, view.state, store.directory);
   assert.match(composeRelayPrompt({ prompt: "Solo", referenceTaskId: null, afterSessionId: null, taskId }, view.state, store.directory), /README\.md/);
@@ -101,25 +105,37 @@ test("relay commands are revision guarded, audited and human/system separated; t
   view = command("relay.resume", { relayId: relay.id, expectedRevision: relay.revision });
   relay = view.state.relays[0];
   assert.equal(relay.status, "scheduled");
-  assert.throws(() => command("relay.fired", { relayId: relay.id, runId: "x" }), /RELAY_NOT_FIRING/);
-  view = command("relay.claim", { relayId: relay.id, expectedRevision: relay.revision, dueAt: new Date().toISOString() });
+  assert.throws(() => command("relay.stepFired", { relayId: relay.id, expectedRevision: relay.revision, stepId: firstStep(relay).id, runId: "x", handoff: { id: "h", to: "chatgpt", prompt: "p" } }), /RELAY_NOT_FIRING/);
+  // The old single-step command no longer exists.
+  assert.throws(() => command("relay.fired", { relayId: relay.id, expectedRevision: relay.revision, runId: "x" }), /UNKNOWN_COMMAND/);
+  view = command("relay.claim", { relayId: relay.id, expectedRevision: relay.revision, stage: 0, dueAt: new Date().toISOString() });
   relay = view.state.relays[0];
   assert.equal(relay.status, "firing");
   assert.throws(() => command("relay.delete", { relayId: relay.id, expectedRevision: relay.revision }), /RELAY_BUSY/);
   assert.throws(() => command("relay.update", { relayId: relay.id, expectedRevision: relay.revision, values: values(taskId) }), /RELAY_NOT_EDITABLE/);
-  view = command("relay.fired", { relayId: relay.id, expectedRevision: relay.revision, runId: "run-1" });
+  view = command("relay.stepFired", { relayId: relay.id, expectedRevision: relay.revision, stepId: firstStep(relay).id, runId: "run-1", handoff: { id: "h-1", to: "chatgpt", prompt: "Continue" } });
   relay = view.state.relays[0];
-  assert.equal(relay.status, "fired");
-  assert.equal(relay.resultRunId, "run-1");
-  assert.ok(relay.firedAt);
-  const audits = store.queryAudit(0, 100).items.filter((a) => a.action.startsWith("relay."));
+  assert.equal(relay.status, "firing");
+  view = command("relay.stageFired", { relayId: relay.id, expectedRevision: relay.revision });
+  relay = view.state.relays[0];
+  assert.equal(relay.status, "running");
+  assert.equal(firstStep(relay).runId, "run-1");
+  assert.ok(firstStep(relay).firedAt);
+  // The relay handoff is written by the scheduler in the same transaction; a human record cannot claim mode "relay".
+  const recorded = view.state.handoffs.find((h) => h.relayId === relay.id)!;
+  assert.equal(recorded.relayStage, 0);
+  assert.equal(recorded.relayStepId, firstStep(relay).id);
+  const { relayStage, relayStepId, relayAttempt, ...forged } = recorded;
+  assert.throws(() => command("handoff.record", { ...forged, id: "h-2" }), /RELAY_SYSTEM_ONLY/);
+  const audits = store.queryAudit(0, 100).items.filter((a) => a.action.startsWith("relay.") || a.action === "handoff.record");
   assert.equal(audits.find((a) => a.action === "relay.create")?.context?.actor.kind, "human");
   assert.equal(audits.find((a) => a.action === "relay.claim")?.context?.actor.kind, "system");
-  assert.deepEqual(audits.find((a) => a.action === "relay.fired")?.context?.tasks.map((x) => x.id), [taskId]);
+  assert.equal(audits.find((a) => a.action === "handoff.record")?.context?.actor.kind, "system");
+  assert.deepEqual(audits.find((a) => a.action === "relay.stepFired")?.context?.tasks.map((x) => x.id), [taskId]);
   // A pending relay keeps its task from deletion; a fired one does not.
   const second = task("Second");
   view = command("relay.create", { values: values(second), enabled: true });
-  const pending = view.state.relays.find((r) => r.taskId === second)!;
+  const pending = view.state.relays.find((r) => firstStep(r).taskId === second)!;
   const archived = command("task.archive", { taskId: second, expectedRevision: view.state.tasks.find((x) => x.id === second)!.revision });
   assert.throws(() => command("task.delete", { taskId: second, expectedRevision: archived.state.tasks.find((x) => x.id === second)!.revision }), /TASK_REFERENCED/);
   view = command("relay.cancel", { relayId: pending.id, expectedRevision: pending.revision });
@@ -149,10 +165,10 @@ test("scheduler claims first, fires once after delivery, records the handoff and
     directories: () => [dir],
     view: async () => store.view(),
     command: async (_d: string, type: string, payload: unknown) => store.command({ id: randomUUID(), type, payload }),
-    start: async (_d: string, relay: Relay, _s: unknown, prompt: string) => {
+    start: async (_d: string, { step, prompt }: { step: Relay["stages"][number]["steps"][number]; prompt: string }) => {
       starts++;
       if (failNext) throw new Error("BACKGROUND_UNSUPPORTED");
-      const result = await runners.start({ provider: "codex", executable, directory: dir, taskId: relay.taskId, prompt });
+      const result = await runners.start({ provider: "codex", executable, directory: dir, taskId: step.taskId, prompt });
       return { runId: result.runId, threadId: result.threadId, to: "chatgpt" };
     },
     now: () => clock,
@@ -166,17 +182,20 @@ test("scheduler claims first, fires once after delivery, records the handoff and
   await scheduler.tick();
   assert.equal(starts, 1);
   let current = store.state().relays.find((r) => r.id === timer.id)!;
-  assert.equal(current.status, "fired");
-  assert.ok(current.resultRunId);
+  assert.equal(current.status, "running");
+  const runId = firstStep(current).runId!;
+  assert.ok(runId);
   const handoff = store.state().handoffs.find((h) => h.relayId === timer.id)!;
   assert.equal(handoff.mode, "relay");
-  assert.equal(handoff.sessionId, current.resultRunId);
+  assert.equal(handoff.sessionId, runId);
   assert.match(handoff.prompt, /Agent task/);
   await scheduler.tick();
   assert.equal(starts, 1);
-  await until(() => events.some((e) => e.sessionId === current.resultRunId && e.lifecycle === "history"));
+  await until(() => events.some((e) => e.sessionId === runId && e.lifecycle === "history"));
+  await scheduler.tick();
+  assert.equal(store.state().relays.find((r) => r.id === timer.id)!.status, "completed");
   // A relay after that run delivers; the run's own relay result cannot be chained again.
-  assert.throws(() => create({ afterSessionId: current.resultRunId! }), /RELAY_CHAIN_FORBIDDEN/);
+  assert.throws(() => create({ afterSessionId: runId }), /RELAY_CHAIN_FORBIDDEN/);
   event({ sessionId: "manual-run", taskIds: [taskId], status: "running", at: new Date(clock).toISOString() });
   const follow = create({ afterSessionId: "manual-run", trigger: { kind: "delay", ms: 2000 } });
   await scheduler.tick();
@@ -188,7 +207,7 @@ test("scheduler claims first, fires once after delivery, records the handoff and
   await scheduler.tick();
   assert.equal(starts, 2);
   current = store.state().relays.find((r) => r.id === follow.id)!;
-  assert.equal(current.status, "fired");
+  assert.ok(["running", "completed"].includes(current.status));
   assert.deepEqual(store.state().handoffs.find((h) => h.relayId === follow.id)!.from, ["claude"]);
   // Failures are recorded once and never retried automatically.
   failNext = true;
@@ -213,7 +232,7 @@ test("scheduler claims first, fires once after delivery, records the handoff and
   store.command({ id: randomUUID(), type: "relay.fireNow", payload: { relayId: late.id, expectedRevision: current.revision } });
   await restarted.tick();
   assert.equal(starts, 4);
-  assert.equal(store.state().relays.find((r) => r.id === late.id)!.status, "fired");
+  assert.ok(["running", "completed"].includes(store.state().relays.find((r) => r.id === late.id)!.status));
   assert.ok(restarted.summary().every((r) => r.directory === dir));
   await until(() => runners.active().length === 0);
 });

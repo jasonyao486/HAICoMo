@@ -13,6 +13,8 @@ import { api, TabContext, type DirtyGuard } from "./api";
 import type { Settings, Workspace } from "../shared/domain";
 import { translator } from "./i18n";
 import { errorText, installFailureText } from "./errors";
+import { relayStatusLabel, stageName, STEP_STATE_KEYS } from "./Relay";
+import type { RelayStepState } from "../shared/relay";
 type Tab = { id: string; workspace: Workspace | null; title: string; page?: string };
 const blank = (): Tab => ({
   id: crypto.randomUUID(),
@@ -424,8 +426,11 @@ export function Tabs() {
                   }
                 >
                   <span>
-                    {r.provider} · {r.title || r.taskId}
-                    <small>{r.directory}{r.dueAt ? ` · ${new Date(r.dueAt).toLocaleString(locale)}` : ""}</small>
+                    {r.title} · {relayStatusLabel(r.status, t)}{r.status === "running" || r.status === "firing" ? ` · ${stageName(r.stage - 1, t)}/${r.stages}` : ""}
+                    <small>
+                      {(r.steps ?? []).map((s: any) => `${s.label} ${t(STEP_STATE_KEYS[s.state as RelayStepState])}`).join(" · ")}
+                    </small>
+                    <small>{r.directory}{r.dueAt && r.status === "scheduled" ? ` · ${new Date(r.dueAt).toLocaleString(locale)}` : ""}</small>
                   </span>
                 </button>
               ))}

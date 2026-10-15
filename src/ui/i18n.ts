@@ -1,11 +1,13 @@
 import { en031, zh031, tw031 } from "./messages031";
 import { en040, zh040, tw040 } from "./messages040";
+import { en050, zh050, tw050 } from "./messages050";
 import { en022, zh022, tw022, gb022 } from "./messages022";
 import type { Settings } from "../shared/domain";
 export const en = {
   ...en022,
   ...en031,
   ...en040,
+  ...en050,
   newTab: "New tab",
   addTab: "New tab",
   closeTab: "Close current tab",
@@ -304,11 +306,11 @@ export const en = {
   updated: "Updated",
   approvedHint:
     "Approved tasks are ready to begin once prerequisites are accepted.",
-  relayIntro: "A relay is an automated handoff: after a chosen run has delivered and the time condition holds, HAICoMo starts one background run with the saved configuration. Acceptance still needs you.",
-  relayLimitHint: "One step only — a run started by a relay cannot be a predecessor. Relays fire only while HAICoMo is open and the project is loaded; a missed due time waits for your confirmation.",
+  relayIntro: "A relay hands work from agent to agent automatically: once its start condition holds, up to three stages run one after another, each with up to three agents working in parallel. Stages hand over without review; acceptance of every delivery still needs you.",
+  relayLimitHint: "A run started by a relay cannot be the predecessor of another relay. Relays run only while HAICoMo is open and the project is loaded; a missed due time or a stopped task waits for you.",
   relayNew: "New relay",
   relayEdit: "Edit relay",
-  relayTextView: "Table",
+  relayTextView: "Text",
   relayVisualView: "Visual",
   relayEmpty: "No relay tasks yet",
   relayEmptyHint: "Create one to hand work to the next agent automatically after a run delivers, or at a chosen time.",
@@ -422,6 +424,7 @@ const zh: Record<Key, string> = {
   ...zh022,
   ...zh031,
   ...zh040,
+  ...zh050,
   newTab: "新标签页",
   addTab: "新建标签页",
   closeTab: "关闭当前标签",
@@ -696,8 +699,8 @@ const zh: Record<Key, string> = {
   newMeeting: "新建会议纪要",
   updated: "更新于",
   approvedHint: "前置任务验收通过后，已批准的任务即可开始。",
-  relayIntro: "接力任务是自动化交接：当所选运行已交付且时间条件满足时，HAICoMo 用保存的配置启动一次后台运行。验收仍由你完成。",
-  relayLimitHint: "只接力一步：由接力启动的运行不能再作为前置。仅在 HAICoMo 运行且项目已打开时触发；错过的时间点需要你确认后再执行。",
+  relayIntro: "接力任务让工作在智能体之间自动传递：开始条件满足后，最多 3 个阶段依次进行，每个阶段最多 3 个智能体并行工作。阶段之间不需要审阅直接交接；每项交付的验收仍由你完成。",
+  relayLimitHint: "由接力启动的运行不能再作为其他接力的前置。仅在 HAICoMo 运行且项目已打开时进行；错过的时间点或停止的任务会等你处理。",
   relayNew: "新建接力",
   relayEdit: "编辑接力",
   relayTextView: "文字",
@@ -814,6 +817,7 @@ const tw: Record<Key, string> = {
   ...tw022,
   ...tw031,
   ...tw040,
+  ...tw050,
   newTab: "新標籤頁",
   addTab: "新增標籤頁",
   closeTab: "關閉目前標籤",
@@ -1087,8 +1091,8 @@ const tw: Record<Key, string> = {
   newMeeting: "新增會議紀錄",
   updated: "更新於",
   approvedHint: "前置任務驗收通過後，已核准的任務即可開始。",
-  relayIntro: "接力任務是自動化交接：當所選執行已交付且時間條件成立時，HAICoMo 會以儲存的設定啟動一次背景執行。驗收仍由你完成。",
-  relayLimitHint: "只接力一步：由接力啟動的執行不能再作為前置。僅在 HAICoMo 執行且專案已載入時觸發；錯過的時間點需你確認後再執行。",
+  relayIntro: "接力任務讓工作在智慧體之間自動傳遞：開始條件成立後，最多 3 個階段依序進行，每個階段最多 3 個智慧體並行工作。階段之間不需要審閱直接交接；每項交付的驗收仍由你完成。",
+  relayLimitHint: "由接力啟動的執行不能再作為其他接力的前置。僅在 HAICoMo 執行且專案已載入時進行；錯過的時間點或停止的任務會等你處理。",
   relayNew: "新增接力",
   relayEdit: "編輯接力",
   relayTextView: "文字",

@@ -30,10 +30,24 @@ import {
   type RunEvent,
 } from "../shared/domain";
 import {
+  relayAuditView,
   relayDecision,
+  relayProgress,
+  relayStarted,
+  relayStepActor,
+  relayPredecessor,
+  relaySteps,
   relayValuesSchema,
+  upgradeRelayV5,
   validateRelay,
+  RELAY_LIVE_STATUSES,
+  RELAY_MAX_DECISIONS,
   type Relay,
+  type RelayDecisionEntry,
+  type RelayStage,
+  type RelayStep,
+  type RelayV5,
+  type RelayValues,
 } from "../shared/relay";
 import {
   atomicWrite,
@@ -47,14 +61,38 @@ import {
 } from "./files";
 
 const now = () => new Date().toISOString();
-export const SCHEMA_VERSIONS = [1, 2, 3, 4, 5];
-export const CURRENT_SCHEMA = 5;
+export const SCHEMA_VERSIONS = [1, 2, 3, 4, 5, 6];
+export const CURRENT_SCHEMA = 6;
 // Written once if absent so a project kept in Git never commits the writer lock,
 // backups or staging folders, and never has proposal bytes rewritten by EOL
 // conversion (hash markers must match the exact bytes).
 const GITIGNORE = `# HAICoMo: machine-local and regenerable files\nwriter.lock\nbackups/\n*.tmp\n*.sqlite-journal\n.haicomo-stage-*\n.haicomo-restore-*\n.haicomo-history-restore-*\n`;
 const GITATTRIBUTES = `# HAICoMo: proposal/event files are hashed byte-for-byte; never convert line endings\n* -text\nproject.sqlite binary\n`;
-const RELAY_SYSTEM_COMMANDS = ["relay.claim", "relay.fired", "relay.failed", "relay.blocked", "relay.missed"];
+const RELAY_SYSTEM_COMMANDS = [
+  "relay.claim",
+  "relay.stepFired",
+  "relay.stepFailed",
+  "relay.stageFired",
+  "relay.failed",
+  "relay.blocked",
+  "relay.missed",
+  "relay.completed",
+  "relay.decision",
+];
+const RELAY_HUMAN_COMMANDS = ["relay.pause", "relay.resume", "relay.cancel", "relay.fireNow", "relay.delete", "relay.retry", "relay.overrideStep"];
+/** Runtime fields start blank; step ids are assigned once and never reused within a relay. */
+function freshStages(values: RelayValues): RelayStage[] {
+  return values.stages.map((stage) => ({
+    steps: stage.steps.map((s) => ({ ...s, id: s.id ?? randomUUID(), runId: null, firedAt: null, error: "", attempt: 0, resumeThreadId: null, overriddenAt: null })),
+  }));
+}
+const relayValuesOf = (relay: Relay): RelayValues => ({
+  title: relay.title,
+  afterSessionId: relay.afterSessionId,
+  trigger: relay.trigger,
+  autonomy: relay.autonomy,
+  stages: relay.stages.map((stage) => ({ steps: stage.steps.map(({ runId, firedAt, error, attempt, resumeThreadId, overriddenAt, ...values }) => values) })),
+});
 export const isRelaySystemCommand = (type: string) => RELAY_SYSTEM_COMMANDS.includes(type);
 const hostName = () => os.hostname();
 const sameHost = (hostname: unknown) =>
@@ -323,10 +361,21 @@ export class ProjectStore {
       const backup = path.join(this.root, "backups", "pre-v5.haicomo.zip");
       if (!fs.existsSync(backup)) this.exportZip(backup);
       this.transaction(() => {
-        state.schemaVersion = 5;
+        (state as any).schemaVersion = 5;
         state.historyStats = { acceptanceReturns: Number((this.db.prepare("SELECT COUNT(*) AS n FROM audit WHERE json_extract(json,'$.action')='task.return'").get() as any).n) };
         this.db.prepare("UPDATE project SET json=? WHERE id=1").run(JSON.stringify(state));
         this.audit("system", "schema.migrate", state.id, { version: 4 }, { version: 5 }, "Pre-migration backup: backups/pre-v5.haicomo.zip; historical return count retained independently");
+      });
+    }
+    if ((state.schemaVersion as number) < 6) {
+      const backup = path.join(this.root, "backups", "pre-v6.haicomo.zip");
+      if (!fs.existsSync(backup)) this.exportZip(backup);
+      this.transaction(() => {
+        const before = structuredClone(state.relays);
+        state.schemaVersion = 6;
+        state.relays = (state.relays as unknown as RelayV5[]).map((r) => upgradeRelayV5(r, state.sessions));
+        this.db.prepare("UPDATE project SET json=? WHERE id=1").run(JSON.stringify(state));
+        this.audit("system", "schema.migrate", state.id, { version: 5, relays: before }, { version: 6, relays: state.relays }, "Pre-migration backup: backups/pre-v6.haicomo.zip; each relay became a one-stage, one-step relay");
       });
     }
     // SQLite is authoritative after a committed migration.
@@ -844,10 +893,10 @@ export class ProjectStore {
     }
     return changed;
   }
-  private relayOf(state: ProjectState, id: unknown, expectedRevision?: unknown): Relay {
+  private relayOf(state: ProjectState, id: unknown, expectedRevision?: unknown, required = false): Relay {
     const relay = state.relays.find((r) => r.id === id);
     if (!relay) fail("RELAY_NOT_FOUND");
-    if (expectedRevision !== undefined) revisionGuard(relay.revision, expectedRevision);
+    if (expectedRevision !== undefined || required) revisionGuard(relay.revision, expectedRevision);
     return relay;
   }
   command(input: any, humanName = ""): Workspace {
@@ -954,7 +1003,7 @@ export class ProjectStore {
             state.tasks.some(
               (t) => t.parentId === task.id || t.dependencies.includes(task.id),
             ) ||
-            state.relays.some((r) => (r.taskId === task.id || r.referenceTaskId === task.id) && ["scheduled", "paused", "blocked", "missed", "firing"].includes(r.status))
+            state.relays.some((r) => RELAY_LIVE_STATUSES.includes(r.status) && relaySteps(r).some((s) => s.taskId === task.id || s.referenceTaskId === task.id))
           )
             fail("TASK_REFERENCED");
           state.tasks = state.tasks.filter((t) => t.id !== task.id);
@@ -1042,6 +1091,8 @@ export class ProjectStore {
           })
           .strict()
           .parse(p);
+        // Relay handoffs are written by the scheduler inside relay.stepFired, never as a human record.
+        if (handoff.mode === "relay") fail("RELAY_SYSTEM_ONLY");
         if (!state.tasks.some((t) => t.id === handoff.taskId))
           fail("TASK_NOT_FOUND");
         state.handoffs.push(handoff);
@@ -1049,18 +1100,23 @@ export class ProjectStore {
       } else if (op.type === "relay.create") {
         const values = relayValuesSchema.parse(p.values);
         validateRelay(values, state, state.relays);
+        const enabled = p.enabled !== false;
         const relay: Relay = {
           ...values,
+          stages: freshStages(values),
           id: typeof p.id === "string" && /^[a-zA-Z0-9_-]{1,100}$/.test(p.id) ? p.id : randomUUID(),
           revision: 1,
-          enabled: p.enabled !== false,
-          status: p.enabled !== false ? "scheduled" : "paused",
+          enabled,
+          status: enabled ? "scheduled" : "paused",
           statusReason: "",
           armedAt: at,
           dueAt: null,
-          firedAt: null,
-          resultRunId: null,
+          stageIndex: 0,
+          claimedAt: null,
+          fireRequestedAt: null,
+          completedAt: null,
           lastError: "",
+          decisions: [],
           createdAt: at,
           updatedAt: at,
         };
@@ -1069,86 +1125,226 @@ export class ProjectStore {
         state.relays.push(relay);
         this.audit("human", op.type, relay.id, null, relay);
       } else if (op.type === "relay.update") {
-        const relay = this.relayOf(state, p.relayId, p.expectedRevision);
-        if (["firing", "fired"].includes(relay.status)) fail("RELAY_NOT_EDITABLE", relay.status);
+        const relay = this.relayOf(state, p.relayId, p.expectedRevision, true);
+        if (relay.status === "firing" || relayStarted(relay)) fail("RELAY_NOT_EDITABLE", relay.status);
         const values = relayValuesSchema.parse(p.values);
         validateRelay(values, state, state.relays, relay.id);
         const before = structuredClone(relay);
         Object.assign(relay, values, {
+          stages: freshStages(values),
           revision: relay.revision + 1,
           enabled: p.enabled !== undefined ? Boolean(p.enabled) : relay.enabled,
           statusReason: "",
           lastError: "",
           armedAt: at,
+          fireRequestedAt: null,
+          decisions: [],
           updatedAt: at,
         });
         relay.status = relay.enabled ? "scheduled" : "paused";
         relay.dueAt = relayDecision(relay, state).dueAt;
         this.audit("human", op.type, relay.id, before, relay);
-      } else if (["relay.pause", "relay.resume", "relay.cancel", "relay.fireNow", "relay.delete"].includes(op.type)) {
-        const relay = this.relayOf(state, p.relayId, p.expectedRevision);
+      } else if (RELAY_HUMAN_COMMANDS.includes(op.type)) {
+        const relay = this.relayOf(state, p.relayId, p.expectedRevision, true);
         const before = structuredClone(relay);
+        const started = relayStarted(relay);
         if (relay.status === "firing") fail("RELAY_BUSY");
         if (op.type === "relay.delete") {
+          if (relay.status === "running") fail("RELAY_BUSY");
           state.relays = state.relays.filter((r) => r.id !== relay.id);
         } else if (op.type === "relay.pause") {
-          if (!["scheduled", "blocked", "missed"].includes(relay.status)) fail("RELAY_NOT_EDITABLE", relay.status);
+          if (!["scheduled", "running", "blocked", "missed"].includes(relay.status)) fail("RELAY_NOT_EDITABLE", relay.status);
+          // Pausing never stops runs; it only keeps the next stage from starting.
           relay.enabled = false;
           relay.status = "paused";
         } else if (op.type === "relay.resume") {
           if (!["paused", "blocked", "missed", "failed", "cancelled"].includes(relay.status)) fail("RELAY_NOT_EDITABLE", relay.status);
-          validateRelay(relay, state, state.relays, relay.id);
+          if (started) {
+            if (relay.status === "failed" || relayProgress(relay, state).retryable.length) fail("RELAY_RETRY_REQUIRED");
+            relay.status = "running";
+            relay.fireRequestedAt = at;
+          } else {
+            validateRelay(relayValuesOf(relay), state, state.relays, relay.id);
+            relay.status = "scheduled";
+            relay.armedAt = at;
+            relay.dueAt = relayDecision(relay, state).dueAt;
+          }
           relay.enabled = true;
-          relay.status = "scheduled";
           relay.statusReason = "";
           relay.lastError = "";
-          relay.armedAt = at;
-          relay.dueAt = relayDecision(relay, state).dueAt;
         } else if (op.type === "relay.cancel") {
-          if (relay.status === "fired") fail("RELAY_NOT_EDITABLE", relay.status);
+          if (["completed", "cancelled"].includes(relay.status)) fail("RELAY_NOT_EDITABLE", relay.status);
           relay.enabled = false;
           relay.status = "cancelled";
-        } else {
-          if (!["scheduled", "paused", "blocked", "missed", "failed"].includes(relay.status)) fail("RELAY_NOT_EDITABLE", relay.status);
-          relay.status = "firing";
+        } else if (op.type === "relay.fireNow") {
+          if (started || !["scheduled", "paused", "blocked", "missed"].includes(relay.status)) fail("RELAY_NOT_EDITABLE", relay.status);
+          validateRelay(relayValuesOf(relay), state, state.relays, relay.id);
+          relay.enabled = true;
+          relay.status = "scheduled";
           relay.statusReason = "manual";
           relay.lastError = "";
+          relay.fireRequestedAt = at;
           relay.dueAt = at;
+        } else if (op.type === "relay.retry") {
+          if (!started || !["blocked", "failed", "paused", "cancelled", "missed"].includes(relay.status)) fail("RELAY_NOT_EDITABLE", relay.status);
+          const progress = relayProgress(relay, state);
+          const retryable = new Set(progress.retryable.map((x) => x.step.id));
+          const ids: string[] = Array.isArray(p.stepIds) ? p.stepIds.map(String) : [...retryable];
+          if (ids.some((id) => !retryable.has(id))) fail("RELAY_NOTHING_TO_RETRY");
+          if (!ids.length && !progress.unfired.length) fail("RELAY_NOTHING_TO_RETRY");
+          for (const step of relay.stages[relay.stageIndex].steps) {
+            if (!ids.includes(step.id)) continue;
+            const session = step.runId ? state.sessions.find((x) => x.sessionId === step.runId) : undefined;
+            step.resumeThreadId = p.resume === true && session?.threadId ? session.threadId : null;
+            step.runId = null;
+            step.error = "";
+            step.firedAt = null;
+          }
+          relay.enabled = true;
+          relay.status = "running";
+          relay.statusReason = "retry";
+          relay.lastError = "";
+          relay.fireRequestedAt = at;
+        } else {
+          // relay.overrideStep: a human declares a stopped step handled (e.g. finished in the foreground).
+          if (!started) fail("RELAY_NOT_EDITABLE", relay.status);
+          const progress = relayProgress(relay, state);
+          const target = progress.retryable.find((x) => x.step.id === p.stepId);
+          if (!target) fail("RELAY_STEP_NOT_STOPPED");
+          relay.stages[relay.stageIndex].steps[target.stepIndex].overriddenAt = at;
+          if (["blocked", "failed", "missed"].includes(relay.status)) {
+            relay.status = "running";
+            relay.enabled = true;
+            relay.statusReason = "";
+            relay.fireRequestedAt = at;
+          }
         }
         if (op.type !== "relay.delete") { relay.revision++; relay.updatedAt = at; }
-        this.audit("human", op.type, relay.id, before, op.type === "relay.delete" ? null : relay, String(p.reason ?? ""));
+        this.audit("human", op.type, relay.id, before, op.type === "relay.delete" ? null : relay, String(p.reason ?? p.note ?? ""));
+      } else if (op.type === "relay.decision") {
+        // Append-only record of an automatic answer; not an edit of the relay, so no revision guard.
+        const relay = this.relayOf(state, p.relayId);
+        const d = p.entry ?? {};
+        const entry: RelayDecisionEntry = {
+          id: randomUUID(),
+          at,
+          stepId: String(d.stepId ?? "").slice(0, 100),
+          kind: z.enum(["auto-answer", "auto-approve", "auto-decline", "waiting-human"]).parse(d.kind),
+          method: String(d.method ?? "").slice(0, 200),
+          question: String(d.question ?? "").slice(0, 4000),
+          options: (Array.isArray(d.options) ? d.options : []).map((o: unknown) => String(o).slice(0, 500)).slice(0, 20),
+          choice: String(d.choice ?? "").slice(0, 1000),
+          reason: String(d.reason ?? "").slice(0, 500),
+        };
+        relay.decisions = [...(relay.decisions ?? []), entry].slice(-RELAY_MAX_DECISIONS);
+        this.audit("system", op.type, relay.id, null, { relayId: relay.id, steps: relaySteps(relay).filter((s) => (s as RelayStep).id === entry.stepId), entry }, entry.reason, { actor: { kind: "system", name: "relay-scheduler" } });
       } else if (RELAY_SYSTEM_COMMANDS.includes(op.type)) {
-        const relay = this.relayOf(state, p.relayId, p.expectedRevision);
-        const before = structuredClone(relay);
+        const relay = this.relayOf(state, p.relayId, p.expectedRevision, true);
+        const before = relayAuditView(relay, typeof p.stepId === "string" ? p.stepId : undefined);
+        const k = relay.stageIndex;
+        const stepIn = (id: unknown) => {
+          const step = relay.stages[k]?.steps.find((s) => s.id === id);
+          if (!step) fail("RELAY_STEP_NOT_FOUND");
+          return step;
+        };
         if (op.type === "relay.claim") {
-          if (relay.status !== "scheduled" || !relay.enabled) fail("RELAY_NOT_SCHEDULED", relay.status);
+          const stage = z.number().int().min(0).parse(p.stage);
+          const progress = relayProgress(relay, state);
+          if (relay.status === "scheduled") {
+            if (!relay.enabled || stage !== 0 || relayStarted(relay)) fail("RELAY_NOT_SCHEDULED", relay.status);
+            relay.claimedAt = at;
+            relay.stageIndex = 0;
+            relay.dueAt = typeof p.dueAt === "string" ? p.dueAt : relay.dueAt;
+          } else if (relay.status === "running" && relay.enabled) {
+            if (stage === k) {
+              if (!progress.unfired.length) fail("RELAY_NOTHING_TO_FIRE");
+            } else if (stage === k + 1 && stage < relay.stages.length) {
+              // The store itself enforces A → B → C: every run of the current stage must have delivered.
+              if (!progress.stageComplete) fail("RELAY_STAGE_INCOMPLETE");
+              relay.stageIndex = stage;
+            } else fail("RELAY_STAGE_INCOMPLETE");
+          } else fail("RELAY_NOT_SCHEDULED", relay.status);
           relay.status = "firing";
-          relay.statusReason = "";
-          relay.dueAt = typeof p.dueAt === "string" ? p.dueAt : relay.dueAt;
-        } else if (op.type === "relay.fired") {
+          relay.statusReason = relay.fireRequestedAt && relay.statusReason === "manual" ? "manual" : "";
+          relay.fireRequestedAt = null;
+        } else if (op.type === "relay.stepFired") {
           if (relay.status !== "firing") fail("RELAY_NOT_FIRING", relay.status);
-          relay.status = "fired";
-          relay.firedAt = at;
-          relay.resultRunId = z.string().min(1).parse(p.runId);
-          relay.statusReason = "";
+          const step = stepIn(p.stepId);
+          if (step.runId) fail("RELAY_STEP_ALREADY_FIRED");
+          const h = z.object({ id: z.string().min(1).max(100), to: z.string().max(200), prompt: z.string().max(400000) }).strict().parse(p.handoff);
+          step.runId = z.string().min(1).parse(p.runId);
+          step.firedAt = at;
+          step.error = "";
+          step.attempt = (step.attempt ?? 0) + 1;
+          step.resumeThreadId = null;
+          const task = state.tasks.find((t) => t.id === step.taskId);
+          const predecessor = relayPredecessor(relay, state);
+          const from =
+            k === 0
+              ? predecessor
+                ? [relayStepActor({ model: predecessor.model, provider: (predecessor.harnessId ?? predecessor.provider) as RelayStep["provider"] }, predecessor)]
+                : task?.assignees ?? []
+              : [...new Set(relay.stages[k - 1].steps.map((s) => relayStepActor(s, state.sessions.find((x) => x.sessionId === s.runId))))];
+          const handoff = {
+            id: h.id,
+            taskId: step.taskId,
+            provider: step.provider,
+            from,
+            to: h.to,
+            prompt: h.prompt,
+            sessionId: step.runId,
+            at,
+            mode: "relay" as const,
+            relayId: relay.id,
+            relayStage: k,
+            relayStepId: step.id,
+            relayAttempt: step.attempt,
+          };
+          state.handoffs.push(handoff);
+          this.audit("system", "handoff.record", step.taskId, null, handoff, "", { actor: { kind: "system", name: "relay-scheduler" } });
+        } else if (op.type === "relay.stepFailed") {
+          if (relay.status !== "firing") fail("RELAY_NOT_FIRING", relay.status);
+          const step = stepIn(p.stepId);
+          if (step.runId) fail("RELAY_STEP_ALREADY_FIRED");
+          step.error = String(p.error ?? "START_FAILED").slice(0, 4000);
+          step.firedAt = at;
+          step.attempt = (step.attempt ?? 0) + 1;
+        } else if (op.type === "relay.stageFired") {
+          if (relay.status !== "firing") fail("RELAY_NOT_FIRING", relay.status);
+          const steps = relay.stages[k].steps;
+          if (steps.some((s) => !s.runId && !s.error && !s.overriddenAt)) fail("RELAY_STAGE_NOT_FIRED");
+          const errors = steps.filter((s) => s.error);
+          if (errors.length) {
+            relay.status = "failed";
+            relay.statusReason = "START_FAILED";
+            relay.lastError = errors.map((s) => s.error).join("\n").slice(0, 4000);
+          } else {
+            relay.status = "running";
+            relay.statusReason = "";
+          }
         } else if (op.type === "relay.failed") {
           if (relay.status !== "firing") fail("RELAY_NOT_FIRING", relay.status);
           relay.status = "failed";
           relay.lastError = String(p.error ?? "").slice(0, 4000);
-          relay.statusReason = "START_FAILED";
+          relay.statusReason = String(p.reason ?? "START_FAILED").slice(0, 200);
         } else if (op.type === "relay.blocked") {
-          if (relay.status !== "scheduled") fail("RELAY_NOT_SCHEDULED", relay.status);
+          if (!["scheduled", "running"].includes(relay.status)) fail("RELAY_NOT_SCHEDULED", relay.status);
           relay.status = "blocked";
           relay.statusReason = String(p.reason ?? "").slice(0, 200);
-        } else {
-          if (relay.status !== "scheduled") fail("RELAY_NOT_SCHEDULED", relay.status);
+        } else if (op.type === "relay.missed") {
+          if (!["scheduled", "running"].includes(relay.status)) fail("RELAY_NOT_SCHEDULED", relay.status);
           relay.status = "missed";
           relay.statusReason = "APP_NOT_RUNNING";
           relay.dueAt = typeof p.dueAt === "string" ? p.dueAt : relay.dueAt;
+        } else {
+          if (relay.status !== "running" || k !== relay.stages.length - 1 || !relayProgress(relay, state).stageComplete) fail("RELAY_NOT_COMPLETE");
+          relay.status = "completed";
+          relay.statusReason = "";
+          relay.completedAt = at;
         }
         relay.revision++;
         relay.updatedAt = at;
-        this.audit("system", op.type, relay.id, before, relay, String(p.reason ?? ""), { actor: { kind: "system", name: "relay-scheduler" } });
+        this.audit("system", op.type, relay.id, before, relayAuditView(relay, typeof p.stepId === "string" ? p.stepId : undefined), String(p.reason ?? ""), { actor: { kind: "system", name: "relay-scheduler" } });
       } else fail("UNKNOWN_COMMAND");
       for (const old of beforeState.tasks) {
         const after = state.tasks.find((t) => t.id === old.id);

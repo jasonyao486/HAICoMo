@@ -1,0 +1,159 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fixtureAgent } from "./fixture-agent";
+import { detect, findExecutable, LocalRunners } from "../src/providers/local";
+import { ADAPTERS, newJsonlState, readJsonlEvent, jsonlMessage, WINDOWS_ARGV_PROMPT_LIMIT } from "../src/providers/adapters";
+import { BACKGROUND_HARNESS_IDS, CLIENTS, HARNESS_IDS, clientIcon, isBackgroundHarness } from "../src/shared/clients";
+import type { RunEvent } from "../src/shared/domain";
+
+function workspace(t: any) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-adapters 测试 "));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  return dir;
+}
+const requests = (dir: string) => fs.readFileSync(path.join(dir, "requests.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+async function run(t: any, dialect: string, provider: any, prompt: string, extra: Record<string, unknown> = {}) {
+  const dir = workspace(t);
+  const executable = fixtureAgent(dir, dialect);
+  const events: RunEvent[] = [];
+  const runners = new LocalRunners((_d, e) => events.push(e), () => {});
+  t.after(() => runners.dispose());
+  await runners.start({ provider, executable, directory: dir, taskId: "task-1", prompt, ...extra });
+  const deadline = Date.now() + 8000;
+  while (!events.some((e) => e.lifecycle === "history")) {
+    if (Date.now() > deadline) throw new Error(`no final event: ${JSON.stringify(events.slice(-2))}`);
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  return { dir, events, final: events.find((e) => e.lifecycle === "history")! };
+}
+
+test("client table: new clients are distinct from model families and background ids have adapters", () => {
+  for (const id of ["kimi-code", "grok-bot", "deepseek-harness", "gemini-cli", "qwen-code"]) {
+    assert.ok(CLIENTS.some((c) => c.id === id), id);
+    assert.ok((HARNESS_IDS as readonly string[]).includes(id), id);
+  }
+  assert.deepEqual(CLIENTS.map((c) => c.id), HARNESS_IDS.filter((id) => id !== "external"));
+  assert.equal(clientIcon("kimi-code"), "/local-assets/kimi-logo.svg");
+  assert.equal(clientIcon("grok-bot"), "/local-assets/grok-logo.svg");
+  assert.equal(clientIcon("deepseek-harness"), "/local-assets/deepseek-logo.svg");
+  for (const id of BACKGROUND_HARNESS_IDS) assert.equal(ADAPTERS[id].id, id);
+  // Grok Bot, WorkBuddy and TRAE have no headless interface: manual handoff only.
+  for (const id of ["grok-bot", "workbuddy", "trae"]) assert.equal(isBackgroundHarness(id), false);
+});
+
+test("detection enables a client only when its own help names the headless flags", async (t) => {
+  const dir = workspace(t);
+  const kimi = await detect("kimi-code", fixtureAgent(dir, "kimi"));
+  assert.equal(kimi.background, true);
+  assert.deepEqual(kimi.modes, ["default", "plan", "ask-when-needed"]);
+  assert.equal(kimi.autonomousMode, "never-ask");
+  assert.equal(kimi.resume, true);
+  const dsh = await detect("deepseek-harness", fixtureAgent(dir, "dsh"));
+  assert.equal(dsh.background, true);
+  assert.equal(dsh.model, false);
+  assert.deepEqual(dsh.modes, ["workspace-write", "read-only"]);
+  const gemini = await detect("gemini-cli", fixtureAgent(dir, "gemini"));
+  assert.equal(gemini.background, true);
+  assert.equal(gemini.autonomousMode, "yolo");
+  assert.ok(!gemini.modes.includes("yolo"));
+  // A CLI whose help lacks the flags stays manual.
+  const wrong = await detect("kimi-code", fixtureAgent(dir, "agent"));
+  assert.equal(wrong.background, false);
+  assert.equal(wrong.reason, "HEADLESS_FLAGS_NOT_FOUND");
+  // Not an adapter at all.
+  assert.equal((await detect("grok-bot", "")).reason, "MANUAL_HANDOFF_ONLY");
+});
+
+test("Kimi: prompt as an argument, role lines parsed, exit code decides delivery", async (t) => {
+  const ok = await run(t, "kimi", "kimi-code", "Summarise the notes", { model: "kimi-k3", mode: "ask-when-needed" });
+  assert.equal(ok.final.endReason, "completed");
+  assert.equal(ok.final.message, "Kimi fixture output");
+  assert.equal(ok.final.threadId, "kimi-session");
+  assert.equal(ok.final.family, "kimi");
+  const call = requests(ok.dir).find((r) => r.args);
+  assert.deepEqual(call.args, ["--prompt", "Summarise the notes", "--output-format", "stream-json", "--yolo", "--model", "kimi-k3"]);
+  const bad = await run(t, "kimi", "kimi-code", "fail");
+  assert.equal(bad.final.endReason, "failed");
+  assert.match(bad.final.message, /quota/);
+});
+
+test("DeepSeek Harness: prompt on stdin, permission preset by environment, final/turn_end events", async (t) => {
+  const ok = await run(t, "dsh", "deepseek-harness", "Review the plan");
+  assert.equal(ok.final.endReason, "completed");
+  assert.equal(ok.final.message, "DeepSeek fixture output");
+  assert.equal(ok.final.threadId, "session-dsh-fixture");
+  const log = requests(ok.dir);
+  assert.deepEqual(log[0].args, ["--profile", "headless", "--json", "-"]);
+  assert.equal(log[0].env.DSH_PERMISSION_MODE, "workspace-write");
+  assert.ok(log.some((r) => r.prompt === "Review the plan"));
+  const bad = await run(t, "dsh", "deepseek-harness", "fail", { mode: "read-only" });
+  assert.equal(bad.final.endReason, "failed");
+  assert.match(bad.final.message, /MISSING_CREDENTIAL/);
+  assert.equal(requests(bad.dir)[0].env.DSH_PERMISSION_MODE, "read-only");
+});
+
+test("Gemini-style deltas and plain-text clients produce the final message", async (t) => {
+  const gemini = await run(t, "gemini", "gemini-cli", "Hello");
+  assert.equal(gemini.final.message, "Gemini fixture output");
+  assert.equal(gemini.final.threadId, "gemini-session");
+  const copilot = await run(t, "copilot", "github-copilot", "Hello");
+  assert.equal(copilot.final.endReason, "completed");
+  assert.match(copilot.final.message, /Copilot fixture output\nsecond line/);
+});
+
+test("unattended modes need relay consent; bypass modes are never passed; long argv prompts are refused on Windows", async (t) => {
+  const dir = workspace(t);
+  const runners = new LocalRunners(() => {}, () => {});
+  t.after(() => runners.dispose());
+  const kimi = fixtureAgent(dir, "kimi");
+  await assert.rejects(runners.start({ provider: "kimi-code", executable: kimi, directory: dir, taskId: "t", prompt: "x", mode: "never-ask" }), /AUTONOMY_CONSENT_REQUIRED/);
+  await assert.rejects(runners.start({ provider: "pi", executable: kimi, directory: dir, taskId: "t", prompt: "x" }), /AUTONOMY_CONSENT_REQUIRED/);
+  await assert.rejects(runners.start({ provider: "claude", executable: kimi, directory: dir, taskId: "t", prompt: "x", mode: "bypassPermissions", autonomous: true }), /MODE_UNSUPPORTED/);
+  await assert.rejects(runners.start({ provider: "kimi-code", executable: kimi, directory: dir, taskId: "t", prompt: "x", mode: "unknown-mode" }), /MODE_UNSUPPORTED/);
+  const ok = await run(t, "kimi", "kimi-code", "go", { mode: "never-ask", autonomous: true });
+  assert.ok(requests(ok.dir).find((r) => r.args).args.includes("--auto"));
+  const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
+  Object.defineProperty(process, "platform", { value: "win32" });
+  try {
+    await assert.rejects(runners.start({ provider: "kimi-code", executable: kimi, directory: dir, taskId: "t", prompt: "x".repeat(WINDOWS_ARGV_PROMPT_LIMIT + 1) }), /PROMPT_TOO_LONG_FOR_ARGV/);
+  } finally {
+    Object.defineProperty(process, "platform", platform);
+  }
+});
+
+test("executables are found in client-specific install folders even when PATH lacks them", (t) => {
+  const home = workspace(t);
+  const bin = path.join(home, ".kimi-code", "bin");
+  fs.mkdirSync(bin, { recursive: true });
+  const file = path.join(bin, process.platform === "win32" ? "kimi.exe" : "kimi");
+  fs.writeFileSync(file, "#!/bin/sh\n");
+  fs.chmodSync(file, 0o755);
+  const saved = { HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE, PATH: process.env.PATH };
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
+  process.env.PATH = "";
+  try {
+    assert.equal(findExecutable("kimi-code"), file);
+  } finally {
+    Object.assign(process.env, saved);
+  }
+});
+
+test("jsonl reader tolerates each vendor's vocabulary", () => {
+  const s = newJsonlState();
+  readJsonlEvent(s, { type: "session", sessionId: "s-1" });
+  readJsonlEvent(s, { type: "status", phase: "turn_end", reason: { kind: "error", error: { message: "MISSING_CREDENTIAL" } } });
+  assert.equal(s.threadId, "s-1");
+  assert.equal(s.error, "MISSING_CREDENTIAL");
+  const o = newJsonlState();
+  readJsonlEvent(o, { type: "text", part: { text: "OpenCode says hi", sessionID: "ses_1" } });
+  assert.equal(jsonlMessage(o), "OpenCode says hi");
+  assert.equal(o.threadId, "ses_1");
+  const c = newJsonlState();
+  readJsonlEvent(c, { type: "assistant", message: { content: [{ type: "text", text: "partial" }] }, session_id: "c-1" });
+  readJsonlEvent(c, { type: "result", result: "Final answer", session_id: "c-1" });
+  assert.equal(jsonlMessage(c), "Final answer");
+});

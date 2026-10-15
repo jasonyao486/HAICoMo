@@ -48,6 +48,7 @@ import { UserAvatar } from "./Identity";
 import { InitialsEditor, ThemeSelect } from "./SettingsControls";
 import { ActivitySummary } from "./Activity";
 import { errorText } from "./errors";
+import { evidenceLabel } from "./RelayEditor";
 
 type Base = {
   workspace: Workspace;
@@ -491,11 +492,15 @@ export function SettingsView({
               {t(
                 c.background
                   ? "backgroundAvailable"
-                  : c.installed
-                    ? "manualCapability"
-                    : "unavailable",
+                  : c.relayReady && c.autonomyOnly
+                    ? "relayAutonomyOnly"
+                    : c.installed
+                      ? "manualCapability"
+                      : "unavailable",
               )}
+              {c.reason && c.installed && !c.background && !c.relayReady ? ` · ${errorText(new Error(c.reason), t)}` : ""}
             </small>
+            <small>{t("backgroundEvidence")}: {evidenceLabel(c.provider, t)}</small>
             <small className="full-path">
               {t("detectedPath")}: {c.executable || c.appPath || "—"}
             </small>

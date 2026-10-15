@@ -51,7 +51,7 @@ New-project copies reset project identity and epoch and drop active sessions; or
 
 ## Provider boundaries
 
-Codex App Server is launched via stdio with workspace-write and on-request approvals. Model/effort are not translated into arbitrary provider flags. Claude local CLI uses stream-json with standard permission behavior. Secrets remain in each provider's existing credential system.
+Codex App Server is launched via stdio with workspace-write and on-request approvals. Model/effort are not translated into arbitrary provider flags. Claude local CLI uses stream-json with standard permission behavior. Secrets remain in each provider's existing credential system. Since 0.5.0 every background client is described by an adapter in `src/providers/adapters.ts` (executable names and install folders, help-text gate, protocol `codex-app-server | claude-stream | jsonl | text`, prompt via stdin or argument, mode table). Modes flagged autonomous are rejected unless `RunOptions.autonomous` is set, which only a consented unattended relay does.
 
 Neither adapter promises to inject into an arbitrary open third-party GUI. Foreground fallback copies a properly quoted command and opens a terminal. A supported background start is never automatically retried after an uncertain RPC outcome.
 
@@ -102,3 +102,12 @@ Audit activity is a human-editable presentation history. The only former audit-d
 Pure graph layout functions are shared-testable and have no renderer imports. Hierarchical subtrees and topological dependency layers are packed by independent components. Explicit family assignments produce deduplicated company marks. The renderer controls zoom/pan without persisting presentation as business state.
 
 Only `assets/runtime` is a Vite public directory, checked against a hash manifest before build. Legal notices distinguish MIT application code, non-commercial character adaptations, CC environment artwork and marks. GitHub Releases are the release channel; from 0.4.0 the app checks them itself and installs only after explicit user choices.
+
+## ADR-009: three-stage relays and unattended mode (0.5.0, schema v6)
+
+A relay holds up to three stages of up to three steps; each step carries its own client, model, effort, mode, thread, target and reference task and custom text, plus runtime fields (`runId`, `firedAt`, `error`, `attempt`, `resumeThreadId`, `overriddenAt`). Relay status adds `running` and `completed` and drops `fired`. All scheduling policy is the pure `relayNext()` over `relayProgress()`; the scheduler only executes the returned action. A stage is claimed in the database before any spawn (`relay.claim`, which itself refuses B while A is incomplete), steps start sequentially and each start is recorded with its handoff in one transaction (`relay.stepFired`), then `relay.stageFired` moves the relay to `running` or `failed`. A claim found while no evaluation is in flight becomes `INTERRUPTED`; nothing is re-sent. Delivery is a session ending `completed`; any other end, a `HAICOMO-NEEDS-HUMAN` marker or a stale lost run blocks the stage. Retry and "mark handled" are human commands.
+
+Dependency checks for a relay step exempt only tasks of earlier stages of the same relay whose runs delivered; `blockers()`/`assertTaskRunnable()` are unchanged for every other caller and acceptance is never written. Later-stage prompts carry earlier steps' final-message tails, fenced and labelled as unreviewed data.
+
+Unattended mode is a per-relay, audited consent. The main process maps relay runs to their relay; Codex server requests from such runs are answered by `autoDecide()` (recommended option, approvals except destructive commands) and recorded with the system command `relay.decision`, an append-only log that does not bump the relay revision. Requests needing free text are left for the human and raise a system notification. The Markdown decision record is regenerated from the database into `.haicomo/relay-decisions/` when a relay completes or stops.
+

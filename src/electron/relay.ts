@@ -1,32 +1,63 @@
 import { randomUUID } from "node:crypto";
-import { assertTaskRunnable, sessionAvatar, type ProjectState, type Workspace, type Settings } from "../shared/domain";
-import { composeRelayPrompt, relayDecision, relayPredecessor, type Relay } from "../shared/relay";
+import { type ProjectState, type Workspace, type Settings } from "../shared/domain";
+import {
+  assertRelayStepRunnable,
+  composeRelayStepPrompt,
+  relayNext,
+  relayProgress,
+  relayTitle,
+  RELAY_ARMED_STATUSES,
+  type Relay,
+  type RelayStep,
+  type RelayStepState,
+} from "../shared/relay";
 
 export type RelayStartResult = { runId: string; threadId?: string; to: string };
-export type RelaySummary = { directory: string; relayId: string; title: string; status: Relay["status"]; dueAt: string | null; taskId: string; provider: string };
-export const ARMED_RELAY_STATUSES: Relay["status"][] = ["scheduled", "firing"];
+export type RelaySummary = {
+  directory: string;
+  relayId: string;
+  title: string;
+  status: Relay["status"];
+  statusReason: string;
+  dueAt: string | null;
+  stage: number;
+  stages: number;
+  autonomous: boolean;
+  steps: { label: string; provider: string; taskId: string; state: RelayStepState; stage: number }[];
+};
+export const ARMED_RELAY_STATUSES: Relay["status"][] = RELAY_ARMED_STATUSES;
+export type RelayStartRequest = { relay: Relay; stageIndex: number; step: RelayStep; state: ProjectState; prompt: string };
 export type SchedulerHooks = {
   /** Directories whose stores are open and may hold relays. */
   directories: () => string[];
   view: (directory: string) => Promise<Workspace>;
   command: (directory: string, type: string, payload: unknown) => Promise<Workspace>;
   /** Capability checks and the actual background start; throws on any refusal. */
-  start: (directory: string, relay: Relay, state: ProjectState, prompt: string) => Promise<RelayStartResult>;
+  start: (directory: string, request: RelayStartRequest) => Promise<RelayStartResult>;
+  /** Run ids the local runner still owns (a run missing here for long is lost). */
+  activeRunIds?: () => string[];
   now?: () => number;
   locale?: () => Settings["locale"];
   warn?: (directory: string, message: string) => void;
+  /** Called after a relay reaches a state a human should look at (blocked, failed, completed, missed). */
+  attention?: (directory: string, relay: Relay, state: ProjectState) => void;
 };
 /**
  * Main-process scheduler for relays. It only acts on projects that are open in
  * the app; it never retries a start whose outcome is unknown, and it claims a
- * relay in the database before spawning so a crash cannot double-send.
+ * stage in the database before spawning so a crash cannot double-send. Runs of
+ * one stage are started one after another (they then execute in parallel);
+ * the next stage is claimed only when every run of the current one delivered.
  */
 export class RelayScheduler {
   aliveSince: number;
   private timer: ReturnType<typeof setInterval> | null = null;
   private running: Promise<void> | null = null;
   private queued = false;
+  private stopped = false;
   private latest = new Map<string, RelaySummary[]>();
+  /** Relays this process is firing right now (`directory\0relayId`). */
+  private inFlight = new Set<string>();
   constructor(private hooks: SchedulerHooks) {
     this.aliveSince = this.now();
   }
@@ -37,6 +68,10 @@ export class RelayScheduler {
   armed(directory?: string): number {
     return this.summary().filter((r) => (!directory || r.directory === directory) && ARMED_RELAY_STATUSES.includes(r.status)).length;
   }
+  /** Relays between or inside stages: quitting now stops them before their next stage. */
+  inProgress(directory?: string): number {
+    return this.summary().filter((r) => (!directory || r.directory === directory) && ["firing", "running"].includes(r.status)).length;
+  }
   forget(directory: string) {
     this.latest.delete(directory);
   }
@@ -45,10 +80,12 @@ export class RelayScheduler {
   }
   start(intervalMs = 20000) {
     if (this.timer) return;
+    this.stopped = false;
     this.timer = setInterval(() => void this.tick(), intervalMs);
     this.timer.unref?.();
   }
   stop() {
+    this.stopped = true;
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
   }
@@ -72,6 +109,26 @@ export class RelayScheduler {
     });
     return this.running;
   }
+  private summarize(directory: string, state: ProjectState): RelaySummary[] {
+    const active = new Set(this.hooks.activeRunIds?.() ?? []);
+    return state.relays
+      .filter((r) => !["completed", "cancelled"].includes(r.status))
+      .map((r) => {
+        const p = relayProgress(r, state, { now: this.now(), activeRunIds: this.hooks.activeRunIds ? active : undefined });
+        return {
+          directory,
+          relayId: r.id,
+          title: relayTitle(r, state),
+          status: r.status,
+          statusReason: r.statusReason,
+          dueAt: r.status === "scheduled" ? (r.dueAt ?? null) : r.dueAt,
+          stage: r.stageIndex + 1,
+          stages: r.stages.length,
+          autonomous: r.autonomy.enabled,
+          steps: p.steps.flat().map((s) => ({ label: s.label, provider: s.step.provider, taskId: s.step.taskId, state: s.state, stage: s.stageIndex })),
+        };
+      });
+  }
   private async evaluate() {
     for (const directory of this.hooks.directories()) {
       let view: Workspace;
@@ -80,71 +137,80 @@ export class RelayScheduler {
       } catch {
         continue;
       }
-      this.latest.set(
-        directory,
-        view.state.relays
-          .filter((r) => !["fired", "cancelled"].includes(r.status))
-          .map((r) => ({ directory, relayId: r.id, title: r.title, status: r.status, dueAt: r.dueAt ?? relayDecision(r, view.state, this.now(), this.aliveSince).dueAt, taskId: r.taskId, provider: r.handoff.provider })),
-      );
+      this.latest.set(directory, this.summarize(directory, view.state));
       if (view.entryError) continue;
-      if (view.agentGuideError) {
-        for (const relay of view.state.relays.filter(r => r.status === "scheduled" || r.status === "firing")) {
-          await this.hooks.command(directory, relay.status === "firing" ? "relay.failed" : "relay.blocked", {
-            relayId: relay.id, expectedRevision: relay.revision,
-            ...(relay.status === "firing" ? { error: view.agentGuideError } : { reason: view.agentGuideError }),
-          }).catch(error => this.hooks.warn?.(directory, String(error)));
-        }
-        continue;
-      }
+      const active = this.hooks.activeRunIds ? new Set(this.hooks.activeRunIds()) : undefined;
       for (const relay of view.state.relays) {
+        const key = `${directory}\0${relay.id}`;
         try {
-          if (relay.status === "firing" && relay.statusReason === "manual") {
-            await this.fire(directory, relay, view.state);
-            continue;
+          const next = relayNext(relay, view.state, { now: this.now(), aliveSince: this.aliveSince, activeRunIds: active, inFlight: this.inFlight.has(key) });
+          const guard = { relayId: relay.id, expectedRevision: relay.revision };
+          let after: Workspace | null = null;
+          if (next.action === "interrupt") after = await this.hooks.command(directory, "relay.failed", { ...guard, reason: "INTERRUPTED", error: "INTERRUPTED" });
+          else if (next.action === "block") after = await this.hooks.command(directory, "relay.blocked", { ...guard, reason: next.reason, stepId: next.stepId });
+          else if (next.action === "missed") after = await this.hooks.command(directory, "relay.missed", { ...guard, dueAt: next.dueAt });
+          else if (next.action === "complete") after = await this.hooks.command(directory, "relay.completed", guard);
+          else if (next.action === "claim") {
+            if (view.agentGuideError) {
+              after = await this.hooks.command(directory, "relay.blocked", { ...guard, reason: view.agentGuideError });
+            } else if (!this.stopped) {
+              const claimed = await this.hooks.command(directory, "relay.claim", { ...guard, stage: next.stage, dueAt: "dueAt" in next ? next.dueAt : undefined });
+              const current = claimed.state.relays.find((r) => r.id === relay.id);
+              if (current?.status === "firing") {
+                this.inFlight.add(key);
+                try {
+                  after = await this.fireStage(directory, current, claimed.state);
+                } finally {
+                  this.inFlight.delete(key);
+                }
+              }
+            }
           }
-          if (relay.status !== "scheduled" || !relay.enabled) continue;
-          const decision = relayDecision(relay, view.state, this.now(), this.aliveSince);
-          if (decision.action === "blocked")
-            await this.hooks.command(directory, "relay.blocked", { relayId: relay.id, expectedRevision: relay.revision, reason: decision.reason });
-          else if (decision.action === "missed")
-            await this.hooks.command(directory, "relay.missed", { relayId: relay.id, expectedRevision: relay.revision, dueAt: decision.dueAt });
-          else if (decision.action === "fire") {
-            const claimed = await this.hooks.command(directory, "relay.claim", { relayId: relay.id, expectedRevision: relay.revision, dueAt: decision.dueAt });
-            const current = claimed.state.relays.find((r) => r.id === relay.id);
-            if (current?.status === "firing") await this.fire(directory, current, claimed.state);
-          }
+          const result = after?.state.relays.find((r) => r.id === relay.id);
+          if (after && result && ["blocked", "failed", "completed", "missed"].includes(result.status)) this.hooks.attention?.(directory, result, after.state);
         } catch (error) {
           // A revision conflict means a human changed the relay meanwhile; it is re-evaluated next tick.
           this.hooks.warn?.(directory, `relay ${relay.id}: ${String(error)}`);
         }
       }
+      try {
+        this.latest.set(directory, this.summarize(directory, (await this.hooks.view(directory)).state));
+      } catch {}
     }
   }
-  private async fire(directory: string, relay: Relay, state: ProjectState) {
-    try {
-      const task = state.tasks.find((t) => t.id === relay.taskId);
-      if (!task) throw new Error("TASK_NOT_FOUND");
-      assertTaskRunnable(task, state.tasks);
-      const prompt = composeRelayPrompt(relay, state, directory, this.hooks.locale?.());
-      const result = await this.hooks.start(directory, relay, state, prompt);
-      const predecessor = relayPredecessor(relay, state);
-      await this.hooks.command(directory, "handoff.record", {
-        id: randomUUID(),
-        taskId: relay.taskId,
-        provider: relay.handoff.provider,
-        from: predecessor ? [sessionAvatar(predecessor)] : task.assignees,
-        to: result.to,
-        prompt,
-        sessionId: result.runId,
-        at: new Date(this.now()).toISOString(),
-        mode: "relay",
-        relayId: relay.id,
+  /**
+   * Starts every unfired step of the claimed stage, sequentially. A step that
+   * cannot start is recorded and its siblings still start. If recording itself
+   * fails the relay stays `firing`; the next evaluation marks it INTERRUPTED.
+   */
+  private async fireStage(directory: string, relay: Relay, state: ProjectState): Promise<Workspace> {
+    const k = relay.stageIndex;
+    let current = relay;
+    let view: Workspace | null = null;
+    const exempt = relayProgress(relay, state).exemptTaskIds;
+    for (const step of relay.stages[k].steps) {
+      if (step.runId || step.error || step.overriddenAt) continue;
+      if (this.stopped) throw new Error("APP_QUITTING");
+      let result: RelayStartResult | null = null;
+      let prompt = "";
+      try {
+        assertRelayStepRunnable(state.tasks.find((t) => t.id === step.taskId), state, exempt);
+        prompt = composeRelayStepPrompt(current, k, step, state, directory, this.hooks.locale?.());
+        result = await this.hooks.start(directory, { relay: current, stageIndex: k, step, state, prompt });
+      } catch (error) {
+        view = await this.hooks.command(directory, "relay.stepFailed", { relayId: current.id, expectedRevision: current.revision, stepId: step.id, error: String(error) });
+        current = view.state.relays.find((r) => r.id === relay.id)!;
+        continue;
+      }
+      view = await this.hooks.command(directory, "relay.stepFired", {
+        relayId: current.id,
+        expectedRevision: current.revision,
+        stepId: step.id,
+        runId: result.runId,
+        handoff: { id: randomUUID(), to: result.to, prompt },
       });
-      await this.hooks.command(directory, "relay.fired", { relayId: relay.id, expectedRevision: relay.revision, runId: result.runId });
-    } catch (error) {
-      await this.hooks
-        .command(directory, "relay.failed", { relayId: relay.id, expectedRevision: relay.revision, error: String(error) })
-        .catch((e) => this.hooks.warn?.(directory, `relay ${relay.id} failure not recorded: ${String(e)}`));
+      current = view.state.relays.find((r) => r.id === relay.id)!;
     }
+    return this.hooks.command(directory, "relay.stageFired", { relayId: current.id, expectedRevision: current.revision });
   }
 }

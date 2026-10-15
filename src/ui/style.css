@@ -2318,3 +2318,63 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
   .topbar { flex-wrap: wrap; gap: 8px; height: auto; padding-block: 10px; }
   .topbar-actions { flex-wrap: wrap; }
 }
+
+/* 0.5.0: multi-stage relays — flowchart cards, one desk for the working stage and one three-seat sofa per waiting stage. */
+.relay-row.visual { display: flex; flex-direction: column; gap: 4px; }
+.relay-empty-preview > .relay-row.visual { display: flex; }
+.relay-stage-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.relay-stage-strip > .relay-arrow { width: 24px; }
+.relay-scene { flex: 0 0 auto; width: 296px; height: 176px; }
+.relay-scene .furniture { bottom: 14px; }
+.relay-scene.workstation .furniture-desk { bottom: 22px; }
+.relay-scene.workstation.enhanced .furniture-desk { bottom: -20px; }
+.relay-scene.sofa .furniture-sofa { bottom: 12px; }
+.relay-scene.sofa.enhanced .furniture-sofa { bottom: -10px; }
+.relay-actor { bottom: 8px; transform: translateX(-50%); }
+.relay-scene.sofa .relay-actor.seated, .relay-scene.sofa.enhanced .relay-actor.seated { transform: translateX(-50%); bottom: 27px; }
+.relay-scene.sofa.enhanced .relay-actor.seated { bottom: 40px; }
+.relay-scene-label { position: absolute; top: 6px; left: 8px; font-size: 11px; color: var(--muted); background: color-mix(in srgb, var(--panel) 70%, transparent); border-radius: 6px; padding: 1px 6px; pointer-events: none; }
+.relay-card-list { display: flex; flex-direction: column; gap: 14px; }
+.relay-card { padding: 12px 14px; }
+.relay-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.relay-card-head .relay-caption { padding-top: 0; }
+.relay-card-head .relay-actions { flex: 0 0 auto; }
+.relay-caption .link { padding: 0; }
+.relay-flow { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px 30px; }
+.relay-flow-stage { position: relative; display: flex; flex-direction: column; gap: 6px; flex: 1 1 210px; min-width: 210px; max-width: 320px; padding: 8px; border: 1px dashed var(--line); border-radius: 12px; }
+.relay-flow-stage + .relay-flow-stage::before { content: "→"; position: absolute; left: -23px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 18px; }
+.relay-flow-stage[data-stage-state="current"] { border-style: solid; border-color: #529b77; }
+.relay-flow-stage[data-stage-state="done"] { opacity: 0.78; }
+.relay-flow-stage-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); min-height: 22px; }
+.relay-flow-node { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.relay-flow-node > .icon-button { align-self: flex-end; margin-top: -30px; }
+.relay-flow-node.selected { border-color: #529b77; box-shadow: 0 0 0 2px color-mix(in srgb, #529b77 30%, transparent); }
+.relay-node-main { display: flex; align-items: flex-start; gap: 8px; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; }
+button.relay-node-main { cursor: pointer; }
+.relay-node-label { min-width: 22px; font-size: 12px; font-weight: 700; color: var(--muted); line-height: 24px; }
+.relay-node-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.relay-node-text strong { font-size: 13px; overflow-wrap: anywhere; }
+.relay-node-text small { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+.relay-step-state { font-size: 11px; font-weight: 600; color: var(--muted); }
+.relay-step-state.state-running, .relay-step-state.state-starting { color: #2f7d58; }
+.relay-step-state.state-completed, .relay-step-state.state-overridden { color: #3d7b5c; }
+.relay-step-state.state-stopped, .relay-step-state.state-start-failed { color: #c64f3f; }
+.relay-step-state.state-needs-human { color: #b8741f; }
+.relay-flow-stage.relay-flow-add { flex: 0 0 auto; min-width: 0; max-width: none; justify-content: center; align-items: center; border: 0; padding: 0; }
+.relay-flow-stage.relay-flow-add::before { content: none; }
+.relay-add { align-self: flex-start; }
+.relay-step-editor .form-grid { margin-top: 4px; }
+.relay-autonomy { display: flex; flex-direction: column; gap: 6px; }
+.relay-autonomy.on { border-color: #d89e5c; background: color-mix(in srgb, #d89e5c 7%, transparent); }
+.relay-autonomy-flags { font-size: 12px; }
+.relay-autonomy-flags ul { margin: 4px 0 0 18px; padding: 0; }
+.relay-autonomy-badge { margin-left: 6px; display: inline-flex; align-items: center; gap: 3px; color: #a3641a; background: color-mix(in srgb, #d89e5c 16%, transparent); }
+.relay-report { white-space: pre-wrap; font-size: 12px; max-height: 60vh; overflow: auto; background: var(--bg); padding: 12px; border-radius: 8px; }
+.badge-relay-running i { background: #529b77; }
+.badge-relay-completed i { background: #3d7b5c; }
+@media (max-width: 760px) {
+  .relay-flow { flex-direction: column; }
+  .relay-flow-stage { max-width: none; }
+  .relay-flow-stage + .relay-flow-stage::before { content: "↓"; left: 50%; top: -24px; transform: translateX(-50%); }
+  .relay-card-head { flex-direction: column; }
+}

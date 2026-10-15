@@ -445,12 +445,12 @@
     },
     {
       "file": "local-assets/studio-sofa.png",
-      "bytes": 2545761,
-      "sha256": "ef6ed4348bdd2d2fdf5477a77f7c6e2296408b34c15573f32a6f6641fac4ff9f",
+      "bytes": 1985953,
+      "sha256": "12fe31c888b3994b1073494c092354ee0cfba66d28def1d8c7d30f59a6e1da20",
       "source": "HAICoMo image generation, 0.3.1",
       "creator": "HAICoMo contributors",
       "license": "CC-BY-4.0",
-      "changes": "Generated and revised to a symmetric front-facing elevated view for seated characters."
+      "changes": "0.5.0 placeholder: widened from the 0.3.1 two-seat painting to three seats by inserting a copy of the pillow-free centre cushion (2056×1024); to be replaced by a newly painted three-seat sofa"
     },
     {
       "file": "local-assets/company-openai.svg",

@@ -56,7 +56,7 @@ test("old project onboarding preserves rule bytes, identity and immutable pendin
   assert.equal(next.view().agentGuideError, undefined);
   assert.equal(next.state().id, initial.id);
   assert.equal(next.state().epoch, initial.epoch);
-  assert.equal(next.state().schemaVersion, 5);
+  assert.equal(next.state().schemaVersion, 6);
   assert.deepEqual(fs.readFileSync(path.join(root, "inbox", proposal.proposalId + ".json")), bytes);
   for (const file of [path.join(dir, "AGENTS.md"), path.join(root, "AGENTS.md")]) assert.equal(fs.readFileSync(file, "utf8"), rules);
   assert.equal(fs.readFileSync(path.join(root, "agent-guide.md"), "utf8"), AGENT_GUIDE);

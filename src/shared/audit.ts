@@ -1,4 +1,5 @@
 import type { Audit, AuditContext, AuditTask, ProjectState, Task } from "./domain";
+import { relayAuditTaskIds } from "./relay";
 export function auditTasks(state: ProjectState, ids: string[], fallback: unknown[] = []): AuditTask[] {
   const known = new Map(state.tasks.map((t) => [t.id, t]));
   for (const value of fallback) if (value && typeof value === "object" && "title" in value && "parentId" in value) {
@@ -17,7 +18,7 @@ export function auditContext(a: Audit, state: ProjectState, historical = true): 
   // Legacy names do not prove a model family or a particular human identity.
   const actor = { kind: a.actor === "system" ? "system" : a.actor === "human" ? "human" : "model", name: ["human", "system"].includes(a.actor) ? "" : a.actor } as AuditContext["actor"];
   const record = a.after as any;
-  const ids = a.action.startsWith("task.") || a.action === "acceptance.invalidated" ? [a.entityId] : a.action === "handoff.record" || a.action.startsWith("relay.") ? [record?.taskId ?? (a.before as any)?.taskId].filter(Boolean) : a.action === "proposal.review" ? record?.proposal?.changes?.filter((c: any) => c.entity === "task").map((c: any) => c.id) ?? [] : [];
+  const ids = a.action.startsWith("task.") || a.action === "acceptance.invalidated" ? [a.entityId] : a.action === "handoff.record" ? [record?.taskId ?? (a.before as any)?.taskId].filter(Boolean) : a.action.startsWith("relay.") ? relayAuditTaskIds(record ?? a.before) : a.action === "proposal.review" ? record?.proposal?.changes?.filter((c: any) => c.entity === "task").map((c: any) => c.id) ?? [] : [];
   // Only before/after payloads prove historical titles. Current titles cannot
   // establish an old hierarchy after a rename or deletion.
   return { actor, tasks: auditTasks(historical ? { ...state, tasks: [] } : state, ids, [a.after, a.before]) };
