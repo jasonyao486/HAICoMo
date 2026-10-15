@@ -33,6 +33,14 @@ Run once each in a temporary directory with a "reply with one word, use no tools
 
 Gemini CLI, Qwen Code, CodeBuddy, Qoder CLI, OpenCode, GitHub Copilot CLI and Pi are not installed here; their adapters follow vendor documentation and the help-text gate and are exercised only with fixtures.
 
-## Local candidate installation
+## Local candidate installation (2026-10-15)
 
-See the section appended after installation below.
+| Step | Result |
+|---|---|
+| Build | `electron-builder` with the same options as `scripts/release-mac.mjs prepare` (arm64 `dir`, hardened runtime), signed with the login keychain's Developer ID Application identity (team `CXWHS9FG9S`, the same team as official releases), **not notarised** |
+| Checks on the candidate | `codesign --verify --deep --strict` passed; authority chain Developer ID → Apple Root CA; `check-package.mjs` passed; packaged-app e2e: 16/16 on the first candidate (v050, v030, readme-relay, tabs, v031, updates, update-safety, v041) and 8/8 on the final candidate after a one-line label fix (v050, v030, tabs, v031) |
+| Install | `npm run install:local:mac`: `/Applications/HAICoMo.app` is 0.5.0 (bundle digest `50b471c9…`), strict signature valid, exactly one registration. The replaced 0.4.1 is kept as `release/archives/app.haicomo.desktop-0.4.1-b588247baec7fadc.zip` |
+| Launch | Installed app launched with isolated synthetic profiles: directly (demo project, relay visual/text views, agent detection) and through LaunchServices (`open -a`), which ran without a Gatekeeper prompt and quit cleanly. `spctl` reports "Unnotarized Developer ID", as expected for a local build that was never quarantined |
+| Agent detection from the installed app | Background: Codex, Claude Code, Cursor, Kimi, DeepSeek Harness. Manual only: WorkBuddy, Grok Bot. Not installed: Pi, Copilot, OpenCode, TRAE, Qoder, CodeBuddy, Gemini CLI, Qwen Code |
+
+Because the candidate is signed by the same Developer ID team, later official releases (0.5.1 and newer) can replace it through the in-app updater. An official 0.5.0 has the same version number and will not be offered as an update; after 0.5.0 is published, replace the candidate with the published artifact (`install:local:mac` from the release ZIP) if an identical-to-release copy is wanted.
