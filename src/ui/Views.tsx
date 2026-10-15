@@ -498,7 +498,7 @@ export function SettingsView({
                       ? "manualCapability"
                       : "unavailable",
               )}
-              {c.reason && c.installed && !c.background && !c.relayReady ? ` · ${errorText(new Error(c.reason), t)}` : ""}
+              {c.reason && c.installed && !c.background && !c.relayReady && !["MANUAL_HANDOFF_ONLY", "NOT_INSTALLED"].includes(c.reason) ? ` · ${errorText(new Error(c.reason), t)}` : ""}
             </small>
             <small>{t("backgroundEvidence")}: {evidenceLabel(c.provider, t)}</small>
             <small className="full-path">
