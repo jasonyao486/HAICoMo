@@ -90,6 +90,8 @@ const legacySelections = new Map<string, string>();
 const closeAllowed = new Set<number>();
 const replacingProjects = new Set<string>();
 const startingProjects = new Map<string, number>();
+/** Projects a window is opening right now: releasing one must wait until the window is bound to it. */
+const openingProjects = new Map<string, number>();
 let quitRequested = false;
 const defaults = defaultSettings;
 function configFile(name: string) {
@@ -447,18 +449,20 @@ async function hasArmedRelays(directory: string) {
     return false;
   }
 }
+const directoryInUse = (directory: string) =>
+  stopping ||
+  startingProjects.has(directory) ||
+  openingProjects.has(directory) ||
+  runners.active().some((r) => r.directory === directory) ||
+  [...windowProjects.values()].some((m) =>
+    [...m.values()].some((p) => p.directory === directory),
+  );
 async function releaseDirectory(directory: string) {
-  if (
-    stopping ||
-    startingProjects.has(directory) ||
-    runners.active().some((r) => r.directory === directory) ||
-    [...windowProjects.values()].some((m) =>
-      [...m.values()].some((p) => p.directory === directory),
-    )
-  )
-    return;
+  if (directoryInUse(directory)) return;
   if (openedDirectories.has(directory)) {
     if (await hasArmedRelays(directory)) { syncTray(); return; }
+    // Checked again after the relay lookup: a window may have opened the project or a run started meanwhile.
+    if (directoryInUse(directory)) return;
     await request("close", directory).catch(() => {});
     openedDirectories.delete(directory);
     scheduler.forget(directory);
@@ -817,7 +821,19 @@ async function pickDirectory(
   });
   return result.canceled ? null : result.filePaths[0];
 }
+/** Marks the project as opening until the window is bound, so a concurrent release cannot close it underneath. */
 async function openProject(win: BrowserWindow, input: string, takeoverLock = false) {
+  const { directory } = resolveEntry(input);
+  openingProjects.set(directory, (openingProjects.get(directory) ?? 0) + 1);
+  try {
+    return await openProjectNow(win, input, takeoverLock);
+  } finally {
+    const remaining = (openingProjects.get(directory) ?? 1) - 1;
+    if (remaining) openingProjects.set(directory, remaining);
+    else openingProjects.delete(directory);
+  }
+}
+async function openProjectNow(win: BrowserWindow, input: string, takeoverLock = false) {
   const entry = resolveEntry(input),
     { directory } = entry;
   const duplicate = [...openedDirectories.values(), ...recents()].find(
