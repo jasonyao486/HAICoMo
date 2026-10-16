@@ -1,6 +1,6 @@
 # 0.5.0 verification status
 
-Status: **local macOS candidate, not published.** Implemented and verified on the development Mac (Apple Silicon) on 2026-10-15 on the local branch `dev/0.5.0`. Windows builds, native CI, notarisation and the fresh-account first-open check have not been run for 0.5.0; nothing here is claimed for Windows. Synthetic projects, fixture agents and isolated profiles only; no real Codex or Claude session was started.
+Status: **local macOS candidate, not published.** Implemented and verified on the development Mac (Apple Silicon) on 2026-10-15, revised on 2026-10-16 (round 2 below), on the local branch `dev/0.5.0`. Windows builds, native CI, notarisation and the fresh-account first-open check have not been run for 0.5.0; nothing here is claimed for Windows. Synthetic projects, fixture agents and isolated profiles only; no real Codex or Claude session was started.
 
 ## Changes
 
@@ -44,3 +44,33 @@ Gemini CLI, Qwen Code, CodeBuddy, Qoder CLI, OpenCode, GitHub Copilot CLI and Pi
 | Agent detection from the installed app | Background: Codex, Claude Code, Cursor, Kimi, DeepSeek Harness. Manual only: WorkBuddy, Grok Bot. Not installed: Pi, Copilot, OpenCode, TRAE, Qoder, CodeBuddy, Gemini CLI, Qwen Code |
 
 Because the candidate is signed by the same Developer ID team, later official releases (0.5.1 and newer) can replace it through the in-app updater. An official 0.5.0 has the same version number and will not be offered as an update; after 0.5.0 is published, replace the candidate with the published artifact (`install:local:mac` from the release ZIP) if an identical-to-release copy is wanted.
+
+## Round 2 (2026-10-16): review fixes and live runs
+
+Changes after the user's review:
+- **Relay scenes fill the row and centre the furniture.** Each scene grows to share the row's width, so there is no blank strip on the right. Each drawing's visible part is centred vertically, leaving the band below the desk for working agents to walk in; seated agents move up with the cushions.
+- **Settings → Local agents is one table.** Detection results (status, version, background ability, evidence, reason) fill the middle of each client's row, and the detected path appears under its path field. The duplicate list below is gone. Detect and Save share one aligned row with a 12 px gap.
+- **The relay editor is wider.** It is up to 1280 px wide (96 % of the window), so stages A, B and C stay side by side; a narrow window scrolls the flow sideways instead of wrapping.
+- **DeepSeek Harness runs on the account route.** Each run gets a private `--patch` overlay with the desktop app's provider (`deepseek-account`) and the step's model, or the desktop app's current default when the model is empty. Unsafe model ids are refused. The overlay is deleted when the run ends.
+
+| Check | Result |
+|---|---|
+| `npm test` (each file) | 132/132 in 23 files (adapter tests: hermetic `DSH_HOME`, typed model, desktop default, no overlay, unsafe id) |
+| `npx playwright test` (source build) | 31 passed, 4 skipped |
+| New e2e assertions (`v050.spec.ts`) | Three editor stages share one row; scenes reach the strip's right edge; 15 merged client rows with detection status and no separate list; Detect/Save aligned with ≥ 10 px gap; name, detection result and reset columns never overlap |
+| Packaged candidate (Developer ID, not notarised) | `check-package.mjs` passed; 17/17 packaged-app scenarios (v050, v030, readme-relay, tabs, v031, v040, updates, update-safety, v041); reinstalled, strict signature valid, exactly one registration |
+
+### Live runs through HAICoMo (synthetic prompts, temporary directories, no files touched)
+
+| Client | Result |
+|---|---|
+| Cursor Agent 2026.01.23 | After the user signed in (`cursor-agent login` in the browser), a run through HAICoMo's runner completed in 18 s: reply `HAICOMO_OK`, model "Auto", session id recorded. No workspace-trust prompt in `-p` mode |
+| DeepSeek Harness 0.2.0-rc.2, account route | `ds-v41-flash` was rejected by DeepSeek: "The supported API model names are deepseek-flash, deepseek-v4-pro". `deepseek-flash` completed in 4 s: reply `HAICOMO_OK`, DeepSeek family avatar, session id recorded. No API key involved |
+| **Cross-agent relay in the installed app** | Unattended two-stage relay: A1 Cursor → B1 DeepSeek (`deepseek-flash`), isolated profile, synthetic project. Completed in 76 s. Stage B started automatically after A delivered; B's prompt contained A's token (`RELAY-A-OK`) and B quoted it. Both agents listed their decisions in the `HAICOMO-DECISIONS` block. The decision record was written to `.haicomo/relay-decisions/`; no files were created in the project |
+
+![Live relay: Cursor working at the desk, DeepSeek waiting](images/0.5.0/live-relay-stage-a.png)
+
+![Live relay completed](images/0.5.0/live-relay-completed.png)
+
+Still unverified live: Kimi (quota exhausted until the next cycle), the seven documented-only adapters (not installed), and everything on Windows.
+
