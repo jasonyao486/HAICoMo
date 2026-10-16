@@ -111,7 +111,8 @@ The first pull-request run ([38912902895](https://github.com/jasonyao486/HAICoMo
 
 The second run ([38917158104](https://github.com/jasonyao486/HAICoMo/actions/runs/38917158104), af8a3f1) passed on both platforms. The two runs after it ([38919828203](https://github.com/jasonyao486/HAICoMo/actions/runs/38919828203), [38920741111](https://github.com/jasonyao486/HAICoMo/actions/runs/38920741111)) failed on test timing, not product behaviour:
 - **Windows:** deleting a test's temporary folder right after the app closed hit `EPERM` (the new README capture, and once the older `v024` spec). Every e2e spec now uses the retrying `removeTestDirectory` helper.
-- **macOS:** the launch-detection test's `uncheck()` saw no change, because the Settings switch only flipped after its save returned. The switch now follows the click at once and reverts if the save fails.
+- **macOS:** the launch-detection test's `uncheck()` saw no change, because the Settings switch only flipped after its save returned. The switch now shows the click at once while the save is in flight. A first attempt wrote the click into the Settings draft, which left the page looking unsaved, so quitting asked to save (`updates.spec` timed out in run [38923612907](https://github.com/jasonyao486/HAICoMo/actions/runs/38923612907)). The pending value is now kept apart from the draft.
+- **Windows (packaged app):** one README capture did not see the demo project within 5 s on a cold start. Both README tests now wait for the home view before opening the project, and allow 30 s.
 
 While retaking the README screenshots, three workers at the desk overlapped: the ±24 px working sway exceeded the ~74 px seat spacing, and reduced motion still applied a fixed offset. Neighbours now sway ±5 px, a lone worker keeps the wider walk, and reduced motion keeps everyone still (decision 57). `readme-relay.spec.ts` asserts no overlap.
 

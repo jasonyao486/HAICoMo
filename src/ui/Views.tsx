@@ -376,17 +376,19 @@ export function SettingsView({
     baseline.current = saved; setSettings(saved);
   };
   // Saved at once and on its own, so unrelated unsaved fields are left untouched.
+  // The switch shows the click at once while the save is in flight; the draft only changes once it is saved,
+  // so the saved settings keep flowing into an otherwise clean form.
+  const [pendingSwitch, setPendingSwitch] = useState<Partial<Record<"autoCheckUpdates" | "autoDetectAgents", boolean>>>({});
+  const switchValue = (key: "autoCheckUpdates" | "autoDetectAgents") => pendingSwitch[key] ?? settings[key] ?? false;
   const saveSwitch = async (key: "autoCheckUpdates" | "autoDetectAgents", after: boolean) => {
     const before = baseline.current[key];
-    // The switch follows the click at once; a failed save puts it back.
-    setSettings((s) => ({ ...s, [key]: after }));
+    setPendingSwitch((p) => ({ ...p, [key]: after }));
     try {
       const saved: Settings = await api("settings.patch", { edits: [{ kind: "preference", key, before, after }] });
       baseline.current = { ...baseline.current, [key]: saved[key] };
       setSettings((s) => ({ ...s, [key]: saved[key] }));
-    } catch (error) {
-      setSettings((s) => ({ ...s, [key]: before }));
-      throw error;
+    } finally {
+      setPendingSwitch(({ [key]: _, ...rest }) => rest);
     }
   };
   const saveAutoCheck = (after: boolean) => saveSwitch("autoCheckUpdates", after);
@@ -491,7 +493,7 @@ export function SettingsView({
         <p className="muted">{t("pathHint")}</p>
         <label className="toggle-row">
           <div><strong>{t("autoDetectAgents")}</strong><p>{t("autoDetectAgentsHint")}</p></div>
-          <input type="checkbox" role="switch" aria-label={t("autoDetectAgents")} checked={settings.autoDetectAgents ?? false} onChange={(e) => void saveSwitch("autoDetectAgents", e.target.checked).catch((error) => notify(errorText(error, t), true))} />
+          <input type="checkbox" role="switch" aria-label={t("autoDetectAgents")} checked={switchValue("autoDetectAgents")} onChange={(e) => void saveSwitch("autoDetectAgents", e.target.checked).catch((error) => notify(errorText(error, t), true))} />
         </label>
         <p className="muted detect-summary" aria-live="polite">
           {detecting ? t("detectRunning") : detection ? fillText(t("detectLastRun"), { time: new Date(detection.at).toLocaleTimeString(settings.locale), trigger: t(detection.trigger === "startup" ? "detectTriggerStartup" : detection.trigger === "recheck" ? "detectTriggerRecheck" : "detectTriggerManual"), seconds: (detection.durationMs / 1000).toFixed(1) }) : t("detectNever")}
@@ -622,7 +624,7 @@ export function SettingsView({
           </div>
         </section>
       )}
-      <UpdatePanel t={t} notify={notify} feed={settings.updateFeed} setFeed={(v) => set("updateFeed", v)} save={savePreferences} autoCheck={settings.autoCheckUpdates} setAutoCheck={saveAutoCheck} />
+      <UpdatePanel t={t} notify={notify} feed={settings.updateFeed} setFeed={(v) => set("updateFeed", v)} save={savePreferences} autoCheck={switchValue("autoCheckUpdates")} setAutoCheck={saveAutoCheck} />
       <LegalSection t={t} notify={notify} />
     </div>
   );

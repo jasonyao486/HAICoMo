@@ -24,8 +24,10 @@ test("README synthetic relay: Claude working, ChatGPT seated and waiting", async
     const page = await app.firstWindow(), frame = page.locator(".workspace-frame:not([hidden])"), errors: string[] = [];
     page.on("pageerror", e => errors.push(String(e)));
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1440, 1000));
+    // Open the demo once the home view is up; a cold packaged start on Windows can take several seconds.
+    await expect(frame.locator(".sidebar")).toBeVisible({ timeout: 30000 });
     await app.evaluate(({ app }, entry) => app.emit("open-file", { preventDefault() {} }, entry), entry);
-    await expect(frame.getByRole("heading", { name: "HAICoMo Demo", exact: true })).toBeVisible();
+    await expect(frame.getByRole("heading", { name: "HAICoMo Demo", exact: true })).toBeVisible({ timeout: 30000 });
     const runId = await page.evaluate(async () => {
       const binding = (await window.haicomo.request("bootstrap")).projects[0].binding;
       const w = await window.haicomo.request("project.view", { binding });
@@ -131,8 +133,10 @@ test(`README 0.5.0 relay (${locale}): three stages of mixed agents, stage A at t
   });
   try {
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1440, 1000));
+    // Open the demo once the home view is up; a cold packaged start on Windows can take several seconds.
+    await expect(frame.locator(".sidebar")).toBeVisible({ timeout: 30000 });
     await app.evaluate(({ app }, entry) => app.emit("open-file", { preventDefault() {} }, entry), entry);
-    await expect(frame.getByRole("heading", { name: "HAICoMo Demo", exact: true })).toBeVisible();
+    await expect(frame.getByRole("heading", { name: "HAICoMo Demo", exact: true })).toBeVisible({ timeout: 30000 });
     await clearRelays();
     await frame.locator(".sidebar nav").getByTitle(t.relay, { exact: true }).click();
     await frame.getByRole("button", { name: t.relayTextView, exact: true }).click();
