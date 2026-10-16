@@ -74,3 +74,29 @@ Changes after the user's review:
 
 Still unverified live: Kimi (quota exhausted until the next cycle), the seven documented-only adapters (not installed), and everything on Windows.
 
+## Round 3 (2026-10-16): detection kept for the session, and safeguards
+
+- **Detection results last for the app session.** The latest detection lives in the main process and is shown by every page, tab and window until HAICoMo quits; it is never written to disk. Concurrent requests share one run. The relay editor and handoff dialog re-check when they open, and their result updates Settings too ("re-checked before a start").
+- **Optional detection at launch** (`autoDetectAgents`, off by default). It runs once in the background about 2.5 s after the window appears.
+- **Safeguards:**
+  - A path edited after detection marks that row stale.
+  - Starts re-check that the program still exists, both in the main process and again in the runner before spawning. A missing program is refused with `CONFIGURED_PATH_NOT_FOUND`, `NOT_INSTALLED` or `EXECUTABLE_MISSING` plus the client's name, and Settings updates itself. No phantom failed session is recorded.
+  - A program that is found but will not run is reported as `EXECUTABLE_FAILED`.
+  - Sign-in, credential and quota failures pause a relay as "needs you" with the reason.
+  - Relay steps warn when the latest detection marks their client unavailable.
+  - Start errors are shown translated.
+
+Cost of one full detection on the development Mac (measured with all 15 clients, run in parallel):
+
+| Run | Wall time | Slowest clients |
+|---|---|---|
+| First (cold) | 4.7 s | DeepSeek Harness 4.7 s (boots its runtime), Cursor 0.9 s, Kimi 0.7 s, Claude 0.2 s, Codex 0.2 s |
+| Second (warm) | 0.5 s | Kimi 0.5 s, DeepSeek Harness 0.5 s, Cursor 0.5 s |
+
+Child processes used about 3.8 s of CPU in total (peak memory of the measuring process 360 MB, including its own runtime). Launch detection therefore starts only after the window is shown, and stays opt-in.
+
+| Check | Result |
+|---|---|
+| New unit cases | `humanBlocker` positives and negatives; a relay whose task fails with "Authentication required" pauses as NEEDS_HUMAN while a plain failure stays "stopped"; a vanished program is refused with `EXECUTABLE_MISSING` and no session; a configured path that vanished reports `CONFIGURED_PATH_NOT_FOUND`; a found file that will not run reports `EXECUTABLE_FAILED`; the setting defaults to off |
+| New e2e (`v050.spec.ts`) | Leaving Settings for the task list and coming back keeps all 15 results. Editing the Codex path marks only that row. Deleting a detected program makes `providers.start` fail with `CONFIGURED_PATH_NOT_FOUND: Codex`, and the row turns "not found" by itself with no `turn/start`. A launch with the switch on fills Settings without a click (trigger "startup"); switching it off saves at once and keeps the session's results |
+

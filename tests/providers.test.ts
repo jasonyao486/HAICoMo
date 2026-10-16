@@ -174,15 +174,17 @@ test(
     await f.runners.start({ ...f.options, prompt: "exitEarly" });
     await until(() => !f.runners.active().length);
     assert.equal(f.events.at(-1)?.status, "unknown");
+    // A program that disappeared since detection is refused before a run (and a session) exists.
+    const before = f.events.length;
     await assert.rejects(
       f.runners.start({
         ...f.options,
         executable: path.join(f.directory, "missing"),
       }),
+      /EXECUTABLE_MISSING/,
     );
     assert.equal(f.runners.active().length, 0);
-    assert.equal(f.events.at(-1)?.lifecycle, "history");
-    assert.equal(f.events.at(-1)?.endReason, "failed");
+    assert.equal(f.events.length, before);
   },
 );
 test(

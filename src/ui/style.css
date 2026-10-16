@@ -2407,3 +2407,12 @@ button.relay-node-main { cursor: pointer; }
   .client-list .client-config-title { grid-template-columns: 1fr auto; }
   .client-list .client-detect { grid-column: 1 / -1; grid-row: 2; }
 }
+/* 0.5.0: session detection record and stale-path warnings. */
+.detect-summary { margin: 4px 0 0; font-size: 12px; }
+.client-detect.stale > :not(.client-stale) { opacity: 0.45; text-decoration: line-through; text-decoration-thickness: 1px; }
+.client-stale { color: #b8741f; font-weight: 600; }
+.client-detected.stale { opacity: 0.45; text-decoration: line-through; }
+.relay-step-warning { color: #b8741f; font-size: 11px; line-height: 1.5; }
+@keyframes haicomo-spin { to { transform: rotate(360deg); } }
+.spin { animation: haicomo-spin 0.9s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }

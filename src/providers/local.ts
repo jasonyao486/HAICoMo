@@ -254,7 +254,7 @@ export async function detect(provider: string, configured = ""): Promise<Capabil
       reason: "NOT_INSTALLED",
     };
   if (!adapter) return { ...base, reason: "MANUAL_HANDOFF_ONLY" };
-  if (!executable) return base;
+  if (!executable) return configured ? { ...base, reason: "CONFIGURED_PATH_NOT_FOUND" } : base;
   try {
     const versionLaunch = launchArgs(executable, ["--version"]);
     const { stdout } = await exec(versionLaunch.command, versionLaunch.args, { timeout: 7000, env: versionLaunch.env });
@@ -291,7 +291,8 @@ export async function detect(provider: string, configured = ""): Promise<Capabil
       reason: discoveryError || (headless ? "" : "HEADLESS_FLAGS_NOT_FOUND"),
     };
   } catch (e) {
-    return { ...base, reason: String(e) };
+    // Found but it would not run (permissions, damaged install, a launcher that needs set-up first).
+    return { ...base, installed: true, reason: `EXECUTABLE_FAILED: ${String((e as Error).message ?? e).split(/\r?\n/)[0].slice(0, 300)}` };
   }
 }
 /** Effort values valid for a provider/model pair, or null when unconstrained. */
@@ -441,6 +442,13 @@ export class LocalRunners {
   async start(options: RunOptions) {
     if (!options.prompt.trim()) fail("PROMPT_REQUIRED");
     if (!path.isAbsolute(options.executable)) fail("EXECUTABLE_REQUIRED");
+    // The client may have been uninstalled, moved or replaced since it was detected.
+    try {
+      fs.accessSync(options.executable, process.platform === "win32" ? fs.constants.F_OK : fs.constants.X_OK);
+      if (!fs.statSync(options.executable).isFile()) throw new Error("not a file");
+    } catch {
+      fail("EXECUTABLE_MISSING", options.executable);
+    }
     if (options.mode && FORBIDDEN_MODES.includes(options.mode)) fail("MODE_UNSUPPORTED", options.mode);
     if (
       this.active().some(

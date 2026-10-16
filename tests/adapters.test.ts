@@ -203,3 +203,24 @@ test("jsonl reader tolerates each vendor's vocabulary", () => {
   readJsonlEvent(c, { type: "result", result: "Final answer", session_id: "c-1" });
   assert.equal(jsonlMessage(c), "Final answer");
 });
+
+test("a client that vanished after detection is refused with a clear code before anything starts", async (t) => {
+  const dir = workspace(t);
+  const executable = fixtureAgent(dir, "kimi");
+  const runners = new LocalRunners(() => {}, () => {});
+  t.after(() => runners.dispose());
+  fs.rmSync(executable);
+  await assert.rejects(runners.start({ provider: "kimi-code", executable, directory: dir, taskId: "t", prompt: "x" }), /EXECUTABLE_MISSING/);
+  // A configured path that no longer exists says so; a found file that will not run is reported as such.
+  assert.equal((await detect("kimi-code", executable)).reason, "CONFIGURED_PATH_NOT_FOUND");
+  const broken = path.join(dir, "broken-kimi");
+  fs.writeFileSync(broken, "#!/nonexistent/interpreter\n");
+  fs.chmodSync(broken, 0o755);
+  if (process.platform !== "win32") {
+    const cap = await detect("kimi-code", broken);
+    assert.equal(cap.installed, true);
+    assert.equal(cap.background, false);
+    assert.match(cap.reason, /^EXECUTABLE_FAILED: /);
+  }
+});
+

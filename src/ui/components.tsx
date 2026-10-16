@@ -1061,7 +1061,7 @@ export function HandoffDialog({
     }
   };
   useEffect(() => {
-    void api("providers.detect")
+    void api("providers.detect", { trigger: "recheck" })
       .then(setCaps)
       .catch((e) => setError(errorText(e, t)));
   }, []);
@@ -1315,7 +1315,7 @@ export function HandoffDialog({
         <p className="muted full">
           {cap?.background ? t("sendHint") : t("manualCapability")}{" "}
           {cap ? `${cap.version || t(cap.installed ? "available" : "unavailable")}` : ""}
-          {cap?.reason && <span>{cap.reason}</span>}
+          {cap?.reason && <span>{errorText(new Error(cap.reason), t)}</span>}
         </p>
         {error && <div className="error-box full">{error}</div>}
         {info && <div className="notice full">{info}</div>}

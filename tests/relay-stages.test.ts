@@ -18,7 +18,7 @@ import {
   type RelayValues,
 } from "../src/shared/relay";
 import { assertTaskRunnable, type RunEvent } from "../src/shared/domain";
-import { autoDecide, isDestructiveCommand, needsHuman, selfReportedDecisions } from "../src/shared/autonomy";
+import { autoDecide, humanBlocker, isDestructiveCommand, needsHuman, selfReportedDecisions } from "../src/shared/autonomy";
 
 function setup(t: any) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-stages 接力 "));
@@ -376,3 +376,26 @@ test("v5 → v6 migration wraps every relay into one stage, maps statuses honest
   assert.deepEqual(fs.readFileSync(backup), bytes);
   assert.equal(upgradeRelayV5(oldRelay("x", "paused") as any, []).status, "paused");
 });
+
+test("a failed sign-in or exhausted quota pauses the relay for the human instead of a plain stop", async (t) => {
+  const h = harness(t);
+  const a1 = h.task("Needs login"), a2 = h.task("Plain failure"), b1 = h.task("Later");
+  const created = h.command("relay.create", { values: relayValues([[a1, a2], [b1]]), enabled: true }).state.relays[0];
+  h.advance(1500);
+  await h.scheduler.tick();
+  h.end(a1, "failed", "Error: Authentication required. Please run 'agent login' first, or set CURSOR_API_KEY.");
+  h.end(a2, "failed", "TypeError: cannot read properties of undefined");
+  await h.scheduler.tick();
+  const r = h.relay(created.id);
+  const p = relayProgress(r, h.store.state());
+  assert.equal(p.steps[0][0].state, "needs-human");
+  assert.match(p.steps[0][0].humanReason!, /Authentication required/);
+  assert.equal(p.steps[0][1].state, "stopped");
+  assert.equal(r.status, "blocked");
+  assert.equal(r.statusReason, "NEEDS_HUMAN");
+  assert.equal(h.starts.length, 2);
+  for (const message of ["provider.auth_error: 403 You've reached your monthly usage limit for this billing cycle", "dsh: MISSING_CREDENTIAL: no API key for provider route", "Error: not logged in", "HTTP 401 Unauthorized", "Your session has expired, please sign in again"])
+    assert.ok(humanBlocker(message), message);
+  for (const message of ["All 41 tests passed", "Fixed the 401 page layout", "Refactored the quota calculator", undefined]) assert.equal(humanBlocker(message), null, String(message));
+});
+

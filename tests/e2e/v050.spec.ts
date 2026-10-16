@@ -160,7 +160,9 @@ test("0.5.0 relay: three stages × three tasks, unattended answers recorded, des
     await frame.getByRole("button", { name: "设置", exact: true }).click();
     const agents = frame.locator(".client-list");
     await expect(agents.locator(".client-config")).toHaveCount(15);
-    await expect(agents.locator(".client-detect .muted").first()).toHaveText(zh.detectPending);
+    // The relay editor already re-checked the agents in this session, so Settings shows those results at once.
+    await expect(agents.locator(".client-detect .client-status")).toHaveCount(15);
+    await expect(frame.locator(".detect-summary")).toContainText(zh.detectTriggerRecheck);
     await agents.scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(screens, "settings-agents-before.png") });
     await frame.getByRole("button", { name: zh.detect }).click();
@@ -180,6 +182,38 @@ test("0.5.0 relay: three stages × three tasks, unattended answers recorded, des
     await page.screenshot({ path: path.join(screens, "settings-agents-after.png") });
     await frame.locator(".settings-actions").scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(screens, "settings-agents-actions.png") });
+    // The detection belongs to the app session: leaving Settings and coming back keeps it.
+    await frame.locator(".sidebar nav").getByRole("button", { name: zh.taskList, exact: true }).click();
+    await frame.getByRole("button", { name: "设置", exact: true }).click();
+    await expect(agents.locator(".client-detect .client-status")).toHaveCount(15);
+    await expect(frame.locator(".detect-summary")).toContainText(zh.detectTriggerManual);
+    // Editing a path after detection marks only that row as outdated.
+    const codexPath = agents.locator('.client-config[data-client="codex"] input');
+    const original = await codexPath.inputValue();
+    await codexPath.fill("/tmp/somewhere-else/codex");
+    await expect(agents.locator('.client-config[data-client="codex"] .client-stale')).toHaveText(zh.detectPathChanged);
+    await expect(agents.locator(".client-stale")).toHaveCount(1);
+    await page.screenshot({ path: path.join(screens, "settings-agents-stale.png") });
+    await codexPath.fill(original);
+    await expect(agents.locator(".client-stale")).toHaveCount(0);
+    // A client removed after detection: the start is refused with a clear reason and Settings updates itself.
+    const vanishing = path.join(root, "vanishing-codex.cjs");
+    fs.copyFileSync(fake, vanishing);
+    fs.chmodSync(vanishing, 0o755);
+    await page.evaluate(async (file) => {
+      const b = await window.haicomo.request("bootstrap");
+      await window.haicomo.request("settings.patch", { edits: [{ kind: "path", key: "codex", before: b.settings.clientPaths.codex ?? "", after: file }] });
+      await window.haicomo.request("providers.detect");
+    }, vanishing);
+    await expect(agents.locator('.client-config[data-client="codex"] .client-status.found')).toBeVisible();
+    fs.rmSync(vanishing);
+    const refusal = await page.evaluate(async (taskId) => {
+      const binding = (await window.haicomo.request("bootstrap")).projects[0].binding;
+      try { await window.haicomo.request("providers.start", { binding, provider: "codex", taskId, prompt: "never sent" }); return "started"; } catch (e) { return String((e as Error).message); }
+    }, api);
+    expect(refusal).toMatch(/CONFIGURED_PATH_NOT_FOUND: Codex/);
+    await expect(agents.locator('.client-config[data-client="codex"] .client-status.missing')).toBeVisible();
+    expect(turnStarts(root)).toBe(6);
     // Leave no held fixture runs behind: quitting with active agents asks for confirmation.
     await page.evaluate(async () => {
       const binding = (await window.haicomo.request("bootstrap")).projects[0].binding;
@@ -192,3 +226,39 @@ test("0.5.0 relay: three stages × three tasks, unattended answers recorded, des
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("0.5.0 optional detection at launch fills Settings without a click and stays for the session", async () => {
+  test.setTimeout(120000);
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-v050-detect-")));
+  const dir = path.join(root, "Detect at launch");
+  fs.mkdirSync(dir);
+  new ProjectStore(dir, "Detect at launch").close();
+  const fake = fixtureAgent(root);
+  fs.mkdirSync(path.join(root, "profile"), { recursive: true });
+  fs.writeFileSync(path.join(root, "profile/settings.json"), JSON.stringify({ ...defaultSettings, locale: "zh-CN", codexPath: fake, clientPaths: { codex: fake }, autoDetectAgents: true }));
+  const app = await electron.launch({
+    ...(process.env.HAICOMO_PACKAGED_EXECUTABLE ? { executablePath: process.env.HAICOMO_PACKAGED_EXECUTABLE, args: [] } : { args: ["."] }),
+    env: { ...process.env, HAICOMO_TEST: "1", HAICOMO_USER_DATA: path.join(root, "profile"), HAICOMO_TEST_DIRECTORY: dir, HAICOMO_TEST_AUTO_DETECT_MS: "300" },
+  });
+  const page = await app.firstWindow(), frame = current(page);
+  try {
+    await app.evaluate(({ app }, file) => app.emit("open-file", { preventDefault() {} }, file), path.join(dir, "HAICoMo.haicomo"));
+    await expect(frame.getByRole("heading", { name: "Detect at launch", exact: true })).toBeVisible();
+    await expect.poll(() => page.evaluate(async () => (await window.haicomo.request("providers.detection")).detection?.trigger ?? null), { timeout: 30000 }).toBe("startup");
+    await frame.getByRole("button", { name: "设置", exact: true }).click();
+    const agents = frame.locator(".client-list");
+    await expect(agents.locator(".client-detect .client-status")).toHaveCount(15);
+    await expect(frame.locator(".detect-summary")).toContainText(zh.detectTriggerStartup);
+    await expect(frame.getByRole("switch", { name: zh.autoDetectAgents })).toBeChecked();
+    await frame.getByRole("switch", { name: zh.autoDetectAgents }).scrollIntoViewIfNeeded();
+    await page.screenshot({ path: path.join(screens, "settings-auto-detect.png") });
+    // Turning the switch off is saved at once and does not clear this session's results.
+    await frame.getByRole("switch", { name: zh.autoDetectAgents }).uncheck();
+    await expect.poll(() => page.evaluate(async () => (await window.haicomo.request("bootstrap")).settings.autoDetectAgents)).toBe(false);
+    await expect(agents.locator(".client-detect .client-status")).toHaveCount(15);
+  } finally {
+    await app.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+

@@ -117,3 +117,24 @@ export function needsHuman(message: string | undefined): string | null {
   if (at < 0) return null;
   return message.slice(at + NEEDS_HUMAN.length).split(/\r?\n/)[0].trim().slice(0, 500) || "?";
 }
+/**
+ * Failures only the human can fix: an expired sign-in, a missing credential or an
+ * exhausted quota. Matched on the failed run's output; returns the matching line.
+ */
+const HUMAN_BLOCKERS = [
+  /authentication required/i,
+  /not (?:logged|signed) in/i,
+  /please (?:run )?[`'"]?[\w-]+ login/i,
+  /\b(?:log|sign) ?in (?:required|again|first)/i,
+  /\bunauthori[sz]ed\b/i,
+  /\b401\b[^\n]*(?:unauthori[sz]ed|auth)/i,
+  /MISSING_CREDENTIAL|missing credential|no api key/i,
+  /(?:monthly )?usage limit|quota (?:exceeded|exhausted|reached)|insufficient (?:balance|quota|credit)/i,
+  /(?:token|session|credential)s? (?:has )?(?:expired|invalid|revoked)/i,
+];
+export function humanBlocker(message: string | undefined): string | null {
+  if (!message) return null;
+  for (const line of message.split(/\r?\n/)) if (HUMAN_BLOCKERS.some((p) => p.test(line))) return line.trim().slice(0, 300);
+  return null;
+}
+

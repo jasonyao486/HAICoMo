@@ -298,6 +298,7 @@ export type Settings = {
   clientPaths: Record<string, string>;
   updateFeed: string;
   autoCheckUpdates: boolean;
+  autoDetectAgents: boolean;
 };
 export type Recent = {
   id: string;
@@ -337,6 +338,20 @@ export type Capabilities = {
   /** Headless flags were found, so relays may use it (possibly only autonomously). */
   relayReady?: boolean;
   reason: string;
+};
+
+/**
+ * The latest agent detection of this app session (kept in the main process,
+ * never persisted): every tab and window shows it until the app quits.
+ * `paths` are the configured client paths it was run with, so a later path
+ * edit can be recognised as making that client's row stale.
+ */
+export type AgentDetection = {
+  at: string;
+  durationMs: number;
+  trigger: "manual" | "startup" | "recheck";
+  paths: Partial<Record<string, string>>;
+  caps: Capabilities[];
 };
 
 export function fail(code: string, detail = ""): never {

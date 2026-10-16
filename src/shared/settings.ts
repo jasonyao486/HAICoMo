@@ -19,9 +19,11 @@ export const settingsSchema = z.object({
   clientPaths: z.partialRecord(z.enum(HARNESS_IDS), z.string()).default({}),
   updateFeed: z.string().default(""),
   autoCheckUpdates: z.boolean().default(true),
+  /** Detect local agents in the background shortly after launch (opt-in). */
+  autoDetectAgents: z.boolean().default(false),
 }).strict();
-export const defaultSettings: Settings = { userName: "", avatarInitials: "", locale: "zh-CN", theme: "light", enhanced: false, reducedMotion: false, accent: "#347965", codexPath: "", claudePath: "", clientPaths: {}, updateFeed: "", autoCheckUpdates: true };
-const preferenceKeys = ["userName", "avatarInitials", "locale", "theme", "enhanced", "reducedMotion", "accent", "updateFeed", "autoCheckUpdates"] as const;
+export const defaultSettings: Settings = { userName: "", avatarInitials: "", locale: "zh-CN", theme: "light", enhanced: false, reducedMotion: false, accent: "#347965", codexPath: "", claudePath: "", clientPaths: {}, updateFeed: "", autoCheckUpdates: true, autoDetectAgents: false };
+const preferenceKeys = ["userName", "avatarInitials", "locale", "theme", "enhanced", "reducedMotion", "accent", "updateFeed", "autoCheckUpdates", "autoDetectAgents"] as const;
 const editSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("preference"), key: z.enum(preferenceKeys), before: z.union([z.string(), z.boolean()]), after: z.union([z.string(), z.boolean()]) }).strict(),
   z.object({ kind: z.literal("path"), key: z.enum(HARNESS_IDS), before: z.string(), after: z.string() }).strict(),

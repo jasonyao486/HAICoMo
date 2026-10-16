@@ -90,7 +90,7 @@ export function RelayEditor({ relay, workspace, settings, t, onClose, onSaved }:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
-    void api("providers.detect").then(setCaps).catch((e) => setError(errorText(e, t)));
+    void api("providers.detect", { trigger: "recheck" }).then(setCaps).catch((e) => setError(errorText(e, t)));
   }, []);
   const [si, ti] = selected[0] < stages.length && selected[1] < stages[selected[0]].steps.length ? selected : [0, 0];
   const step = stages[si].steps[ti];
@@ -328,7 +328,7 @@ export function RelayEditor({ relay, workspace, settings, t, onClose, onSaved }:
               <summary>{t("relayPreview")}</summary>
               <pre>{preview}</pre>
             </details>
-            <p className="muted full">{t("sendHint")} {cap ? cap.version || t("unavailable") : ""}{cap?.reason && <span> {cap.reason}</span>}</p>
+            <p className="muted full">{t("sendHint")} {cap ? cap.version || t("unavailable") : ""}{cap?.reason && <span> {errorText(new Error(cap.reason), t)}</span>}</p>
           </div>
         </fieldset>
         {warnings.length > 0 && (
@@ -367,7 +367,7 @@ export function RelayEditor({ relay, workspace, settings, t, onClose, onSaved }:
         {error && <div className="error-box full" role="alert">{error}</div>}
       </div>
       <div className="modal-footer">
-        <button type="button" className="button" disabled={busy} onClick={() => void api("providers.detect").then(setCaps)}><RotateCw size={14} /> {t("detect")}</button>
+        <button type="button" className="button" disabled={busy} onClick={() => void api("providers.detect").then(setCaps).catch((e) => setError(errorText(e, t)))}><RotateCw size={14} /> {t("detect")}</button>
         <button type="button" className="button" disabled={busy || !allSteps.every((s) => s.taskId) || (autonomy && !consent)} onClick={() => void save(false)}>{t("relaySaveDisabled")}</button>
         <button type="button" className="button primary" disabled={busy || !ready} onClick={() => void save(true)}><Check size={15} /> {t("relaySaveEnable")}</button>
       </div>

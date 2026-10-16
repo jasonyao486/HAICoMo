@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Pause, Play, Pencil, Trash2, Zap, Ban, LayoutList, Clapperboard, RotateCcw, FileText, Check, Bot } from "lucide-react";
-import { sessionAvatar, sessionStatus, type Settings, type Workspace } from "../shared/domain";
+import { sessionAvatar, sessionStatus, type AgentDetection, type Capabilities, type Settings, type Workspace } from "../shared/domain";
 import {
   actorLabel,
   relayDecision,
@@ -45,13 +45,37 @@ function reasonText(relay: Relay, t: Translate) {
   if (r === "PREDECESSOR_NOT_FOUND") return t("relayReasonPredecessorNotFound");
   if (r.startsWith("PREDECESSOR_")) return `${t("relayReasonPredecessorNotCompleted")} (${r.slice(12).toLowerCase()})`;
   if (r === "APP_NOT_RUNNING") return t("relayReasonAppNotRunning");
-  if (r === "START_FAILED" || r === "STEP_START_FAILED") return `${t("relayReasonStartFailed")}${relay.lastError ? `: ${relay.lastError.slice(0, 300)}` : ""}`;
+  if (r === "START_FAILED" || r === "STEP_START_FAILED") return `${t("relayReasonStartFailed")}${relay.lastError ? `: ${startErrorText(relay.lastError, t)}` : ""}`;
   if (r === "INTERRUPTED") return t("relayReasonInterrupted");
   if (r === "NEEDS_HUMAN") return t("relayReasonNeedsHuman");
   if (r.startsWith("STEP_")) return `${t("relayReasonStepStopped")} (${r.slice(5).toLowerCase()})`;
   if (r === "manual") return t("relayReasonManual");
   if (r === "retry") return t("relayReasonRetry");
   return r;
+}
+/** Start errors are stored verbatim ("Error: CODE: client — detail"); show them translated, one per failed task. */
+export const startErrorText = (stored: string, t: Translate) =>
+  stored
+    .split(/\n(?=(?:Error:\s*)?[A-Z][A-Z_]+[:\n]|Error:)/)
+    .map((line) => errorText(new Error(line.trim()), t))
+    .join(" · ")
+    .slice(0, 600);
+/** Whether the latest detection says this client can start the step now (unknown when never detected). */
+export function clientUsable(detection: AgentDetection | null, provider: string, autonomous: boolean): { usable: boolean | null; cap?: Capabilities } {
+  const cap = detection?.caps.find((c) => c.provider === provider);
+  if (!cap) return { usable: null };
+  return { usable: Boolean(cap.background || (autonomous && cap.relayReady)), cap };
+}
+export function useAgentDetection() {
+  const { api } = useApi();
+  const [detection, setDetection] = useState<AgentDetection | null>(null);
+  useEffect(() => {
+    let live = true;
+    void api("providers.detection").then((r: { detection: AgentDetection | null }) => { if (live) setDetection(r.detection); }).catch(() => {});
+    const off = window.haicomo.subscribe((e: any) => { if (e.event === "detection") setDetection(e.detection ?? null); });
+    return () => { live = false; off(); };
+  }, []);
+  return detection;
 }
 const when = (iso: string | null, locale: string) => (iso ? new Date(iso).toLocaleString(locale) : "");
 function triggerText(relay: Relay, state: Workspace["state"], t: Translate, locale: string) {
@@ -85,7 +109,7 @@ export function FlowNode({ label, actor, title, sub, state, t, selected, onClick
           </span>
         )}
         {state?.humanReason && <small className="relay-reason">{state.humanReason}</small>}
-        {state?.state === "start-failed" && state.step.error && <small className="relay-reason">{state.step.error.slice(0, 300)}</small>}
+        {state?.state === "start-failed" && state.step.error && <small className="relay-reason">{startErrorText(state.step.error, t)}</small>}
       </span>
     </>
   );
@@ -96,7 +120,7 @@ export function FlowNode({ label, actor, title, sub, state, t, selected, onClick
     </div>
   );
 }
-function RelayFlowView({ relay, progress, state, t, locale, onOverride }: { relay: Relay; progress: RelayProgress; state: Workspace["state"]; t: Translate; locale: string; onOverride: (stepId: string) => void }) {
+function RelayFlowView({ relay, progress, state, t, locale, onOverride, detection }: { relay: Relay; progress: RelayProgress; state: Workspace["state"]; t: Translate; locale: string; onOverride: (stepId: string) => void; detection: AgentDetection | null }) {
   const { trigger, due } = triggerText(relay, state, t, locale);
   const predecessor = progress.predecessor;
   return (
@@ -131,6 +155,12 @@ function RelayFlowView({ relay, progress, state, t, locale, onOverride }: { rela
                   state={p}
                   t={t}
                 >
+                  {["pending", "waiting", "start-failed", "stopped", "needs-human"].includes(p.state) && !["completed", "cancelled"].includes(relay.status) && (() => {
+                    const { usable, cap } = clientUsable(detection, p.step.provider, relay.autonomy.enabled);
+                    if (usable !== false || !cap) return null;
+                    const why = !cap.installed ? t("unavailable") : cap.reason && !["MANUAL_HANDOFF_ONLY"].includes(cap.reason) ? errorText(new Error(cap.reason), t) : cap.autonomyOnly ? t("relayAutonomyOnly") : t("evidenceManual");
+                    return <small className="relay-step-warning" role="note">⚠ {t("relayClientUnavailable")} {clientName(p.step.provider)} · {why}</small>;
+                  })()}
                   {progress.retryable.some((x) => x.step.id === p.step.id) && !["firing", "running"].includes(relay.status) && (
                     <button type="button" className="button small" onClick={() => onOverride(p.step.id)}>
                       <Check size={13} /> {t("relayOverride")}
@@ -225,6 +255,7 @@ export function RelayPage({ workspace, settings, t, onEdit, onAgent, onChanged }
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
   const seconds = useAnimationClock(visual && workspace.state.relays.length > 0 && tab.active && !hidden && !settings.reducedMotion, 8);
+  const detection = useAgentDetection();
   const state = workspace.state;
   const relays = state.relays.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const act = async (type: string, relay: Relay, confirmKey?: Key, extra: Record<string, unknown> = {}) => {
@@ -336,7 +367,7 @@ export function RelayPage({ workspace, settings, t, onEdit, onAgent, onChanged }
                   {header(relay, progress)}
                   {actions(relay, progress)}
                 </div>
-                <RelayFlowView relay={relay} progress={progress} state={state} t={t} locale={settings.locale} onOverride={(stepId) => void act("relay.overrideStep", relay, "relayConfirmOverride", { stepId })} />
+                <RelayFlowView relay={relay} progress={progress} state={state} t={t} locale={settings.locale} detection={detection} onOverride={(stepId) => void act("relay.overrideStep", relay, "relayConfirmOverride", { stepId })} />
               </article>
             );
           })}

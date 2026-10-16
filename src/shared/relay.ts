@@ -12,7 +12,7 @@ import {
   type Task,
 } from "./domain";
 import { HARNESS_IDS, clientName, isBackgroundHarness, isClientActor } from "./clients";
-import { needsHuman, selfReportedDecisions } from "./autonomy";
+import { humanBlocker, needsHuman, selfReportedDecisions } from "./autonomy";
 
 /**
  * A relay is a human-configured chain of up to three stages (A → B → C). Each
@@ -283,6 +283,9 @@ export function relayProgress(
           return human ? { ...base, state: "needs-human", humanReason: human, endReason: end, place } : { ...base, state: "completed", endReason: end, place };
         }
         if (end === "permission") return { ...base, state: "needs-human", endReason: end, humanReason: session?.lastMessage?.slice(-500), place };
+        // A failed sign-in or exhausted quota needs the human, not a blind retry.
+        const blocker = end === "failed" || end === "lost" ? humanBlocker(session?.lastMessage || session?.message) : null;
+        if (blocker && end) return { ...base, state: "needs-human", endReason: end, humanReason: blocker, place };
         if (end) return { ...base, state: "stopped", endReason: end, place };
         if (!session) {
           const since = Date.parse(step.firedAt ?? relay.updatedAt);

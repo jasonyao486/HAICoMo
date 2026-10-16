@@ -30,6 +30,7 @@ import {
   type Task,
   type Settings,
   type Capabilities,
+  type AgentDetection,
   type Note,
   type ProposalRecord,
 } from "../shared/domain";
@@ -337,6 +338,7 @@ export function Analytics({ workspace, t, settings }: Base) {
   );
 }
 
+const fillText = (text: string, values: Record<string, string>) => text.replace(/\{(\w+)\}/g, (_, k) => values[k] ?? "");
 export function SettingsView({
   value,
   onSave,
@@ -354,7 +356,8 @@ export function SettingsView({
   const baseline = useRef(value);
   const [conflict, setConflict] = useState(false);
   const [settings, setSettings] = useState(value),
-    [caps, setCaps] = useState<Capabilities[]>([]),
+    [detection, setDetection] = useState<AgentDetection | null>(null),
+    [detecting, setDetecting] = useState(false),
     [projectTitle, setProjectTitle] = useState(workspace?.state.title ?? ""),
     [metadataRevision, setMetadataRevision] = useState(
       workspace?.state.metadataRevision ?? 0,
@@ -373,12 +376,29 @@ export function SettingsView({
     baseline.current = saved; setSettings(saved);
   };
   // Saved at once and on its own, so unrelated unsaved fields are left untouched.
-  const saveAutoCheck = async (after: boolean) => {
-    const before = baseline.current.autoCheckUpdates;
-    const saved: Settings = await api("settings.patch", { edits: [{ kind: "preference", key: "autoCheckUpdates", before, after }] });
-    baseline.current = { ...baseline.current, autoCheckUpdates: saved.autoCheckUpdates };
-    setSettings((s) => ({ ...s, autoCheckUpdates: saved.autoCheckUpdates }));
+  const saveSwitch = async (key: "autoCheckUpdates" | "autoDetectAgents", after: boolean) => {
+    const before = baseline.current[key];
+    const saved: Settings = await api("settings.patch", { edits: [{ kind: "preference", key, before, after }] });
+    baseline.current = { ...baseline.current, [key]: saved[key] };
+    setSettings((s) => ({ ...s, [key]: saved[key] }));
   };
+  const saveAutoCheck = (after: boolean) => saveSwitch("autoCheckUpdates", after);
+  // Detection results belong to the app session (main process): switching pages, tabs or windows keeps them.
+  useEffect(() => {
+    let live = true;
+    void api("providers.detection").then((r: { detection: AgentDetection | null; running: boolean }) => {
+      if (!live) return;
+      setDetection(r.detection);
+      setDetecting(r.running);
+    }).catch(() => {});
+    const off = window.haicomo.subscribe((e: any) => {
+      if (e.event !== "detection") return;
+      setDetection(e.detection ?? null);
+      setDetecting(Boolean(e.running));
+    });
+    return () => { live = false; off(); };
+  }, []);
+  const caps = detection?.caps ?? [];
   const saveProject = async () => {
     if (
       workspace &&
@@ -462,6 +482,13 @@ export function SettingsView({
       <section className="panel settings-panel">
         <h2>{t("connections")}</h2>
         <p className="muted">{t("pathHint")}</p>
+        <label className="toggle-row">
+          <div><strong>{t("autoDetectAgents")}</strong><p>{t("autoDetectAgentsHint")}</p></div>
+          <input type="checkbox" role="switch" aria-label={t("autoDetectAgents")} checked={settings.autoDetectAgents ?? false} onChange={(e) => void saveSwitch("autoDetectAgents", e.target.checked).catch((error) => notify(errorText(error, t), true))} />
+        </label>
+        <p className="muted detect-summary" aria-live="polite">
+          {detecting ? t("detectRunning") : detection ? fillText(t("detectLastRun"), { time: new Date(detection.at).toLocaleTimeString(settings.locale), trigger: t(detection.trigger === "startup" ? "detectTriggerStartup" : detection.trigger === "recheck" ? "detectTriggerRecheck" : "detectTriggerManual"), seconds: (detection.durationMs / 1000).toFixed(1) }) : t("detectNever")}
+        </p>
         <div className="client-list">
           {CLIENTS.map((c) => {
             const cap = caps.find((x) => x.provider === c.id);
@@ -474,11 +501,14 @@ export function SettingsView({
                   : "";
             const reason = cap?.reason && cap.installed && !cap.background && !cap.relayReady && !["MANUAL_HANDOFF_ONLY", "NOT_INSTALLED"].includes(cap.reason) ? errorText(new Error(cap.reason), t) : "";
             const detected = cap?.executable || cap?.appPath || "";
+            // A path typed or saved after the detection makes this row's result outdated.
+            const stale = Boolean(detection && cap && (settings.clientPaths[c.id] ?? "") !== (detection.paths[c.id] ?? ""));
             return (
               <div className="client-config" key={c.id} data-client={c.id}>
                 <div className="client-config-title">
                   <span className="client-name"><img src={`.${clientIcon(c.id)}`} alt="" />{c.name}</span>
-                  <span className="client-detect" aria-live="polite">
+                  <span className={`client-detect ${stale ? "stale" : ""}`} aria-live="polite">
+                    {stale && <span className="client-stale">{t("detectPathChanged")}</span>}
                     {cap ? (
                       <>
                         <span className={`client-status ${cap.installed ? "found" : "missing"}`}>{t(cap.installed ? "available" : "unavailable")}</span>
@@ -494,7 +524,7 @@ export function SettingsView({
                   <button className="link" onClick={() => set("clientPaths", { ...settings.clientPaths, [c.id]: "" })}>{t("clearPath")}</button>
                 </div>
                 <div className="client-path-row"><input aria-label={`${c.name} · ${t("clientPath")}`} value={settings.clientPaths[c.id] ?? ""} placeholder={t("autoDetect")} onChange={(e) => set("clientPaths", { ...settings.clientPaths, [c.id]: e.target.value })} /><button className="link" onClick={() => void api("providers.pickPath").then((file) => { if (file) set("clientPaths", { ...settings.clientPaths, [c.id]: file }); }).catch((e) => notify(errorText(e, t), true))}>{t("choosePath")}</button></div>
-                {detected && <small className="client-detected full-path">{t("detectedPath")}: {detected}</small>}
+                {detected && <small className={`client-detected full-path ${stale ? "stale" : ""}`}>{t("detectedPath")}: {detected}</small>}
               </div>
             );
           })}
@@ -502,15 +532,24 @@ export function SettingsView({
         <div className="settings-actions">
           <button
             className="button"
+            disabled={detecting}
+            aria-busy={detecting}
             onClick={() =>
               action(async () => {
                 await savePreferences();
-                setCaps(await api("providers.detect"));
+                setDetecting(true);
+                try {
+                  await api("providers.detect");
+                  const r = await api("providers.detection");
+                  setDetection(r.detection);
+                } finally {
+                  setDetecting(false);
+                }
               })
             }
           >
-            <RotateCw size={15} />
-            {t("detect")}
+            <RotateCw size={15} className={detecting ? "spin" : undefined} />
+            {detecting ? t("detectRunning") : t("detect")}
           </button>
           <button className="button primary" onClick={() => action(savePreferences)}>
             {t("save")}

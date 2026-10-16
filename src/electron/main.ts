@@ -33,11 +33,11 @@ import {
   type ProjectEntry,
 } from "../core/files";
 import { LocalRunners, findExecutable, supportedEfforts } from "../providers/local";
-import type { Settings, Recent, Workspace, Capabilities } from "../shared/domain";
+import type { Settings, Recent, Workspace, Capabilities, AgentDetection } from "../shared/domain";
 import { assertTaskRunnable, inferFamily } from "../shared/domain";
 import { z } from "zod";
 import { detectClients, detectClient } from "../providers/registry";
-import { HARNESS_IDS, BACKGROUND_HARNESS_IDS, isBackgroundHarness, type BackgroundHarnessId } from "../shared/clients";
+import { HARNESS_IDS, BACKGROUND_HARNESS_IDS, CLIENTS, clientName, isBackgroundHarness, type BackgroundHarnessId } from "../shared/clients";
 import { InstallGate, resumeTabSchema, type ResumeWindow } from "../core/install";
 import { UpdateController, updateCacheLeftovers, type UpdateSource } from "../core/updates";
 import { createReleaseResolver, isOfficialTagFeed, OFFICIAL_RELEASES, releaseTarget, type HttpGet, type ReleaseOrigins } from "../core/release-feed";
@@ -609,17 +609,74 @@ async function capability(provider: BackgroundHarnessId, fresh = false): Promise
   if (!fresh && hit && hit.key === key && Date.now() - hit.at < 600000) return hit.value;
   const value = await detectClient(provider, configured);
   capabilityCache.set(provider, { key, at: Date.now(), value });
+  rememberCapability(value);
   return value;
 }
+/**
+ * The session's latest detection, shared by every tab and window and cleared
+ * only when the app quits. Concurrent requests (a click, an editor opening, the
+ * optional launch check) share one run instead of spawning every CLI twice.
+ */
+let lastDetection: AgentDetection | null = null;
+let detecting: Promise<AgentDetection> | null = null;
+const detectionPaths = () => Object.fromEntries(CLIENTS.map((c) => [c.id, configuredPath(c.id) || ""])) as AgentDetection["paths"];
+function publishDetection() {
+  broadcast({ event: "detection", detection: lastDetection, running: Boolean(detecting) });
+}
+function runDetection(trigger: AgentDetection["trigger"]): Promise<AgentDetection> {
+  if (detecting) return detecting;
+  const started = Date.now();
+  const prefs = settings();
+  const paths = detectionPaths();
+  detecting = (async () => {
+    const caps = await detectClients(prefs);
+    for (const cap of caps)
+      if (isBackgroundHarness(cap.provider))
+        capabilityCache.set(cap.provider, { key: capabilityKey(cap.provider, findExecutable(cap.provider, configuredPath(cap.provider))), at: Date.now(), value: cap });
+    lastDetection = { at: new Date().toISOString(), durationMs: Date.now() - started, trigger, paths, caps };
+    return lastDetection;
+  })().finally(() => {
+    detecting = null;
+    publishDetection();
+  });
+  publishDetection();
+  return detecting;
+}
+/** A start-time re-check updates the shared record so Settings never shows an outdated "available". */
+function rememberCapability(cap: Capabilities) {
+  if (!lastDetection) return;
+  const caps = lastDetection.caps.map((c) => (c.provider === cap.provider ? cap : c));
+  lastDetection = { ...lastDetection, caps, paths: { ...lastDetection.paths, [cap.provider]: configuredPath(cap.provider) || "" } };
+  publishDetection();
+}
+const executableUsable = (file: string) => {
+  try {
+    fs.accessSync(file, process.platform === "win32" ? fs.constants.F_OK : fs.constants.X_OK);
+    return fs.statSync(file).isFile();
+  } catch {
+    return false;
+  }
+};
 /**
  * Shared checks for a human handoff and a relay start; throws domain codes.
  * `autonomous` is true only for a relay whose owner consented to unattended
  * runs: then the client's own unattended mode is the only mode accepted.
  */
 async function prepareStart(provider: string, model: string | undefined, effort: string | undefined, mode: string | undefined, autonomous = false) {
-  if (!isBackgroundHarness(provider)) throw new Error("BACKGROUND_UNSUPPORTED");
-  const cap = await capability(provider);
-  if (autonomous ? !cap.relayReady : !cap.background) throw new Error(cap.reason || (cap.autonomyOnly ? "AUTONOMY_CONSENT_REQUIRED" : "BACKGROUND_UNSUPPORTED"));
+  if (!isBackgroundHarness(provider)) throw new Error(`MANUAL_HANDOFF_ONLY: ${clientName(provider)}`);
+  let cap = await capability(provider);
+  // The cached result can predate an uninstall, move or update: re-check before relying on it.
+  if (cap.executable && !executableUsable(cap.executable)) {
+    capabilityCache.delete(provider);
+    cap = await capability(provider, true);
+  }
+  if (autonomous ? !cap.relayReady : !cap.background) {
+    // Always "CODE: client — detail" so the renderer can translate it and name the client.
+    const raw = (cap.reason || (cap.autonomyOnly ? "AUTONOMY_CONSENT_REQUIRED" : "BACKGROUND_UNSUPPORTED")).replace(/^(Error:\s*)+/, "");
+    const match = /^([A-Z][A-Z_]+)(?::\s*([\s\S]*))?$/.exec(raw);
+    const detail = (match ? match[2] : raw)?.slice(0, 300);
+    throw new Error(`${match ? match[1] : "BACKGROUND_UNSUPPORTED"}: ${clientName(provider)}${detail ? ` — ${detail}` : ""}`);
+  }
   if (autonomous) {
     if (mode && mode !== cap.autonomousMode && !cap.modes.includes(mode)) throw new Error(`MODE_UNSUPPORTED: ${mode}`);
   } else if (mode && !cap.modes.includes(mode)) throw new Error(`MODE_UNSUPPORTED: ${mode}`);
@@ -949,6 +1006,12 @@ else {
         broadcast({ event: "warning", error: String(error) });
       }
     };
+    // Optional agent detection after launch: in the background once the window is up, never before it.
+    const firstDetection = testing ? Number(process.env.HAICOMO_TEST_AUTO_DETECT_MS || 0) : 2500;
+    if (firstDetection > 0 && settings().autoDetectAgents)
+      setTimeout(() => {
+        if (!stopping && settings().autoDetectAgents) void runDetection("startup").catch((error) => broadcast({ event: "warning", error: `agent detection: ${String(error)}` }));
+      }, firstDetection).unref();
     const firstAutomaticCheck = testing ? Number(process.env.HAICOMO_TEST_AUTO_CHECK_MS || 0) : 10000;
     if (firstAutomaticCheck > 0) {
       setTimeout(() => automaticUpdateCheck(true), firstAutomaticCheck).unref();
@@ -1333,14 +1396,12 @@ else {
               relays: scheduler.summary().map((r) => ({ ...r, entryPath: openedDirectories.get(r.directory)?.entryPath })),
             };
             break;
-          case "providers.detect": {
-            const caps = await detectClients(settings());
-            for (const cap of caps)
-              if (isBackgroundHarness(cap.provider))
-                capabilityCache.set(cap.provider, { key: capabilityKey(cap.provider, findExecutable(cap.provider, configuredPath(cap.provider))), at: Date.now(), value: cap });
-            result = caps;
+          case "providers.detect":
+            result = (await runDetection(payload?.trigger === "recheck" ? "recheck" : "manual")).caps;
             break;
-          }
+          case "providers.detection":
+            result = { detection: lastDetection, running: Boolean(detecting) };
+            break;
           case "providers.open": {
             const id = z.enum(HARNESS_IDS).parse(payload.provider);
             const cap = await detectClient(id, configuredPath(id));
