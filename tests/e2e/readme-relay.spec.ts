@@ -63,41 +63,61 @@ test("README synthetic relay: Claude working, ChatGPT seated and waiting", async
   } finally { await app.close(); fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test("README 0.5.0 relay: three stages of mixed agents, stage A at the desk, B and C on sofas", async () => {
+// README and 0.5.0 manuals: one synthetic capture set per interface language.
+const ENGLISH = {
+  relay: "Synthetic demo: three-stage relay", answered: "Synthetic demo: unattended answer", choose: "Choose an approach",
+  tasks: ["Draft the API notes", "Sketch the settings screen", "Write test cases", "Review the API notes", "Check accessibility", "Integrate the screens", "Prepare release notes", "Final review"],
+} as const;
+const LOCALIZED = {
+  "en-GB": ENGLISH,
+  "en-US": ENGLISH,
+  "zh-CN": {
+    relay: "合成演示：三阶段接力", answered: "合成演示：无人值守回答", choose: "选择实现方案",
+    tasks: ["起草接口说明", "绘制设置页草图", "编写测试用例", "审阅接口说明", "检查无障碍", "整合各页面", "准备发布说明", "最终审阅"],
+  },
+  "zh-TW": {
+    relay: "合成示範：三階段接力", answered: "合成示範：無人值守回答", choose: "選擇實作方案",
+    tasks: ["起草介面說明", "繪製設定頁草圖", "撰寫測試案例", "審閱介面說明", "檢查無障礙", "整合各頁面", "準備發布說明", "最終審閱"],
+  },
+} as const;
+
+for (const locale of Object.keys(LOCALIZED) as (keyof typeof LOCALIZED)[])
+test(`README 0.5.0 relay (${locale}): three stages of mixed agents, stage A at the desk, B and C on sofas`, async () => {
   test.setTimeout(120000);
-  const en = dictionaries["en-GB"];
+  const t = dictionaries[locale], text = LOCALIZED[locale];
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-readme-050-"));
   const directory = path.join(root, "Demo"), profile = path.join(root, "profile");
   const entry = createDemo(directory), agent = fixtureAgent(root), gemini = fixtureAgent(root, "gemini");
   const dsh = fixtureAgent(root, "dsh"), kimi = fixtureAgent(root, "kimi"), qwen = fixtureAgent(root, "qwen");
-  // Eight synthetic tasks without prerequisites, one per relay step.
-  const titles = ["Draft the API notes", "Sketch the settings screen", "Write test cases", "Review the API notes", "Check accessibility", "Integrate the screens", "Prepare release notes", "Final review"];
+  // Nine synthetic tasks without prerequisites: one per relay step, plus one for the unattended answer.
   const store = new ProjectStore(directory);
-  const relayTasks = titles.map(title => {
-    const id = `relay-demo-${title.toLowerCase().replace(/\W+/g, "-")}`;
+  const [choose, ...relayTasks] = [text.choose, ...text.tasks].map((title, i) => {
+    const id = `relay-demo-${i}`;
     store.command({ id: crypto.randomUUID(), type: "change", payload: { entity: "task", operation: "create", id, expectedRevision: null, values: { title, description: "Synthetic demonstration only." } } }, "Demo user");
     return id;
   });
   store.close();
   fs.mkdirSync(profile);
   fs.writeFileSync(path.join(profile, "settings.json"), JSON.stringify({ ...defaultSettings,
-    locale: "en-GB", userName: "Demo user", theme: "light", enhanced: true, reducedMotion: true,
+    locale, userName: "Demo user", theme: "light", enhanced: true, reducedMotion: true,
     // Every client in the relay is a fixture, so nothing depends on what this computer has installed.
     clientPaths: { codex: agent, claude: agent, "gemini-cli": gemini, "deepseek-harness": dsh, "kimi-code": kimi, "qwen-code": qwen },
   }));
   const app = await electron.launch({ ...(process.env.HAICOMO_PACKAGED_EXECUTABLE ? { executablePath: process.env.HAICOMO_PACKAGED_EXECUTABLE, args: [] } : { args: ["."] }), env: { ...process.env, HAICOMO_TEST: "1", HAICOMO_USER_DATA: profile, HAICOMO_TEST_DIRECTORY: directory } });
   const page = await app.firstWindow(), frame = page.locator(".workspace-frame:not([hidden])"), errors: string[] = [];
   page.on("pageerror", e => errors.push(String(e)));
-  const screenshots = path.resolve(process.env.HAICOMO_SCREENSHOT_DIR ?? "validation/0.5.0/readme");
+  const screenshots = path.join(path.resolve(process.env.HAICOMO_SCREENSHOT_DIR ?? "validation/0.5.0/readme"), locale);
   fs.mkdirSync(screenshots, { recursive: true });
-  // Synthetic only: every model id below names a character family; only the stage-A fixtures run, and they never call a model.
-  const hold = "Synthetic demonstration only.\nreadme-relay-hold";
+  const shot = (name: string) => page.screenshot({ path: path.join(screenshots, `${name}.png`) });
+  const imagesLoaded = () => expect.poll(() => page.evaluate(() => [...document.images].filter(i => !i.complete || !i.naturalWidth).length)).toBe(0);
+  // Synthetic only: every model id below names a character family; the fixtures never call a model.
+  const hold = "Synthetic demonstration: this run waits until it is cancelled.";
   const stages = [
     [["claude", "claude-sonnet-4-6"], ["codex", "gpt-5.5"], ["gemini-cli", "gemini-2.5-pro"]],
     [["deepseek-harness", "deepseek-flash"], ["kimi-code", "kimi-k2"], ["qwen-code", "qwen3-coder"]],
     [["claude", "claude-opus-4-1"], ["codex", "gpt-5.5"]],
   ].map((steps, s) => ({ steps: steps.map(([provider, model], i) => ({ provider, model, taskId: relayTasks[s * 3 + i], prompt: hold })) }));
-  const create = (enabled: boolean, title: string) => page.evaluate(async ({ stages, enabled, title }) => {
+  const create = (enabled: boolean, title: string, stages: unknown) => page.evaluate(async ({ stages, enabled, title }) => {
     const binding = (await window.haicomo.request("bootstrap")).projects[0].binding;
     await window.haicomo.request("project.command", { binding, id: crypto.randomUUID(), type: "relay.create", payload: { enabled, values: {
       title, trigger: { kind: "delay", ms: 1000 }, autonomy: { enabled: true, consentedAt: new Date().toISOString() }, stages,
@@ -113,33 +133,45 @@ test("README 0.5.0 relay: three stages of mixed agents, stage A at the desk, B a
     await app.evaluate(({ app }, entry) => app.emit("open-file", { preventDefault() {} }, entry), entry);
     await expect(frame.getByRole("heading", { name: "HAICoMo Demo", exact: true })).toBeVisible();
     await clearRelays();
-    await frame.locator(".sidebar nav").getByTitle(en.relay, { exact: true }).click();
-    await frame.getByRole("button", { name: en.relayTextView, exact: true }).click();
+    await frame.locator(".sidebar nav").getByTitle(t.relay, { exact: true }).click();
+    await frame.getByRole("button", { name: t.relayTextView, exact: true }).click();
+    const card = frame.locator(".relay-card[data-relay-id]").first(), dialog = frame.locator("dialog.modal");
+
+    // Unattended answer: Codex asks a multiple-choice question; HAICoMo picks the recommended option and records it.
+    await create(true, text.answered, [{ steps: [{ provider: "codex", model: "gpt-5.5", taskId: choose, prompt: "Synthetic demonstration only.\nrecommend" }] }]);
+    await expect(card).toHaveAttribute("data-status", "completed", { timeout: 30000 });
+    await card.getByRole("button", { name: t.relayDecisions }).click();
+    await expect(frame.locator(".relay-report")).toContainText("Safe (Recommended)");
+    await shot("relay-decision-record");
+    await dialog.getByRole("button").first().click();
+    await expect(dialog).toHaveCount(0);
+    await clearRelays();
 
     // The editor shows all three stages side by side (a paused copy, deleted afterwards).
-    await create(false, "Synthetic demo: three-stage relay");
-    await frame.locator(".relay-card").first().getByRole("button", { name: en.relayEdit }).click();
-    const dialog = frame.locator("dialog.modal");
+    await create(false, text.relay, stages);
+    await card.getByRole("button", { name: t.relayEdit }).click();
     await expect(dialog.locator(".relay-flow-edit .relay-flow-node")).toHaveCount(8);
     const stageTops = await dialog.locator(".relay-flow-edit > .relay-flow-stage:not(.relay-flow-add)").evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)));
     expect(new Set(stageTops).size).toBe(1);
     // The editor re-checks the clients when it opens; wait until the unattended options are known.
-    await expect(dialog.locator(`select[aria-label="${en.relayMode}"]`)).not.toContainText(en.relayAutonomyNoFlag, { timeout: 30000 });
+    await expect(dialog.locator(`select[aria-label="${t.relayMode}"]`)).not.toContainText(t.relayAutonomyNoFlag, { timeout: 30000 });
     await dialog.locator(".relay-flow-edit").evaluate(e => e.scrollIntoView({ block: "start" }));
-    await expect.poll(() => page.evaluate(() => [...document.images].filter(i => !i.complete || !i.naturalWidth).length)).toBe(0);
-    await page.screenshot({ path: path.join(screenshots, "relay-editor.png") });
+    await imagesLoaded();
+    await shot("relay-editor");
+    await expect(dialog.locator(".relay-autonomy-flags li")).toHaveCount(8);
+    await dialog.locator(".relay-autonomy").evaluate(e => e.scrollIntoView({ block: "center" }));
+    await shot("relay-editor-autonomy");
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
     await clearRelays();
 
     // Running: stage A's three agents work at the desk; B and C wait on one sofa each.
-    await create(true, "Synthetic demo: three-stage relay");
-    const card = frame.locator(".relay-card[data-relay-id]").first();
+    await create(true, text.relay, stages);
     await expect(card).toHaveAttribute("data-status", "running", { timeout: 30000 });
     await expect(card.locator(".relay-flow-stage[data-stage-state=current] .relay-flow-node[data-step-state=running]")).toHaveCount(3, { timeout: 20000 });
     await expect(card.locator(".relay-step-warning")).toHaveCount(0);
-    await page.screenshot({ path: path.join(screenshots, "relay-flow.png") });
-    await frame.getByRole("button", { name: en.relayVisualView, exact: true }).click();
+    await shot("relay-flow");
+    await frame.getByRole("button", { name: t.relayVisualView, exact: true }).click();
     const row = frame.locator(".relay-row.visual").first();
     await expect(row.locator(".relay-scene.workstation .relay-actor")).toHaveCount(3);
     await expect(row.locator(".relay-scene.sofa[data-stage=B] .relay-actor.seated")).toHaveCount(3);
@@ -149,11 +181,11 @@ test("README 0.5.0 relay: three stages of mixed agents, stage A at the desk, B a
     // Reduced motion: the three workers stand at their own seats without overlapping.
     const desk = await row.locator(".relay-scene.workstation .relay-actor").evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return [r.left, r.right]; }));
     for (let i = 1; i < desk.length; i++) expect(desk[i][0]).toBeGreaterThanOrEqual(desk[i - 1][1] - 2);
-    await expect.poll(() => page.evaluate(() => [...document.images].filter(i => !i.complete || !i.naturalWidth).length)).toBe(0);
-    await page.screenshot({ path: path.join(screenshots, "relay-three-stages-enhanced.png") });
+    await imagesLoaded();
+    await shot("relay-three-stages-enhanced");
     await page.evaluate(async () => { const b = await window.haicomo.request("bootstrap"); await window.haicomo.request("settings.patch", { base: b.settings, next: { ...b.settings, enhanced: false } }); });
     await expect(row.locator(".relay-scene.workstation.enhanced")).toHaveCount(0);
-    await page.screenshot({ path: path.join(screenshots, "relay-three-stages-default.png") });
+    await shot("relay-three-stages-default");
     await page.evaluate(async () => {
       const binding = (await window.haicomo.request("bootstrap")).projects[0].binding;
       for (const run of await window.haicomo.request("providers.active", { binding })) await window.haicomo.request("providers.cancel", { binding, runId: run.runId });

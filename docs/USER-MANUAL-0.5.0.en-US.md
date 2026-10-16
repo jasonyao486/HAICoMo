@@ -1,6 +1,6 @@
 # HAICoMo 0.5.0 — User manual (US English)
 
-This is a complete guide to version 0.5.0. Interface translations: UK English, US English, Simplified Chinese and Traditional Chinese. Examples and screenshots are synthetic; the new 0.5.0 relay screenshots show the Simplified Chinese interface. Platform evidence is recorded separately in [the testing record](TESTING-0.5.0.md).
+This is a complete guide to version 0.5.0. Interface translations: UK English, US English, Simplified Chinese and Traditional Chinese. Examples and screenshots are synthetic; the 0.5.0 relay screenshots show the US English interface, and every agent in them is a test stand-in that never calls a model. Platform evidence is recorded separately in [the testing record](TESTING-0.5.0.md).
 
 ## 1. Install and update
 
@@ -12,7 +12,7 @@ Task management requires no Node.js, Git or AI subscription. Background AI work 
 
 **In-app updates (from 0.4.0).** Open Settings → HAICoMo and choose **Check for updates**. HAICoMo asks the official GitHub releases (previews included) for the newest version for this computer and shows its number and expandable **What's new**. Choose **Update now** to download: the progress bar shows the percentage, size, speed and estimated time remaining, and **Cancel download** stops it at any time. The download is then verified against its SHA-512 checksum; the step indicator reads Check → Download → Verify → Restart and install. When you are ready, choose **Restart and install**. HAICoMo first asks you to save unsaved work in every window and does not install while agents are running. It then closes and installs: Windows shows the installer's own progress window and reopens HAICoMo; on Mac the system verifies the Developer ID signature, replaces the app and reopens it. After the restart, a notice reads “Updated to x.y.z” and your project tabs are restored. **Update later** and **Restart later** keep the decision with you.
 
-**Check for updates automatically** is on by default: shortly after launch and every 12 hours HAICoMo checks once and only tells you about a new version; it never downloads or installs by itself. Turn it off in the same panel. A check sends only an anonymous request to GitHub; no project is uploaded. Leave the custom update source under **Advanced** empty. Versions 0.3.5 and earlier have no built-in source: install 0.4.0 once by download, or enter `https://github.com/jasonyao486/HAICoMo/releases/download/v0.4.0` as the old **Update source (HTTPS)** and check for updates (0.4.0 clears that address when it starts). On Mac, run HAICoMo from the Applications folder, not from the DMG, or it cannot update itself. Settings also includes Downloads and releases, GitHub feedback and a separate diagnostic export. Diagnostic export does not send anything automatically.
+**Check for updates automatically** is on by default: shortly after launch and every 12 hours HAICoMo checks once and only tells you about a new version; it never downloads or installs by itself. Turn it off in the same panel. A check sends only an anonymous request to GitHub; no project is uploaded. Leave the custom update source under **Advanced** empty. Versions 0.3.5 and earlier have no built-in source: install 0.5.0 once by download, or enter `https://github.com/jasonyao486/HAICoMo/releases/download/v0.5.0` as the old **Update source (HTTPS)** and check for updates (0.4.0 and later clear that address when they start). On Mac, run HAICoMo from the Applications folder, not from the DMG, or it cannot update itself. Settings also includes Downloads and releases, GitHub feedback and a separate diagnostic export. Diagnostic export does not send anything automatically.
 
 If the first launch uses Chinese, open **设置 (Settings) → 语言 (Language)**, choose **English (UK)** or **English (US)**, then select **保存修改 (Save changes)**.
 
@@ -159,7 +159,7 @@ A relay is a start condition followed by up to three stages, A → B → C, each
 
 **Create a relay.** Click New relay and enter a name and the start condition. In Relay flow, Add task adds a parallel task to a stage (up to three) and Add stage adds stage B or C (up to three); × removes one. Click a task in the flow (for example B1) to edit it below under Task B1: client (only background-capable clients, each with its evidence level), model, effort, mode, session, target task, reference-delivery task and custom handoff text; the prompt preview shows what will be sent. Prompts for stages B and C automatically include, for each earlier task, the agent, model, end reason, session and the tail of its final message, labeled as unreviewed and unaccepted data. Save and enable schedules it; Save as paused stores it without running.
 
-![Editing a relay flow](images/0.5.0/relay-editor-flow.png)
+![Editing a relay flow](images/0.5.0/en-US/relay-editor.png)
 
 **Dependencies.** If a stage-B task depends on a stage-A task in the task graph, it may start as soon as that A run has delivered: saving the relay pre-authorizes this order. A dependency on an unaccepted task outside the relay still stops the task, and the editor warns you in advance. A stage cannot contain the same task twice, and a dependency on a task of the same or a later stage is refused because it could never start.
 
@@ -167,11 +167,11 @@ A relay is a start condition followed by up to three stages, A → B → C, each
 
 **Text view** shows the whole relay as a flowchart: start condition → stages A/B/C, each task with its label, agent, model, task, state, attempt and reason; the current stage has a green border.
 
-![Relay flowchart](images/0.5.0/relay-flow-3x3.png)
+![Relay flowchart](images/0.5.0/en-US/relay-flow.png)
 
-In **Visual view** the desk and the three-seat sofa have the same width. Only the agents of the stage that is working sit at the desk (before the start, the preceding run); each waiting stage gets its own three-seat sofa, labeled with its letter, and more sofas appear as needed; finished stages leave the scene and remain in Text view. Bubbles: ✓ delivered, ! stopped, ? needs you, zᶻ waiting. The picture shows 3 stages × 3 tasks during stage A: A1–A3 at the desk, B1–B3 and C1–C3 on two sofas.
+In **Visual view** the desk and the three-seat sofa have the same width. Only the agents of the stage that is working sit at the desk (before the start, the preceding run); each waiting stage gets its own three-seat sofa, labeled with its letter, and more sofas appear as needed; finished stages leave the scene and remain in Text view. Bubbles: ✓ delivered, ! stopped, ? needs you, zᶻ waiting. The picture shows a three-stage relay during stage A: A1–A3 (Claude Code, Codex, Gemini CLI) at the desk, B1–B3 (DeepSeek Harness, Kimi, Qwen Code) and C1–C2 on two sofas. Several agents at the desk stay at their own seats; with Reduce motion on, everyone stays still.
 
-![Three-stage relay, visual view](images/0.5.0/relay-visual-3x3-enhanced.png)
+![Three-stage relay, visual view](images/0.5.0/en-US/relay-three-stages-enhanced.png)
 
 Relays require HAICoMo to be running with the project loaded. A closed tab stays loaded in the background; quitting while a relay is in progress warns that its next stage will not start while the app is closed. Quitting or sleeping through a due time causes Missed after the grace period, which waits for you. Reducing motion or hiding the view stops animation.
 
@@ -230,14 +230,14 @@ Results are grouped by kind, title matches first and then the most recently upda
 
 ## 13. Unattended mode and decision record (0.5.0)
 
-At the bottom of the relay editor, tick Unattended mode to see the options each task will run with (for example Claude's auto permission mode, Kimi's never-ask mode, Cursor's force-allow, Gemini/Qwen approve-everything). You must also tick "I understand that these agents may change files and run commands without asking me, and I agree for this relay" before saving; the consent time is recorded in Activity. Claude's bypassPermissions and Codex's danger-full-access are still never used.
+At the bottom of the relay editor, tick Unattended mode to see the options each task will run with (for example Claude's auto permission mode, or Accept edits on versions without it, Kimi's never-ask mode, Cursor's force-allow, Gemini/Qwen approve-everything). You must also tick "I understand that these agents may change files and run commands without asking me, and I agree for this relay" before saving; the consent time is recorded in Activity. Claude's bypassPermissions and Codex's danger-full-access are still never used.
 
-![Unattended mode](images/0.5.0/relay-editor-autonomy.png)
+![Unattended mode](images/0.5.0/en-US/relay-editor-autonomy.png)
 
 While running, Codex keeps its workspace sandbox; HAICoMo answers its multiple-choice questions with the recommended option (or the first option if none is marked) and approves tool requests, but always declines destructive commands such as sudo, recursive deletion outside the project, force pushes, `git reset --hard` and disk erasure. Other agents are told not to ask questions, to choose the recommended or most conservative option themselves and to list their decisions in their final reply. When something only you can do blocks an agent (sign-in, verification codes, payments, CAPTCHAs), it stops, the relay pauses and a system notification appears; Codex questions that need typed answers also notify you and are answered in the app. Afterwards, Retry or Mark handled.
 
 Each relay that completes or pauses gets a **decision record**: open it with the file icon on the relay row, then Open file or Export…. It has three parts: answers given automatically by HAICoMo (question, options, choice, reason), decisions reported by the agents themselves (unverified), and items that need a human. The file is kept in the project's `.haicomo/relay-decisions/`; the database is authoritative and the file can be regenerated at any time.
 
-![Decision record](images/0.5.0/relay-decision-record.png)
+![Decision record](images/0.5.0/en-US/relay-decision-record.png)
 
 Limits: HAICoMo does not install or turn on computer use for other clients; if you have configured it in Claude or Codex, unattended mode does not restrict it. Apart from Codex, interactive questions asked by other clients during a run cannot be answered by HAICoMo; they rely on the instructions in the prompt. There is no cost or time budget, so split work into stages as needed.

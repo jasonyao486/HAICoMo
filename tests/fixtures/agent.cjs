@@ -31,8 +31,9 @@ const log = (value) =>
   );
 log({ args, dialect, env: { DSH_PERMISSION_MODE: process.env.DSH_PERMISSION_MODE } });
 const argValue = (flag) => { const i = args.indexOf(flag); return i >= 0 ? args[i + 1] : undefined; };
-// A "readme-relay-hold" line keeps the run observable for synthetic README scenes; it never calls a model.
-const holds = (prompt) => String(prompt).split(/\r?\n/).includes("readme-relay-hold");
+// A hold line keeps the run observable for synthetic README scenes; it never calls a model.
+const HOLD_LINES = ["readme-relay-hold", "Synthetic demonstration: this run waits until it is cancelled."];
+const holds = (prompt) => String(prompt).split(/\r?\n/).some((line) => HOLD_LINES.includes(line));
 if (dialect === "kimi" || dialect === "gemini" || dialect === "copilot") {
   const prompt = argValue("--prompt") ?? "";
   log({ prompt });
@@ -99,7 +100,7 @@ if (dialect === "kimi" || dialect === "gemini" || dialect === "copilot") {
     if (m.method === "turn/start") {
       if (!Array.isArray(m.params.input[0].text_elements))
         return send({ id: m.id, error: { message: "missing text_elements" } });
-      mode = m.params.input[0].text.split(/\r?\n/).find(line => ["approve", "cancel", "cancelQueued", "cancelWithoutCompletion", "recommend", "readme-relay-hold"].includes(line)) ?? m.params.input[0].text;
+      mode = m.params.input[0].text.split(/\r?\n/).find(line => ["approve", "cancel", "cancelQueued", "cancelWithoutCompletion", "recommend", ...HOLD_LINES].includes(line)) ?? m.params.input[0].text;
       send({ id: m.id, result: { turn: { id: "turn-fixture" } } });
       const started = () => { turnStarted = true; send({
         method: "turn/started",
@@ -145,7 +146,7 @@ if (dialect === "kimi" || dialect === "gemini" || dialect === "copilot") {
           },
         });
       else if (mode === "exitEarly") process.exit(0);
-      else if (!["cancel", "cancelWithoutCompletion", "cancelQueued", "readme-relay-hold"].includes(mode))
+      else if (!["cancel", "cancelWithoutCompletion", "cancelQueued", ...HOLD_LINES].includes(mode))
         setTimeout(
           () =>
             send({

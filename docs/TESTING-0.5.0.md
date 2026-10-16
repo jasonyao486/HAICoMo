@@ -111,6 +111,8 @@ The first pull-request run ([38912902895](https://github.com/jasonyao486/HAICoMo
 
 While retaking the README screenshots, three workers at the desk overlapped: the ±24 px working sway exceeded the ~74 px seat spacing, and reduced motion still applied a fixed offset. Neighbours now sway ±5 px, a lone worker keeps the wider walk, and reduced motion keeps everyone still (decision 57). `readme-relay.spec.ts` asserts no overlap.
 
+Manual and README screenshots were retaken from this source with `tests/e2e/readme-relay.spec.ts`. Each of en-GB, en-US, zh-CN and zh-TW gets its own set (decision record, editor, unattended options, flowchart, visual view). The setup uses the synthetic demo project, an isolated profile, light theme and reduced motion. Every client is a fixture that never calls a model, so nothing depends on the agents installed on this computer. Pixels and text were not edited. The earlier Simplified Chinese captures that all four manuals had shared were removed; the live-run images above are kept.
+
 Local re-check after these fixes: typecheck; 134 unit tests in 21 files (run per file); full Electron suite 33 passed, 4 skipped; `v050` ×3 consecutive passes.
 
 ## Windows (native CI)
