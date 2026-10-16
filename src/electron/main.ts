@@ -984,6 +984,9 @@ else {
     if (app.isReady()) routeFile(file);
     else app.once("ready", () => setTimeout(() => routeFile(file), 50));
   });
+  // Windows shows toast notifications (relay paused/completed) only for an app whose
+  // AppUserModelID matches its Start-menu shortcut; the NSIS installer uses the appId.
+  if (process.platform === "win32") app.setAppUserModelId("app.haicomo.desktop");
   app.whenReady().then(() => {
     startWorker();
     configureMenu();

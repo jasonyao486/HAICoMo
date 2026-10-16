@@ -123,7 +123,8 @@ test("0.4.0 project search spans the overview cards, filters four scopes and ope
     const icon = frame.locator('.client-config .client-name img[src$="workbuddy-app.png"]');
     await expect(icon).toHaveCount(1);
     expect(await icon.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBe(256);
-    await expect(frame.locator('.client-config[data-client="workbuddy"] .client-status')).toBeVisible();
+    // A cold detection can take several seconds (DeepSeek Harness boots its own runtime).
+    await expect(frame.locator('.client-config[data-client="workbuddy"] .client-status')).toBeVisible({ timeout: 30000 });
     await frame.locator('.client-config[data-client="workbuddy"]').scrollIntoViewIfNeeded();
     await shot("v040-agent-icons");
     await frame.locator(".update-panel").scrollIntoViewIfNeeded();

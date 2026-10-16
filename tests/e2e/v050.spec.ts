@@ -197,7 +197,8 @@ test("0.5.0 relay: three stages × three tasks, unattended answers recorded, des
     await codexPath.fill(original);
     await expect(agents.locator(".client-stale")).toHaveCount(0);
     // A client removed after detection: the start is refused with a clear reason and Settings updates itself.
-    const vanishing = path.join(root, "vanishing-codex.cjs");
+    // Keep the fixture's own extension: on Windows it is a .cmd launcher next to agent.cjs.
+    const vanishing = path.join(root, `vanishing-codex${path.extname(fake)}`);
     fs.copyFileSync(fake, vanishing);
     fs.chmodSync(vanishing, 0o755);
     await page.evaluate(async (file) => {

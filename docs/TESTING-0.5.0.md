@@ -1,6 +1,6 @@
 # 0.5.0 verification status
 
-Status: **local macOS candidate, not published.** Implemented and verified on the development Mac (Apple Silicon) on 2026-10-15, revised on 2026-10-16 (round 2 below), on the local branch `dev/0.5.0`. Windows builds, native CI, notarisation and the fresh-account first-open check have not been run for 0.5.0; nothing here is claimed for Windows. Synthetic projects, fixture agents and isolated profiles only; no real Codex or Claude session was started.
+Status: **release in progress.** macOS was implemented, verified and reviewed locally on the development Mac (2026-10-15/16, rounds 1–3 below; the user approved the macOS candidate). Windows verification runs on native GitHub Windows runners and publication follows the gates in [RELEASE](RELEASE.md); both are recorded in the sections at the end. Nothing here is claimed for Windows from a Mac run. Synthetic projects, fixture agents and isolated profiles only; no real Codex or Claude session was started.
 
 ## Changes
 
@@ -14,7 +14,7 @@ Status: **local macOS candidate, not published.** Implemented and verified on th
 | Check | Result |
 |---|---|
 | `npm run typecheck`, `npm run check:assets` | Passed; 86 runtime assets (sofa hash updated) |
-| `npm test` (each file run separately) | 131/131 passed in 23 files, including new `adapters.test.ts` (8), `relay-stages.test.ts` (10) and updated relay/schema assertions |
+| `npm test` (each file run separately) | 131/131 passed in 21 files, including new `adapters.test.ts` (8), `relay-stages.test.ts` (10) and updated relay/schema assertions |
 | `npx playwright test` (source build) | 31 passed, 4 skipped (Windows-only, installed-upgrade and Windows in-app scenarios) |
 | New `tests/e2e/v050.spec.ts` | Builds A1 + A2 → B1 in the editor with unattended consent; fixture Codex asks a question, HAICoMo answers "Safe (Recommended)" and records it; 3 `turn/start` calls, handoff stages 0/0/1, stage-B prompt contains A's results and the unattended instructions; decision record file written. Then a 3 × 3 relay: A1–A3 at the desk, B and C on two sofas (geometry inside each scene), cancelling one A run blocks the relay at stage A with Retry offered and no stage-B start |
 | `prd_draft.md` SHA-256 | `da6a5edb…c41c8`, unchanged |
@@ -55,7 +55,7 @@ Changes after the user's review:
 
 | Check | Result |
 |---|---|
-| `npm test` (each file) | 132/132 in 23 files (adapter tests: hermetic `DSH_HOME`, typed model, desktop default, no overlay, unsafe id) |
+| `npm test` (each file) | 132/132 in 21 files (adapter tests: hermetic `DSH_HOME`, typed model, desktop default, no overlay, unsafe id) |
 | `npx playwright test` (source build) | 31 passed, 4 skipped |
 | New e2e assertions (`v050.spec.ts`) | Three editor stages share one row; scenes reach the strip's right edge; 15 merged client rows with detection status and no separate list; Detect/Save aligned with ≥ 10 px gap; name, detection result and reset columns never overlap |
 | Packaged candidate (Developer ID, not notarised) | `check-package.mjs` passed; 17/17 packaged-app scenarios (v050, v030, readme-relay, tabs, v031, v040, updates, update-safety, v041); reinstalled, strict signature valid, exactly one registration |
@@ -99,7 +99,27 @@ Child processes used about 3.8 s of CPU in total (peak memory of the measuring p
 |---|---|
 | New unit cases | `humanBlocker` positives and negatives; a relay whose task fails with "Authentication required" pauses as NEEDS_HUMAN while a plain failure stays "stopped"; a vanished program is refused with `EXECUTABLE_MISSING` and no session; a configured path that vanished reports `CONFIGURED_PATH_NOT_FOUND`; a found file that will not run reports `EXECUTABLE_FAILED`; the setting defaults to off |
 | New e2e (`v050.spec.ts`) | Leaving Settings for the task list and coming back keeps all 15 results. Editing the Codex path marks only that row. Deleting a detected program makes `providers.start` fail with `CONFIGURED_PATH_NOT_FOUND: Codex`, and the row turns "not found" by itself with no `turn/start`. A launch with the switch on fills Settings without a click (trigger "startup"); switching it off saves at once and keeps the session's results |
-| Full suites (fresh build) | Unit 135/135 in 23 files; Electron 32 passed, 4 skipped (Windows-only and installed-upgrade scenarios) |
+| Full suites (fresh build) | Unit 134/134 in 21 files (an earlier draft of this line said 135/135 in 23 files, a counting error); Electron 32 passed, 4 skipped (Windows-only and installed-upgrade scenarios) |
 | Packaged candidate | Developer ID signed (not notarised); `check-package.mjs` passed; 18/18 packaged-app scenarios including the launch-detection test; reinstalled with a strict signature valid and exactly one registration |
 | Installed app, launch detection on (isolated profile) | The window was ready before detection had started. Background detection with trigger "startup" finished about 3 s later and took 0.74 s warm. It found 7 installed clients; 5 can run in the background (Codex, Claude, Cursor, Kimi, DeepSeek Harness). A LaunchServices open with the switch off started and quit cleanly |
+
+## Windows (native CI)
+
+Pending. The pull-request and main `verify.yml` runs on `windows-2025` cover:
+- unit and Electron suites;
+- packaging and the packaged-app suite;
+- a real standard-user install, reinstall and uninstall;
+- the 0.3.5 → 0.5.0 upgrade (which also runs the v5 → v6 migration on a real installed project);
+- an in-app update to a fixture build.
+
+Results, run IDs and job IDs are recorded here once they finish.
+
+Known Windows limits:
+- The new adapters' Windows install locations have not been exercised with the real CLIs; CI uses fixture agents.
+- A DeepSeek Harness launcher that is a non-npm `.cmd` script is reported as "found but would not run" rather than started through a shell.
+- Installers are not Authenticode-signed.
+
+## Publication
+
+Pending. The release is created from the GitHub-made pull-request merge commit, so the `v0.5.0` tag carries GitHub's "Verified" signature. It requires the maintainer's fresh-account DMG first-open attestation, which is supplied by the maintainer only.
 
