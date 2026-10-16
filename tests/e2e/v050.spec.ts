@@ -8,6 +8,7 @@ import { ProjectStore } from "../../src/core/store";
 import { readSnapshot } from "../../src/core/files";
 import { defaultSettings } from "../../src/shared/settings";
 import { dictionaries } from "../../src/ui/i18n";
+import { removeTestDirectory } from "./cleanup";
 
 const zh = dictionaries["zh-CN"];
 const screens = path.resolve(process.env.HAICOMO_EVIDENCE_DIR ?? "validation/0.5.0/screens");
@@ -233,7 +234,7 @@ test("0.5.0 relay: three stages × three tasks, unattended answers recorded, des
     const child = app.process();
     await Promise.race([app.close(), new Promise((resolve) => setTimeout(resolve, 15000))]);
     if (child.exitCode === null && child.signalCode === null) child.kill();
-    fs.rmSync(root, { recursive: true, force: true });
+    await removeTestDirectory(root);
   }
 });
 
@@ -268,7 +269,7 @@ test("0.5.0 optional detection at launch fills Settings without a click and stay
     await expect(agents.locator(".client-detect .client-status")).toHaveCount(15);
   } finally {
     await app.close();
-    fs.rmSync(root, { recursive: true, force: true });
+    await removeTestDirectory(root);
   }
 });
 

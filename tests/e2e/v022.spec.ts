@@ -5,6 +5,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { ProjectStore } from "../../src/core/store";
 import { dictionaries } from "../../src/ui/i18n";
+import { removeTestDirectory } from "./cleanup";
 const current = (page: Page) => page.locator(".workspace-frame:not([hidden])");
 const screenDir = path.resolve(process.env.HAICOMO_EVIDENCE_DIR ?? "validation/0.2.2/screens");
 async function prefs(page: Page, next: any) { await page.evaluate(async (next) => { const b = await window.haicomo.request("bootstrap"); await window.haicomo.request("settings.patch", { base: b.settings, next: { ...b.settings, ...next } }); }, next); }
@@ -78,7 +79,7 @@ test("0.2.2 home, compact profile and offline terms in all locales/themes; exter
     await page.screenshot({ path: path.join(screenDir, "terms-narrow-bottom.png") });
     expect(await current(page).locator(".settings-page").evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     expect(failures).toEqual([]);
-  } finally { await app.close(); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await app.close(); await removeTestDirectory(root); }
 });
 
 test("0.2.2 model-only statistics, audit context, filled mode control and recent-file actions", async () => {
@@ -116,5 +117,5 @@ test("0.2.2 model-only statistics, audit context, filled mode control and recent
     await recent.screenshot({ path: path.join(screenDir, "recent-row.png") });
     await recent.getByRole("button", { name: /移出最近项目/ }).click();
     await expect(recent).toHaveCount(0); expect(fs.existsSync(path.join(directory, "HAICoMo.haicomo"))).toBe(true);
-  } finally { await app.close(); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await app.close(); await removeTestDirectory(root); }
 });

@@ -7,7 +7,7 @@ import { createDemo } from "../../scripts/create-demo";
 import { defaultSettings } from "../../src/shared/settings";
 import { ProjectStore } from "../../src/core/store";
 import { publishProposal } from "../../src/core/files";
-import { closeTestApp } from "./cleanup";
+import { closeTestApp, removeTestDirectory } from "./cleanup";
 
 const version = JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
 
@@ -130,5 +130,5 @@ test("0.4.0 project search spans the overview cards, filters four scopes and ope
     await frame.locator(".update-panel").scrollIntoViewIfNeeded();
     await shot("v040-update-panel");
     expect(errors).toEqual([]);
-  } finally { await closeTestApp(app); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await closeTestApp(app); await removeTestDirectory(root); }
 });

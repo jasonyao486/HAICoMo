@@ -109,11 +109,15 @@ The first pull-request run ([38912902895](https://github.com/jasonyao486/HAICoMo
 - **Windows unit (`relay-stages`, 3 tests):** the test harness's simulated clock could fall behind the real time at which slow storage armed a relay. The harness now never advances from a time earlier than the real clock. App code was unchanged.
 - **macOS e2e (`v050`):** an unattended relay stayed "running". The fixture asks its first question in the same output burst that acknowledges `turn/start`. The relay run was registered only after `start()` returned, so that question went to the UI unanswered. Relay starts now choose the run ID first and register it before spawning (decision 56). The e2e teardown also cancels held runs and bounds shutdown, so a failed assertion no longer hangs the worker.
 
+The second run ([38917158104](https://github.com/jasonyao486/HAICoMo/actions/runs/38917158104), af8a3f1) passed on both platforms. The two runs after it ([38919828203](https://github.com/jasonyao486/HAICoMo/actions/runs/38919828203), [38920741111](https://github.com/jasonyao486/HAICoMo/actions/runs/38920741111)) failed on test timing, not product behaviour:
+- **Windows:** deleting a test's temporary folder right after the app closed hit `EPERM` (the new README capture, and once the older `v024` spec). Every e2e spec now uses the retrying `removeTestDirectory` helper.
+- **macOS:** the launch-detection test's `uncheck()` saw no change, because the Settings switch only flipped after its save returned. The switch now follows the click at once and reverts if the save fails.
+
 While retaking the README screenshots, three workers at the desk overlapped: the ±24 px working sway exceeded the ~74 px seat spacing, and reduced motion still applied a fixed offset. Neighbours now sway ±5 px, a lone worker keeps the wider walk, and reduced motion keeps everyone still (decision 57). `readme-relay.spec.ts` asserts no overlap.
 
 Manual and README screenshots were retaken from this source with `tests/e2e/readme-relay.spec.ts`. Each of en-GB, en-US, zh-CN and zh-TW gets its own set (decision record, editor, unattended options, flowchart, visual view). The setup uses the synthetic demo project, an isolated profile, light theme and reduced motion. Every client is a fixture that never calls a model, so nothing depends on the agents installed on this computer. Pixels and text were not edited. The earlier Simplified Chinese captures that all four manuals had shared were removed; the live-run images above are kept.
 
-Local re-check after these fixes: typecheck; 134 unit tests in 21 files (run per file); full Electron suite 33 passed, 4 skipped; `v050` ×3 consecutive passes.
+Local re-check after these fixes: typecheck; 134 unit tests in 21 files (run per file); full Electron suite 36 passed, 4 skipped (including the per-locale README captures); `v050` ×3 consecutive passes.
 
 ## Windows (native CI)
 

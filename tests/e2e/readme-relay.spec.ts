@@ -7,6 +7,7 @@ import { defaultSettings } from "../../src/shared/settings";
 import { fixtureAgent } from "../fixture-agent";
 import { dictionaries } from "../../src/ui/i18n";
 import { ProjectStore } from "../../src/core/store";
+import { removeTestDirectory } from "./cleanup";
 
 test("README synthetic relay: Claude working, ChatGPT seated and waiting", async () => {
   test.setTimeout(90000);
@@ -60,7 +61,7 @@ test("README synthetic relay: Claude working, ChatGPT seated and waiting", async
       await window.haicomo.request("providers.cancel", { binding, runId });
     }, runId);
     expect(errors).toEqual([]);
-  } finally { await app.close(); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await app.close(); await removeTestDirectory(root); }
 });
 
 // README and 0.5.0 manuals: one synthetic capture set per interface language.
@@ -204,6 +205,6 @@ test(`README 0.5.0 relay (${locale}): three stages of mixed agents, stage A at t
     const child = app.process();
     await Promise.race([app.close(), new Promise(resolve => setTimeout(resolve, 15000))]);
     if (child.exitCode === null && child.signalCode === null) child.kill();
-    fs.rmSync(root, { recursive: true, force: true });
+    await removeTestDirectory(root);
   }
 });

@@ -7,6 +7,7 @@ import { defaultSettings } from "../../src/shared/settings";
 import { readSnapshot } from "../../src/core/files";
 import { ProjectStore } from "../../src/core/store";
 import { dictionaries } from "../../src/ui/i18n";
+import { removeTestDirectory } from "./cleanup";
 
 const version = JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
 
@@ -118,5 +119,5 @@ test("Public demo: 60 tasks, graphs, assets, audit deletion and four locales", a
       await expect(frame.locator(".legal-panel")).toContainText("MIT");
     }
     expect(errors).toEqual([]);
-  } finally { await app.close(); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await app.close(); await removeTestDirectory(root); }
 });

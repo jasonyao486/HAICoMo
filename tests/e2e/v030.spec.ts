@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import { ProjectStore } from "../../src/core/store";
 import { readSnapshot } from "../../src/core/files";
 import { defaultSettings } from "../../src/shared/settings";
+import { removeTestDirectory } from "./cleanup";
 const screens = path.resolve(process.env.HAICOMO_EVIDENCE_DIR ?? "validation/0.3.0/screens");
 const current = (page: Page) => page.locator(".workspace-frame:not([hidden])");
 function fixture(root: string) {
@@ -107,7 +108,7 @@ test("0.3.0 relay: form creates a timer relay, the scheduler starts the fixture 
     expect(errors).toEqual([]);
   } finally {
     await app.close();
-    fs.rmSync(root, { recursive: true, force: true });
+    await removeTestDirectory(root);
   }
 });
 
@@ -137,6 +138,6 @@ test("0.3.0 lock left by another computer is explained and can be taken over aft
     expect(fs.existsSync(path.join(dir, ".haicomo/.gitignore"))).toBe(true);
   } finally {
     await app.close();
-    fs.rmSync(root, { recursive: true, force: true });
+    await removeTestDirectory(root);
   }
 });

@@ -378,9 +378,16 @@ export function SettingsView({
   // Saved at once and on its own, so unrelated unsaved fields are left untouched.
   const saveSwitch = async (key: "autoCheckUpdates" | "autoDetectAgents", after: boolean) => {
     const before = baseline.current[key];
-    const saved: Settings = await api("settings.patch", { edits: [{ kind: "preference", key, before, after }] });
-    baseline.current = { ...baseline.current, [key]: saved[key] };
-    setSettings((s) => ({ ...s, [key]: saved[key] }));
+    // The switch follows the click at once; a failed save puts it back.
+    setSettings((s) => ({ ...s, [key]: after }));
+    try {
+      const saved: Settings = await api("settings.patch", { edits: [{ kind: "preference", key, before, after }] });
+      baseline.current = { ...baseline.current, [key]: saved[key] };
+      setSettings((s) => ({ ...s, [key]: saved[key] }));
+    } catch (error) {
+      setSettings((s) => ({ ...s, [key]: before }));
+      throw error;
+    }
   };
   const saveAutoCheck = (after: boolean) => saveSwitch("autoCheckUpdates", after);
   // Detection results belong to the app session (main process): switching pages, tabs or windows keeps them.
