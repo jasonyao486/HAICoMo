@@ -193,18 +193,21 @@ function DeskScene({ relay, progress, seconds, settings, t, onAgent, index }: { 
   const workers: { key: string; actor: string; pose: Pose; x: number; flip: boolean; bubble: string | null; title: string; label?: string }[] = [];
   if (!started && predecessor) {
     const running = predecessor.lifecycle !== "history" && sessionStatus(predecessor) === "running";
+    const moving = running && !settings.reducedMotion;
     const phase = Math.sin(seconds * 0.9 + index);
-    workers.push({ key: "predecessor", actor: sessionAvatar(predecessor), pose: running ? "run" : "idle", x: running ? phase * (FURNITURE_WIDTH * 0.32) : 0, flip: running ? Math.cos(seconds * 0.9 + index) < 0 : false, bubble: null, title: actorLabel(sessionAvatar(predecessor)) });
+    workers.push({ key: "predecessor", actor: sessionAvatar(predecessor), pose: running ? "run" : "idle", x: moving ? phase * (FURNITURE_WIDTH * 0.32) : 0, flip: moving ? Math.cos(seconds * 0.9 + index) < 0 : false, bubble: null, title: actorLabel(sessionAvatar(predecessor)) });
   } else if (progress)
     progress.desk.forEach((p, slot) => {
       const working = p.state === "running" && !p.waitingHuman;
+      // Seats are about 74px apart: a lone worker may roam, neighbours only shuffle so figures never overlap; reduced motion keeps everyone in place.
+      const sway = settings.reducedMotion ? 0 : progress.desk.length === 1 ? 24 : 5;
       const phase = Math.sin(seconds * 1.4 + slot * 2 + index);
       workers.push({
         key: p.step.id,
         actor: p.actor,
         pose: working ? "run" : p.state === "starting" ? "walk" : "idle",
-        x: slotOffset(slot) + (working ? phase * 24 : 0),
-        flip: working ? Math.cos(seconds * 1.4 + slot * 2 + index) < 0 : false,
+        x: slotOffset(slot) + (working ? phase * sway : 0),
+        flip: working && sway > 0 ? Math.cos(seconds * 1.4 + slot * 2 + index) < 0 : false,
         bubble: bubbleOf(p),
         title: `${p.label} · ${actorLabel(p.actor)} · ${t(STEP_STATE_KEYS[p.state])}`,
         label: p.label,

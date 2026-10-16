@@ -103,6 +103,16 @@ Child processes used about 3.8 s of CPU in total (peak memory of the measuring p
 | Packaged candidate | Developer ID signed (not notarised); `check-package.mjs` passed; 18/18 packaged-app scenarios including the launch-detection test; reinstalled with a strict signature valid and exactly one registration |
 | Installed app, launch detection on (isolated profile) | The window was ready before detection had started. Background detection with trigger "startup" finished about 3 s later and took 0.74 s warm. It found 7 installed clients; 5 can run in the background (Codex, Claude, Cursor, Kimi, DeepSeek Harness). A LaunchServices open with the switch off started and quit cleanly |
 
+## Pull-request CI fixes (2026-10-16)
+
+The first pull-request run ([38912902895](https://github.com/jasonyao486/HAICoMo/actions/runs/38912902895), head 7bc4c97) failed on both platforms:
+- **Windows unit (`relay-stages`, 3 tests):** the test harness's simulated clock could fall behind the real time at which slow storage armed a relay. The harness now never advances from a time earlier than the real clock. App code was unchanged.
+- **macOS e2e (`v050`):** an unattended relay stayed "running". The fixture asks its first question in the same output burst that acknowledges `turn/start`. The relay run was registered only after `start()` returned, so that question went to the UI unanswered. Relay starts now choose the run ID first and register it before spawning (decision 56). The e2e teardown also cancels held runs and bounds shutdown, so a failed assertion no longer hangs the worker.
+
+While retaking the README screenshots, three workers at the desk overlapped: the ±24 px working sway exceeded the ~74 px seat spacing, and reduced motion still applied a fixed offset. Neighbours now sway ±5 px, a lone worker keeps the wider walk, and reduced motion keeps everyone still (decision 57). `readme-relay.spec.ts` asserts no overlap.
+
+Local re-check after these fixes: typecheck; 134 unit tests in 21 files (run per file); full Electron suite 33 passed, 4 skipped; `v050` ×3 consecutive passes.
+
 ## Windows (native CI)
 
 Pending. The pull-request and main `verify.yml` runs on `windows-2025` cover:

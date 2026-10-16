@@ -6,7 +6,8 @@ const args = process.argv.slice(2);
 // stream-json), kimi (role lines, prompt argument), dsh (DeepSeek Harness
 // session/status/final events, prompt on stdin), gemini (message deltas),
 // copilot (plain text). No dialect ever calls a model.
-const dialect = require("node:path").basename(process.argv[1]).replace(/\.(c?js|cmd)$/, "");
+// qwen behaves like gemini (Qwen Code shares Gemini CLI's headless interface).
+const dialect = require("node:path").basename(process.argv[1]).replace(/\.(c?js|cmd)$/, "").replace(/^qwen$/, "gemini");
 const HELP = {
   agent: "--listen --resume --model stream-json",
   kimi: "-p, --prompt <prompt>  --output-format <format> (choices: \"text\", \"stream-json\")  -S, --session [id]  -m, --model <model>  -y, --yolo  --auto  --plan",
@@ -30,6 +31,8 @@ const log = (value) =>
   );
 log({ args, dialect, env: { DSH_PERMISSION_MODE: process.env.DSH_PERMISSION_MODE } });
 const argValue = (flag) => { const i = args.indexOf(flag); return i >= 0 ? args[i + 1] : undefined; };
+// A "readme-relay-hold" line keeps the run observable for synthetic README scenes; it never calls a model.
+const holds = (prompt) => String(prompt).split(/\r?\n/).includes("readme-relay-hold");
 if (dialect === "kimi" || dialect === "gemini" || dialect === "copilot") {
   const prompt = argValue("--prompt") ?? "";
   log({ prompt });
@@ -41,6 +44,7 @@ if (dialect === "kimi" || dialect === "gemini" || dialect === "copilot") {
   }
   if (dialect === "gemini") {
     send({ type: "init", session_id: "gemini-session", model: "gemini-fixture" });
+    if (holds(prompt)) return setInterval(() => {}, 1000);
     send({ type: "message", role: "assistant", content: "Gemini ", delta: true });
     send({ type: "message", role: "assistant", content: "fixture output", delta: true });
     send({ type: "result", status: "success" });
@@ -95,7 +99,7 @@ if (dialect === "kimi" || dialect === "gemini" || dialect === "copilot") {
     if (m.method === "turn/start") {
       if (!Array.isArray(m.params.input[0].text_elements))
         return send({ id: m.id, error: { message: "missing text_elements" } });
-      mode = m.params.input[0].text.split(/\r?\n/).find(line => ["approve", "cancel", "cancelQueued", "cancelWithoutCompletion", "recommend"].includes(line)) ?? m.params.input[0].text;
+      mode = m.params.input[0].text.split(/\r?\n/).find(line => ["approve", "cancel", "cancelQueued", "cancelWithoutCompletion", "recommend", "readme-relay-hold"].includes(line)) ?? m.params.input[0].text;
       send({ id: m.id, result: { turn: { id: "turn-fixture" } } });
       const started = () => { turnStarted = true; send({
         method: "turn/started",
@@ -141,7 +145,7 @@ if (dialect === "kimi" || dialect === "gemini" || dialect === "copilot") {
           },
         });
       else if (mode === "exitEarly") process.exit(0);
-      else if (!["cancel", "cancelWithoutCompletion", "cancelQueued"].includes(mode))
+      else if (!["cancel", "cancelWithoutCompletion", "cancelQueued", "readme-relay-hold"].includes(mode))
         setTimeout(
           () =>
             send({
@@ -186,7 +190,7 @@ if (dialect === "kimi" || dialect === "gemini" || dialect === "copilot") {
       message: { content: [{ type: "text", text: "Fixture output" }] },
     });
     // Hold an observable run for the synthetic README scene; never call a model.
-    if (prompt === "readme-relay-hold") {
+    if (holds(prompt)) {
       setInterval(() => {}, 1000);
       return;
     }
