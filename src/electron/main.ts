@@ -736,8 +736,12 @@ const scheduler = new RelayScheduler({
     const predecessor = relayPredecessor(relay, state);
     const threadId = step.resumeThreadId || (stageIndex === 0 && step.continueThread ? predecessor?.threadId : step.threadId || undefined);
     startingProjects.set(directory, (startingProjects.get(directory) ?? 0) + 1);
+    // Registered before the process starts: the first question can arrive with the start acknowledgement.
+    const runId = randomUUID();
+    relayRuns.set(runId, { directory, relayId: relay.id, stepId: step.id, autonomous, identity });
     try {
       const result = await runners.start({
+        runId,
         provider: step.provider as BackgroundHarnessId,
         executable: cap.executable,
         directory,
@@ -751,9 +755,12 @@ const scheduler = new RelayScheduler({
         threadId,
         autonomous,
       });
-      relayRuns.set(result.runId, { directory, relayId: relay.id, stepId: step.id, autonomous, identity });
       const model = step.model || cap.models?.find((m) => m.isDefault)?.id || "";
       return { runId: result.runId, threadId: result.threadId, to: relayStepActor({ model, provider: step.provider }) };
+    } catch (error) {
+      // A start that failed before a run existed leaves no link behind.
+      if (!runners.active().some((r) => r.runId === runId)) relayRuns.delete(runId);
+      throw error;
     } finally {
       const remaining = (startingProjects.get(directory) ?? 1) - 1;
       if (remaining) startingProjects.set(directory, remaining);

@@ -223,7 +223,16 @@ test("0.5.0 relay: three stages × three tasks, unattended answers recorded, des
     await expect.poll(() => page.evaluate(async () => (await window.haicomo.request("providers.background")).runs.length), { timeout: 15000 }).toBe(0);
     expect(errors).toEqual([]);
   } finally {
-    await app.close();
+    // A failed assertion must not leave held runs behind: they turn closing into a quit confirmation.
+    await page
+      .evaluate(async () => {
+        const binding = (await window.haicomo.request("bootstrap")).projects[0]?.binding;
+        if (binding) for (const run of await window.haicomo.request("providers.active", { binding })) await window.haicomo.request("providers.cancel", { binding, runId: run.runId });
+      })
+      .catch(() => {});
+    const child = app.process();
+    await Promise.race([app.close(), new Promise((resolve) => setTimeout(resolve, 15000))]);
+    if (child.exitCode === null && child.signalCode === null) child.kill();
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

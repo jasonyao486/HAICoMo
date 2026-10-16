@@ -70,7 +70,9 @@ function harness(t: any, opts: { fail?: (taskId: string) => boolean } = {}) {
     env.store.recordEvent({ id: randomUUID(), sessionId: runId, family: null, provider: "codex", model: "fixture", taskIds: [taskId], status: endReason === "completed" ? "idle" : "error", source: "runner", at: new Date(clock).toISOString(), endedAt: new Date(clock).toISOString(), message, lifecycle: "history", endReason, instanceId: "test" } as RunEvent);
   };
   const relay = (id: string) => env.store.state().relays.find((r) => r.id === id)!;
-  return { ...env, scheduler, starts, attention, end, relay, advance: (ms: number) => (clock += ms) };
+  // Relays are armed at the real time of their creation; slow storage (Windows runners)
+  // can put that after the simulated clock, so advancing never starts behind real time.
+  return { ...env, scheduler, starts, attention, end, relay, advance: (ms: number) => (clock = Math.max(clock, Date.now()) + ms) };
 }
 
 test("validation: limits, duplicate tasks per stage, stage order, continue-thread, providers and consent", (t) => {

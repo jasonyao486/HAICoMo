@@ -174,6 +174,12 @@ export type RunOptions = {
   threadId?: string;
   /** Set only for relays the user explicitly consented to run unattended. */
   autonomous?: boolean;
+  /**
+   * Caller-chosen run id, so the caller can register the run before the
+   * process starts: a client may ask its first question in the same output
+   * burst that acknowledges the start.
+   */
+  runId?: string;
 };
 export type PermissionRequest = {
   runId: string;
@@ -442,6 +448,7 @@ export class LocalRunners {
   async start(options: RunOptions) {
     if (!options.prompt.trim()) fail("PROMPT_REQUIRED");
     if (!path.isAbsolute(options.executable)) fail("EXECUTABLE_REQUIRED");
+    if (options.runId !== undefined && (!/^[\w-]{8,100}$/.test(options.runId) || this.runs.has(options.runId))) fail("RUN_ID_INVALID");
     // The client may have been uninstalled, moved or replaced since it was detected.
     try {
       fs.accessSync(options.executable, process.platform === "win32" ? fs.constants.F_OK : fs.constants.X_OK);
@@ -499,7 +506,7 @@ export class LocalRunners {
     const run: Run = {
       process: proc,
       options,
-      id: randomUUID(),
+      id: options.runId ?? randomUUID(),
       threadId: options.threadId,
       turnStarted: false,
       status: "unknown",
