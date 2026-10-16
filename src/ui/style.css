@@ -2324,15 +2324,20 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .relay-empty-preview > .relay-row.visual { display: flex; }
 .relay-stage-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .relay-stage-strip > .relay-arrow { width: 24px; }
-.relay-scene { flex: 0 0 auto; width: 296px; height: 176px; }
-.relay-scene .furniture { bottom: 14px; }
-.relay-scene.workstation .furniture-desk { bottom: 22px; }
-.relay-scene.workstation.enhanced .furniture-desk { bottom: -20px; }
-.relay-scene.sofa .furniture-sofa { bottom: 12px; }
-.relay-scene.sofa.enhanced .furniture-sofa { bottom: -10px; }
+/* Scenes share the row's full width; furniture keeps its size, centred in the scene. */
+.relay-scene { flex: 1 1 296px; min-width: 296px; width: auto; height: 176px; }
+/* Visible furniture is centred vertically in the 176 px scene: bottom = (176 − visible height) / 2 − transparent bottom margin.
+   Painted desk 108 px visible, 31 px margin; painted sofa 97 px, 19 px; SVG desk 83 px, 1 px; SVG sofa 68 px, 0 px. */
+.relay-scene .furniture { bottom: 45px; }
+.relay-scene.workstation .furniture-desk { bottom: 45px; }
+.relay-scene.workstation.enhanced .furniture-desk { bottom: 3px; }
+.relay-scene.sofa .furniture-sofa { bottom: 54px; }
+.relay-scene.sofa.enhanced .furniture-sofa { bottom: 20px; }
+/* Working agents walk in the free band below the desk. */
 .relay-actor { bottom: 8px; transform: translateX(-50%); }
-.relay-scene.sofa .relay-actor.seated, .relay-scene.sofa.enhanced .relay-actor.seated { transform: translateX(-50%); bottom: 27px; }
-.relay-scene.sofa.enhanced .relay-actor.seated { bottom: 40px; }
+/* Seated agents keep their offset from the seat cushions (SVG +15 px, painting +50 px above the drawing's bottom). */
+.relay-scene.sofa .relay-actor.seated, .relay-scene.sofa.enhanced .relay-actor.seated { transform: translateX(-50%); bottom: 69px; }
+.relay-scene.sofa.enhanced .relay-actor.seated { bottom: 70px; }
 .relay-scene-label { position: absolute; top: 6px; left: 8px; font-size: 11px; color: var(--muted); background: color-mix(in srgb, var(--panel) 70%, transparent); border-radius: 6px; padding: 1px 6px; pointer-events: none; }
 .relay-card-list { display: flex; flex-direction: column; gap: 14px; }
 .relay-card { padding: 12px 14px; }
@@ -2377,4 +2382,28 @@ button.relay-node-main { cursor: pointer; }
   .relay-flow-stage { max-width: none; }
   .relay-flow-stage + .relay-flow-stage::before { content: "↓"; left: 50%; top: -24px; transform: translateX(-50%); }
   .relay-card-head { flex-direction: column; }
+}
+/* 0.5.0: the relay editor is wide enough for stages A, B and C side by side; narrow windows scroll the flow instead of wrapping a stage. */
+.modal.wide.relay-editor { width: min(1280px, 96vw); }
+.relay-flow.relay-flow-edit { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+.relay-flow-edit > .relay-flow-stage { flex: 1 1 0; min-width: 230px; max-width: none; }
+.relay-flow-edit > .relay-flow-stage.relay-flow-add { flex: 0 0 auto; min-width: 0; }
+/* 0.5.0: Settings → Local agents is one table: name | detection result | reset, then the path row. */
+.client-list { margin-top: 6px; }
+.client-list .client-config { margin: 0; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.client-list .client-config-title { display: grid; grid-template-columns: 180px minmax(0, 1fr) auto; align-items: center; gap: 8px 20px; margin-bottom: 10px; }
+.client-list .client-name { font-size: 13px; font-weight: 600; min-width: 0; }
+.client-detect { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-width: 0; font-size: 12px; line-height: 1.6; color: var(--text); }
+.client-detect > span { overflow-wrap: anywhere; }
+.client-detect .client-evidence, .client-detect .client-version { color: var(--muted); }
+.client-detect .client-reason { color: #b8741f; }
+.client-status { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); }
+.client-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.client-status.found { background: color-mix(in srgb, #529b77 16%, transparent); color: #2f7d58; }
+.client-detected { display: block; margin-top: 8px; font-size: 11px; color: var(--muted); }
+.settings-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 18px; }
+.settings-actions .button { margin: 0; }
+@media (max-width: 760px) {
+  .client-list .client-config-title { grid-template-columns: 1fr auto; }
+  .client-list .client-detect { grid-column: 1 / -1; grid-row: 2; }
 }

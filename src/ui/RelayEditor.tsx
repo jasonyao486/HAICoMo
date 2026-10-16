@@ -176,7 +176,7 @@ export function RelayEditor({ relay, workspace, settings, t, onClose, onSaved }:
   };
   const autonomousMode = (provider: string) => capOf(provider)?.autonomousMode;
   return (
-    <Modal title={relay ? t("relayEdit") : t("relayNew")} onClose={() => { if (!dirty || confirm(t("unsaved"))) onClose(); }} wide>
+    <Modal title={relay ? t("relayEdit") : t("relayNew")} onClose={() => { if (!dirty || confirm(t("unsaved"))) onClose(); }} wide className="relay-editor">
       <div className="modal-body form-grid relay-form">
         <p className="muted full">{t("relayLimits")} {t("relayLimitHint")}</p>
         <label className="full">

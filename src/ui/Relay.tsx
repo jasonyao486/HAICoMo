@@ -173,7 +173,7 @@ function DeskScene({ relay, progress, seconds, settings, t, onAgent, index }: { 
         key: p.step.id,
         actor: p.actor,
         pose: working ? "run" : p.state === "starting" ? "walk" : "idle",
-        x: slotOffset(slot) + (working ? phase * 14 : 0),
+        x: slotOffset(slot) + (working ? phase * 24 : 0),
         flip: working ? Math.cos(seconds * 1.4 + slot * 2 + index) < 0 : false,
         bubble: bubbleOf(p),
         title: `${p.label} · ${actorLabel(p.actor)} · ${t(STEP_STATE_KEYS[p.state])}`,

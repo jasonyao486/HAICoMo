@@ -6,7 +6,7 @@ import path from "node:path";
 import { fixtureAgent } from "./fixture-agent";
 import { detect, findExecutable, LocalRunners } from "../src/providers/local";
 import { ADAPTERS, newJsonlState, readJsonlEvent, jsonlMessage, WINDOWS_ARGV_PROMPT_LIMIT } from "../src/providers/adapters";
-import { BACKGROUND_HARNESS_IDS, CLIENTS, HARNESS_IDS, clientIcon, isBackgroundHarness } from "../src/shared/clients";
+import { BACKGROUND_EVIDENCE, BACKGROUND_HARNESS_IDS, CLIENTS, HARNESS_IDS, clientIcon, isBackgroundHarness } from "../src/shared/clients";
 import type { RunEvent } from "../src/shared/domain";
 
 function workspace(t: any) {
@@ -42,6 +42,8 @@ test("client table: new clients are distinct from model families and background 
   for (const id of BACKGROUND_HARNESS_IDS) assert.equal(ADAPTERS[id].id, id);
   // Grok Bot, WorkBuddy and TRAE have no headless interface: manual handoff only.
   for (const id of ["grok-bot", "workbuddy", "trae"]) assert.equal(isBackgroundHarness(id), false);
+  assert.equal(BACKGROUND_EVIDENCE.cursor, "verified");
+  assert.equal(BACKGROUND_EVIDENCE["deepseek-harness"], "verified");
 });
 
 test("detection enables a client only when its own help names the headless flags", async (t) => {
@@ -51,9 +53,11 @@ test("detection enables a client only when its own help names the headless flags
   assert.deepEqual(kimi.modes, ["default", "plan", "ask-when-needed"]);
   assert.equal(kimi.autonomousMode, "never-ask");
   assert.equal(kimi.resume, true);
+  dshHome(t);
   const dsh = await detect("deepseek-harness", fixtureAgent(dir, "dsh"));
   assert.equal(dsh.background, true);
-  assert.equal(dsh.model, false);
+  assert.equal(dsh.model, true);
+  assert.equal(dsh.models, undefined);
   assert.deepEqual(dsh.modes, ["workspace-write", "read-only"]);
   const gemini = await detect("gemini-cli", fixtureAgent(dir, "gemini"));
   assert.equal(gemini.background, true);
@@ -80,7 +84,21 @@ test("Kimi: prompt as an argument, role lines parsed, exit code decides delivery
   assert.match(bad.final.message, /quota/);
 });
 
+/** DeepSeek tests use their own DSH_HOME so the developer's real ~/.dsh never leaks in. */
+function dshHome(t: any, desktopPatch?: string) {
+  const home = workspace(t);
+  if (desktopPatch !== undefined) {
+    fs.mkdirSync(path.join(home, "profiles", "desktop"), { recursive: true });
+    fs.writeFileSync(path.join(home, "profiles", "desktop", "cordis.patch.yml"), desktopPatch);
+  }
+  const saved = process.env.DSH_HOME;
+  process.env.DSH_HOME = home;
+  t.after(() => { if (saved === undefined) delete process.env.DSH_HOME; else process.env.DSH_HOME = saved; });
+}
+const DESKTOP_PATCH = `# user layer\n- id: locale\n  name: "@deepseek-ai/dsh-client-locale"\n  config:\n    preference: zh\n- id: agent-default-model\n  name: "@deepseek-ai/dsh-agent-default-model"\n  config:\n    provider: deepseek-account\n    model: deepseek-v4-pro\n    reasoningEffort: high\n- id: ui-chat\n  config: {}\n`;
+
 test("DeepSeek Harness: prompt on stdin, permission preset by environment, final/turn_end events", async (t) => {
+  dshHome(t);
   const ok = await run(t, "dsh", "deepseek-harness", "Review the plan");
   assert.equal(ok.final.endReason, "completed");
   assert.equal(ok.final.message, "DeepSeek fixture output");
@@ -88,11 +106,39 @@ test("DeepSeek Harness: prompt on stdin, permission preset by environment, final
   const log = requests(ok.dir);
   assert.deepEqual(log[0].args, ["--profile", "headless", "--json", "-"]);
   assert.equal(log[0].env.DSH_PERMISSION_MODE, "workspace-write");
-  assert.ok(log.some((r) => r.prompt === "Review the plan"));
+  assert.ok(log.some((r) => r.prompt === "Review the plan" && r.patch === null));
   const bad = await run(t, "dsh", "deepseek-harness", "fail", { mode: "read-only" });
   assert.equal(bad.final.endReason, "failed");
   assert.match(bad.final.message, /MISSING_CREDENTIAL/);
+  assert.doesNotMatch(bad.final.message, /Starting local agent/);
   assert.equal(requests(bad.dir)[0].env.DSH_PERMISSION_MODE, "read-only");
+});
+
+test("DeepSeek Harness: account route via a private per-run patch; typed model, desktop default, safe ids only", async (t) => {
+  dshHome(t, DESKTOP_PATCH);
+  // A typed model wins and keeps the desktop app's provider (the account login).
+  const typed = await run(t, "dsh", "deepseek-harness", "Typed", { model: "deepseek-flash" });
+  const call = requests(typed.dir).find((r) => r.args), patched = requests(typed.dir).find((r) => r.patch);
+  const patchArg = call.args[call.args.indexOf("--patch") + 1];
+  assert.deepEqual(call.args.filter((a: string) => a !== patchArg), ["--profile", "headless", "--patch", "--json", "-"]);
+  assert.match(patched.patch, /id: agent-default-model/);
+  assert.match(patched.patch, /provider: "deepseek-account"/);
+  assert.match(patched.patch, /model: "deepseek-flash"/);
+  assert.equal(typed.final.model, "deepseek-flash");
+  assert.equal(typed.final.family, "deepseek");
+  assert.equal(fs.existsSync(patchArg), false, "the overlay is removed when the run ends");
+  // An empty model follows the desktop app's current default.
+  const followed = await run(t, "dsh", "deepseek-harness", "Default");
+  assert.match(requests(followed.dir).find((r) => r.patch).patch, /model: "deepseek-v4-pro"/);
+  assert.equal(followed.final.model, "deepseek-v4-pro");
+  const cap = await detect("deepseek-harness", fixtureAgent(workspace(t), "dsh"));
+  assert.equal(cap.model, true);
+  assert.deepEqual(cap.models?.map((m) => [m.id, m.isDefault]), [["deepseek-v4-pro", true]]);
+  // Ids that could escape the YAML overlay are refused before anything starts.
+  const runners = new LocalRunners(() => {}, () => {});
+  t.after(() => runners.dispose());
+  const dir = workspace(t);
+  await assert.rejects(runners.start({ provider: "deepseek-harness", executable: fixtureAgent(dir, "dsh"), directory: dir, taskId: "t", prompt: "x", model: 'flash"\n- id: evil' }), /MODEL_UNSUPPORTED/);
 });
 
 test("Gemini-style deltas and plain-text clients produce the final message", async (t) => {

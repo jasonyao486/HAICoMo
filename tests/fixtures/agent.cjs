@@ -52,7 +52,8 @@ if (dialect === "kimi" || dialect === "gemini" || dialect === "copilot") {
   let prompt = "";
   process.stdin.on("data", (d) => (prompt += d));
   process.stdin.on("end", () => {
-    log({ prompt });
+    const patch = argValue("--patch");
+    log({ prompt, patch: patch ? fs.readFileSync(patch, "utf8") : null });
     send({ type: "session", sessionId: "session-dsh-fixture", cwd: process.cwd() });
     send({ type: "status", phase: "turn_start", turn: 1 });
     if (prompt === "fail") {

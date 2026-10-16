@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { BACKGROUND_EVIDENCE, type BackgroundHarnessId } from "../shared/clients";
@@ -11,7 +12,9 @@ import { BACKGROUND_EVIDENCE, type BackgroundHarnessId } from "../shared/clients
  */
 export type Protocol = "codex-app-server" | "claude-stream" | "jsonl" | "text";
 export type ModeLaunch = { args: string[]; env?: Record<string, string>; autonomous: boolean };
-export type LaunchRequest = { prompt: string; model?: string; effort?: string; mode?: string; threadId?: string; directory: string };
+export type LaunchRequest = { prompt: string; model?: string; effort?: string; mode?: string; threadId?: string; directory: string; patchFile?: string };
+/** A per-run configuration overlay written to a private temporary file (DeepSeek Harness `--patch`). */
+export type RunPatch = { yaml: string; model: string };
 export type ProviderAdapter = {
   id: BackgroundHarnessId;
   /** Executable names searched on PATH and in `extraDirs`, in order. */
@@ -33,6 +36,10 @@ export type ProviderAdapter = {
   model: (help: string) => boolean;
   /** No permission system at all: only usable in consented autonomous relays. */
   autonomyOnly?: boolean;
+  /** Optional per-run overlay; its file path reaches `args` as `request.patchFile`. */
+  patch?: (request: LaunchRequest) => RunPatch | null;
+  /** Model suggestions known without a network call. */
+  models?: () => { id: string; name: string; efforts: string[]; isDefault: boolean }[] | undefined;
 };
 
 /** Modes the application will never offer or pass, autonomous or not. */
@@ -235,12 +242,17 @@ export const ADAPTERS: Record<BackgroundHarnessId, ProviderAdapter> = {
     protocol: "jsonl",
     promptVia: "stdin",
     modes: offered(DSH_MODES),
-    // Unverified end to end (no API key on the development Mac); the sandboxed preset is kept even unattended.
+    // The sandboxed preset is kept even unattended.
     autonomousMode: () => "workspace-write",
     mode: table(DSH_MODES, "workspace-write"),
-    args: (r) => ["--profile", "headless", "--json", ...(r.threadId ? ["--session-id", r.threadId] : []), "-"],
+    args: (r) => ["--profile", "headless", ...(r.patchFile ? ["--patch", r.patchFile] : []), "--json", ...(r.threadId ? ["--session-id", r.threadId] : []), "-"],
     resume: (help) => help.includes("--session-id"),
-    model: () => false,
+    model: () => true,
+    patch: (r) => deepseekPatch(r.model),
+    models: () => {
+      const d = deepseekDesktopDefault();
+      return d ? [{ id: d.model, name: `${d.model} (DeepSeek Harness default)`, efforts: [], isDefault: true }] : undefined;
+    },
   },
   codebuddy: claudeLike("codebuddy", ["codebuddy"]),
   qoder: {
@@ -331,6 +343,52 @@ function approvalCli(id: "gemini-cli" | "qwen-code", name: string): ProviderAdap
     ],
     resume: (help) => help.includes("--resume"),
     model: (help) => help.includes("--model"),
+  };
+}
+const SAFE_ID = /^[\w.:/-]{1,100}$/;
+const dshHome = () => process.env.DSH_HOME || path.join(home(), ".dsh");
+/**
+ * The model the DeepSeek Harness desktop app currently uses (its own patch layer),
+ * read-only. Headless runs follow it when the step leaves the model empty, so they
+ * use the user's account login instead of the API-key route.
+ */
+export function deepseekDesktopDefault(): { provider: string; model: string } | null {
+  let text = "";
+  try {
+    text = fs.readFileSync(path.join(dshHome(), "profiles", "desktop", "cordis.patch.yml"), "utf8");
+  } catch {
+    return null;
+  }
+  const lines = text.split(/\r?\n/);
+  const start = lines.findIndex((l) => /^\s*-\s*id:\s*["']?agent-default-model["']?\s*$/.test(l));
+  if (start < 0) return null;
+  const block: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (/^\s*-\s*id:/.test(line)) break;
+    block.push(line);
+  }
+  const value = (key: string) => block.map((l) => new RegExp(`^\\s+${key}:\\s*["']?([^"'#\\s]+)["']?\\s*(#.*)?$`).exec(l)?.[1]).find(Boolean);
+  const provider = value("provider"), model = value("model");
+  return provider && model && SAFE_ID.test(provider) && SAFE_ID.test(model) ? { provider, model } : null;
+}
+/** Overlay selecting the account route and model for one headless run; null keeps the profile's own default. */
+export function deepseekPatch(requested?: string): RunPatch | null {
+  const desktop = deepseekDesktopDefault();
+  const model = requested || desktop?.model;
+  if (!model) return null;
+  if (!SAFE_ID.test(model)) throw new Error(`MODEL_UNSUPPORTED: ${model}`);
+  const provider = desktop?.provider ?? "deepseek-account";
+  return {
+    model,
+    yaml: [
+      "# Written by HAICoMo for one headless run; deleted when the run ends.",
+      "- id: agent-default-model",
+      '  name: "@deepseek-ai/dsh-agent-default-model"',
+      "  config:",
+      `    provider: ${JSON.stringify(provider)}`,
+      `    model: ${JSON.stringify(model)}`,
+      "",
+    ].join("\n"),
   };
 }
 export const adapterFor = (id: string): ProviderAdapter | undefined =>

@@ -64,6 +64,16 @@ test("0.5.0 relay: three stages × three tasks, unattended answers recorded, des
     await expect(dialog.getByRole("button", { name: zh.relaySaveEnable })).toBeDisabled();
     await expect(dialog.locator(".relay-autonomy-flags li")).toHaveCount(3);
     await dialog.getByRole("checkbox", { name: zh.relayAutonomyConsent }).check();
+    // A third stage stays on the same row as A and B (the editor is wide enough); then it is removed again.
+    await dialog.getByRole("button", { name: zh.relayAddStage }).click();
+    const stageTops = await dialog.locator(".relay-flow-edit > .relay-flow-stage:not(.relay-flow-add)").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+    expect(stageTops).toHaveLength(3);
+    expect(new Set(stageTops).size).toBe(1);
+    await dialog.locator(".relay-flow-edit").scrollIntoViewIfNeeded();
+    await page.screenshot({ path: path.join(screens, "relay-editor-three-stages.png") });
+    await dialog.getByRole("button", { name: `${zh.relayRemoveStage} ${zh.relayStageName.replace("{s}", "C")}` }).click();
+    await expect(dialog.locator(".relay-flow-edit [data-step-label=C1]")).toHaveCount(0);
+    await dialog.locator(".relay-flow-edit [data-step-label=B1] .relay-node-main").click();
     await dialog.locator(".relay-flow-edit").scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(screens, "relay-editor-flow.png") });
     await dialog.locator(".relay-autonomy").scrollIntoViewIfNeeded();
@@ -123,6 +133,13 @@ test("0.5.0 relay: three stages × three tasks, unattended answers recorded, des
     // Desk and sofa paintings show the same visible width.
     const widths = await row.evaluate((el) => [...el.querySelectorAll(".furniture")].map((f) => Math.round(f.getBoundingClientRect().width)));
     expect(widths.length).toBe(3);
+    // The scenes fill the whole row (no blank strip on the right) and the furniture sits mid-height.
+    const fill = await row.evaluate((el) => {
+      const strip = el.querySelector(".relay-stage-strip")!.getBoundingClientRect();
+      const scenes = [...el.querySelectorAll(".relay-scene")].map((s) => s.getBoundingClientRect());
+      return { right: Math.round(strip.right - Math.max(...scenes.map((s) => s.right))), width: Math.round(strip.width) };
+    });
+    expect(fill.right).toBeLessThanOrEqual(2);
     await page.screenshot({ path: path.join(screens, "relay-visual-3x3-default.png") });
     await page.evaluate(async () => { const b = await window.haicomo.request("bootstrap"); await window.haicomo.request("settings.patch", { base: b.settings, next: { ...b.settings, enhanced: true } }); });
     await expect(row.locator("img.furniture-sofa")).toHaveCount(2);
@@ -139,6 +156,30 @@ test("0.5.0 relay: three stages × three tasks, unattended answers recorded, des
     await expect(row.getByRole("button", { name: zh.relayRetry })).toBeVisible();
     await page.screenshot({ path: path.join(screens, "relay-visual-blocked-enhanced.png") });
     expect(turnStarts(root)).toBe(6);
+    // Settings → Local agents: one table; detection results fill each client's row, buttons share one aligned row.
+    await frame.getByRole("button", { name: "设置", exact: true }).click();
+    const agents = frame.locator(".client-list");
+    await expect(agents.locator(".client-config")).toHaveCount(15);
+    await expect(agents.locator(".client-detect .muted").first()).toHaveText(zh.detectPending);
+    await agents.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: path.join(screens, "settings-agents-before.png") });
+    await frame.getByRole("button", { name: zh.detect }).click();
+    await expect(agents.locator(".client-detect .client-status")).toHaveCount(15, { timeout: 30000 });
+    await expect(frame.locator(".capability")).toHaveCount(0);
+    const buttons = await frame.locator(".settings-actions .button").evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.height), Math.round(r.left), Math.round(r.right)]; }));
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0][0]).toBe(buttons[1][0]);
+    expect(buttons[0][1]).toBe(buttons[1][1]);
+    expect(buttons[1][2] - buttons[0][3]).toBeGreaterThanOrEqual(10);
+    for (const client of await agents.locator(".client-config-title").all()) {
+      const [name, info, reset] = await client.evaluate((el) => [...el.children].map((c) => { const r = c.getBoundingClientRect(); return [r.left, r.right]; }));
+      expect(name[1]).toBeLessThanOrEqual(info[0]);
+      expect(info[1]).toBeLessThanOrEqual(reset[0]);
+    }
+    await agents.locator('.client-config[data-client="codex"]').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: path.join(screens, "settings-agents-after.png") });
+    await frame.locator(".settings-actions").scrollIntoViewIfNeeded();
+    await page.screenshot({ path: path.join(screens, "settings-agents-actions.png") });
     // Leave no held fixture runs behind: quitting with active agents asks for confirmation.
     await page.evaluate(async () => {
       const binding = (await window.haicomo.request("bootstrap")).projects[0].binding;

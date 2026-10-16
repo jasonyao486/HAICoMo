@@ -141,7 +141,7 @@ Mac：打开 DMG，把 HAICoMo 拖入“应用程序”，推出映像，再启�
 
 “设置 → 本地智能体”检测 15 个客户端：Codex、Claude Code、WorkBuddy、Pi、GitHub Copilot、OpenCode、Cursor、TRAE、Qoder、CodeBuddy，以及 0.5.0 新增的 Kimi（Kimi Code 命令行与 Kimi 桌面应用）、Grok Bot、DeepSeek Harness、Gemini CLI 和 Qwen Code。路径留空自动检测，必要时手动指定；Kimi 会自动查找 `~/.kimi-code/bin`，DeepSeek Harness 会使用应用包内自带的 `dsh`。
 
-凡提供无界面（headless）命令行的客户端都可后台调用：Codex、Claude Code、Cursor Agent、Kimi、DeepSeek Harness、CodeBuddy、Qoder CLI、Gemini CLI、Qwen Code、OpenCode、GitHub Copilot CLI、Pi。只有当你已安装版本的帮助文本列出 HAICoMo 需要的参数时才会启用，否则显示“已安装版本没有所需的后台运行参数”并退回手动交接。每个客户端旁标注“后台支持”的证据等级：**已实测**（Codex、Claude Code）、**已在本机核对参数**（Cursor、Kimi、DeepSeek Harness：参数和出错路径已核对，成功运行仍需你的登录、额度或 API key）、**按官方文档适配，未实测**（其余）。Grok Bot、WorkBuddy、TRAE 和 Kimi 桌面应用没有命令行接口，只能检测、打开应用并复制提示词。DeepSeek Harness 的 headless 模式需要在其“模型”页配置 DeepSeek API key，这会按 API 计费；HAICoMo 不代为获取或填写密钥。
+凡提供无界面（headless）命令行的客户端都可后台调用：Codex、Claude Code、Cursor Agent、Kimi、DeepSeek Harness、CodeBuddy、Qoder CLI、Gemini CLI、Qwen Code、OpenCode、GitHub Copilot CLI、Pi。只有当你已安装版本的帮助文本列出 HAICoMo 需要的参数时才会启用，否则显示“已安装版本没有所需的后台运行参数”并退回手动交接。每个客户端旁标注“后台支持”的证据等级：**已实测**（Codex、Claude Code、Cursor、DeepSeek Harness）、**已在本机核对参数**（Kimi：参数和出错路径已核对，成功运行需要你的额度）、**按官方文档适配，未实测**（其余）。Grok Bot、WorkBuddy、TRAE 和 Kimi 桌面应用没有命令行接口，只能检测、打开应用并复制提示词。DeepSeek Harness 走你在桌面版登录的 DeepSeek 账号（不需要 API key）：任务里填写的模型优先（例如 `deepseek-flash`），留空则跟随桌面版当前的默认模型；HAICoMo 每次运行只在私有临时文件中叠加这两项设置，运行结束即删除，不修改 DeepSeek Harness 的配置，也不获取或填写任何密钥。
 
 从任务打开“交接”，选择客户端、模型、强度、模式及可选会话，检查提示词和交付物引用。复制提示词、打开客户端、后台发送是不同操作。打开 GUI 不代表提示词已送达。
 

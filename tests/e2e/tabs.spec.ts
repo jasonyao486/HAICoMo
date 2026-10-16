@@ -175,7 +175,7 @@ test("single window tabs retain drafts, route background permissions and keep cl
       current(page).locator(".client-config .client-name img"),
     ).toHaveCount(15);
     await expect(
-      current(page).locator(".capability .client-name img"),
+      current(page).locator(".client-config .client-detect .client-status"),
     ).toHaveCount(15);
     await expect(
       current(page).getByText("打开客户端后粘贴已复制的提示词；尚未确认发送。"),

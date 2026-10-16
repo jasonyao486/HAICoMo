@@ -17,7 +17,7 @@
 | 5 | 输出格式不认识时怎么判断完成 | 以进程退出码为准；最终消息取最后的 assistant 文本或输出末尾 | 各厂商事件格式不同且可能变化；按退出码判断最稳妥，也不会把失败误报为成功 | `readJsonlEvent` |
 | 6 | Pi 没有权限系统 | 只允许在你已同意的无人值守接力中使用 | 普通交接中运行它，等于默认绕过权限，违反 AGENTS.md | `ADAPTERS.pi.autonomyOnly` |
 | 7 | Windows 上把提示词作为命令行参数的客户端 | 提示词超过 24,000 字符直接报错，不截断 | Windows 命令行总长上限为 32,767 字符；截断会悄悄改变指令 | `WINDOWS_ARGV_PROMPT_LIMIT` |
-| 8 | DeepSeek Harness 需要 API key | 不代为获取或填写；在手册和测试记录中写明会按 API 计费 | AGENTS.md 规定不获取模型密钥、不静默产生 API 计费 | — |
+| 8 | DeepSeek Harness 的计费路线 | 走你在桌面版登录的账号（`deepseek-account`），不用 API key。每次运行在私有临时文件中叠加 provider 和 model，运行结束即删除；不修改 DeepSeek Harness 的配置，不获取或填写密钥（第二轮修订） | headless 默认走 API key 路线，而你没有 key；账号路线与桌面版计费方式相同，不会静默产生 API 计费 | `deepseekPatch()` |
 
 ## 二、三阶段接力
 
@@ -64,6 +64,18 @@
 | 37 | 文字模式原来的表格 | 改为流程图卡片 | 你要求显示完整流程 | `RelayFlowView` |
 | 38 | 编辑器布局 | 流程图负责增删阶段和任务；点选一个任务后在下方编辑它 | 9 个任务全部展开会太长 | `RelayEditor` |
 
+## 第二轮（2026-10-16）新增的决定
+
+| # | 问题 | 选择 | 理由 | 若要改 |
+|---|---|---|---|---|
+| 39 | DeepSeek 任务模型留空时用哪个 | 跟随 DeepSeek Harness 桌面版当前的默认模型（只读 `~/.dsh/profiles/desktop/cordis.patch.yml`，目前是 `deepseek-v4-pro`）。**这是你确认的选择** | 你在桌面版换了默认模型，HAICoMo 会自动跟着换 | `deepseekDesktopDefault()` |
+| 40 | 你说的 “ds-v41-flash” | 实际 id 是 `deepseek-flash`：DeepSeek 服务器拒绝 `ds-v41-flash`，并返回可用的 id 只有 `deepseek-flash` 和 `deepseek-v4-pro`；实测改用 `deepseek-flash` | 以服务器返回为准 | 任务的“模型”栏 |
+| 41 | 模型 id 的安全性 | 只接受字母、数字及 `. : / _ -`，最长 100 个字符；其他一律拒绝（`MODEL_UNSUPPORTED`） | 模型 id 会写进 YAML 叠加文件，需防止注入 | `SAFE_ID` |
+| 42 | 场景铺满整行后，家具大小 | 家具保持原尺寸并居中，只把背景框拉宽；工位角色的走动幅度从 ±14 加大到 ±24 px | 你要求加宽的是背景；家具放大会让场景变高 | `.relay-scene` |
+| 43 | 家具的上下位置 | 按每件家具实际可见部分的高度，让它的中心落在场景中线；坐着的角色跟随座垫一起上移 | 你要求上下居中，把下方留给角色走动 | `style.css` 中的说明注释 |
+| 44 | 设置页何时检测 | 仍然点击“检测智能体”才检测；检测前每行显示“点击检测智能体查看状态” | 检测要启动每个 CLI；打开设置页就自动检测会变慢 | `Views.tsx` |
+| 45 | 编辑器宽度 | 最宽 1280 px（窗口的 96%）；三个阶段并排，窗口过窄时流程图横向滚动，不换行 | 你要求 C 阶段不要跑到下一行 | `.modal.relay-editor` |
+
 ## 素材交接（给负责重绘沙发的智能体）
 
 - **需要替换的文件：** `assets/runtime/local-assets/studio-sofa.png`。当前是占位图，2056×1024，不透明区域 x 43–2013。
@@ -81,7 +93,7 @@
 
 ## 还没有验证的部分（如实列出）
 
-- **Kimi、Cursor、DeepSeek 的成功运行：** 未实测，分别缺额度、缺登录、缺 API key。补上任意一个后，我可以在临时目录各跑一次只读小任务。
+- **Kimi 的成功运行：** 未实测，因为本月额度已用完。Cursor 和 DeepSeek 已在第二轮实测通过，见 TESTING-0.5.0。
 - **7 个按文档适配的客户端：** 本机没有安装，没有真实运行过。
 - **Windows：** 新适配器的安装路径和 `.cmd` 启动方式都未验证（例如 DeepSeek 在 Windows 上的 `dsh` 启动器）。Windows 轮次会在 CI 和真机上验证。
 - **本机安装的 0.5.0：** 是本地候选版，用 Developer ID 签名，未经公证。正式发布后，用官方安装包替换即可。

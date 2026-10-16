@@ -462,56 +462,60 @@ export function SettingsView({
       <section className="panel settings-panel">
         <h2>{t("connections")}</h2>
         <p className="muted">{t("pathHint")}</p>
-        {CLIENTS.map((c) => (
-          <div className="client-config" key={c.id}>
-            <div className="client-config-title"><span className="client-name"><img src={`.${clientIcon(c.id)}`} alt="" />{c.name}</span><button className="link" onClick={() => set("clientPaths", { ...settings.clientPaths, [c.id]: "" })}>{t("clearPath")}</button></div>
-            <div className="client-path-row"><input aria-label={`${c.name} · ${t("clientPath")}`} value={settings.clientPaths[c.id] ?? ""} placeholder={t("autoDetect")} onChange={(e) => set("clientPaths", { ...settings.clientPaths, [c.id]: e.target.value })} /><button className="link" onClick={() => void api("providers.pickPath").then((file) => { if (file) set("clientPaths", { ...settings.clientPaths, [c.id]: file }); }).catch((e) => notify(errorText(e, t), true))}>{t("choosePath")}</button></div>
-          </div>
-        ))}
-        <button
-          className="button"
-          onClick={() =>
-            action(async () => {
-              await savePreferences();
-              setCaps(await api("providers.detect"));
-            })
-          }
-        >
-          <RotateCw size={15} />
-          {t("detect")}
-        </button>
-        {caps.map((c) => (
-          <div className="capability" key={c.provider}>
-            <strong className="client-name">
-              <img src={`.${clientIcon(c.provider)}`} alt="" />
-              {clientName(c.provider)}
-            </strong>
-            <span>{t(c.installed ? "available" : "unavailable")}</span>
-            <small>
-              {c.version} ·{" "}
-              {t(
-                c.background
-                  ? "backgroundAvailable"
-                  : c.relayReady && c.autonomyOnly
-                    ? "relayAutonomyOnly"
-                    : c.installed
-                      ? "manualCapability"
-                      : "unavailable",
-              )}
-              {c.reason && c.installed && !c.background && !c.relayReady && !["MANUAL_HANDOFF_ONLY", "NOT_INSTALLED"].includes(c.reason) ? ` · ${errorText(new Error(c.reason), t)}` : ""}
-            </small>
-            <small>{t("backgroundEvidence")}: {evidenceLabel(c.provider, t)}</small>
-            <small className="full-path">
-              {t("detectedPath")}: {c.executable || c.appPath || "—"}
-            </small>
-          </div>
-        ))}
-        <button
-          className="button primary"
-          onClick={() => action(savePreferences)}
-        >
-          {t("save")}
-        </button>
+        <div className="client-list">
+          {CLIENTS.map((c) => {
+            const cap = caps.find((x) => x.provider === c.id);
+            const capability = !cap
+              ? ""
+              : cap.background
+                ? t("backgroundAvailable")
+                : cap.relayReady && cap.autonomyOnly
+                  ? t("relayAutonomyOnly")
+                  : "";
+            const reason = cap?.reason && cap.installed && !cap.background && !cap.relayReady && !["MANUAL_HANDOFF_ONLY", "NOT_INSTALLED"].includes(cap.reason) ? errorText(new Error(cap.reason), t) : "";
+            const detected = cap?.executable || cap?.appPath || "";
+            return (
+              <div className="client-config" key={c.id} data-client={c.id}>
+                <div className="client-config-title">
+                  <span className="client-name"><img src={`.${clientIcon(c.id)}`} alt="" />{c.name}</span>
+                  <span className="client-detect" aria-live="polite">
+                    {cap ? (
+                      <>
+                        <span className={`client-status ${cap.installed ? "found" : "missing"}`}>{t(cap.installed ? "available" : "unavailable")}</span>
+                        {cap.version && <span className="client-version">{cap.version}</span>}
+                        {capability && <span>{capability}</span>}
+                        <span className="client-evidence">{t("backgroundEvidence")}: {evidenceLabel(c.id, t)}</span>
+                        {reason && <span className="client-reason">{reason}</span>}
+                      </>
+                    ) : (
+                      <span className="muted">{t("detectPending")}</span>
+                    )}
+                  </span>
+                  <button className="link" onClick={() => set("clientPaths", { ...settings.clientPaths, [c.id]: "" })}>{t("clearPath")}</button>
+                </div>
+                <div className="client-path-row"><input aria-label={`${c.name} · ${t("clientPath")}`} value={settings.clientPaths[c.id] ?? ""} placeholder={t("autoDetect")} onChange={(e) => set("clientPaths", { ...settings.clientPaths, [c.id]: e.target.value })} /><button className="link" onClick={() => void api("providers.pickPath").then((file) => { if (file) set("clientPaths", { ...settings.clientPaths, [c.id]: file }); }).catch((e) => notify(errorText(e, t), true))}>{t("choosePath")}</button></div>
+                {detected && <small className="client-detected full-path">{t("detectedPath")}: {detected}</small>}
+              </div>
+            );
+          })}
+        </div>
+        <div className="settings-actions">
+          <button
+            className="button"
+            onClick={() =>
+              action(async () => {
+                await savePreferences();
+                setCaps(await api("providers.detect"));
+              })
+            }
+          >
+            <RotateCw size={15} />
+            {t("detect")}
+          </button>
+          <button className="button primary" onClick={() => action(savePreferences)}>
+            {t("save")}
+          </button>
+        </div>
         <p className="muted">{t("privacy")}</p>
       </section>
       {workspace && (

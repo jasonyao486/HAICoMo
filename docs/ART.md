@@ -38,6 +38,8 @@ The relay scene now seats up to three waiting agents per sofa (one sofa per wait
 
 Desk and sofa are displayed at the same visible width (`FURNITURE_WIDTH` = 264 CSS px). Because the paintings carry transparent margins, `figures.tsx` scales each `<img>` by its measured ratio of image width to opaque width (`DESK_VISIBLE_RATIO` = 1619/1519, `SOFA_VISIBLE_RATIO` = 2056/1971). Seats and workstations sit at 22 %, 50 % and 78 % of that width (`SLOT_FRACTIONS`).
 
+Scenes fill the relay row: the desk scene and each sofa scene share the row's width (`flex: 1 1 296px`), while the furniture keeps its size and stays centred. Vertically, each drawing's visible part is centred in the 176 px scene (bottom = (176 − visible height) / 2 − transparent bottom margin), leaving the band below the desk for working agents to walk in; seated agents move with the cushions.
+
 Replacement brief for the three-seat painting: same hand-painted style, fine pencil outlines, woven sage fabric, cream piped cushions and brass feet as the current sofa; facing straight forward from a slightly elevated camera with level seat edges; **three equal seat cushions** whose centres fall near 22 %, 50 % and 78 % of the sofa's width; landscape canvas around 2:1; real transparent alpha with no haze or opaque shadow; tightly framed. After replacing the file, update its `bytes`, `sha256` and `changes` in `assets/manifest.json` (`npm run check:assets` fails otherwise) and re-measure `SOFA_VISIBLE_RATIO`.
 
 Environment artwork is offered under CC BY 4.0 to the extent rights are held; credit HAICoMo contributors and identify changes. Character and brand rights remain separate.

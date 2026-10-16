@@ -205,6 +205,10 @@ type Run = {
   lastEventAt: number;
   protocol: "codex-app-server" | "claude-stream" | "jsonl" | "text";
   jsonl?: JsonlState;
+  /** Private temporary folder for a per-run overlay; removed when the run finishes. */
+  tempDir?: string;
+  /** The client's own stderr, kept apart from HAICoMo's status lines for failure messages. */
+  stderr: string[];
 };
 
 export function findExecutable(provider: string, configured = "") {
@@ -266,6 +270,7 @@ export async function detect(provider: string, configured = ""): Promise<Capabil
       } catch (error) {
         discoveryError = String(error);
       }
+    else models = adapter.models?.();
     const modes = adapter.modes(help).filter((m) => !FORBIDDEN_MODES.includes(m));
     const efforts = provider === "claude" && help.includes("--effort") ? helpChoices(help, "--effort") : [];
     const autonomous = headless ? adapter.autonomousMode(help) : null;
@@ -458,10 +463,21 @@ export class LocalRunners {
     if ((mode.autonomous || adapter.autonomyOnly) && !options.autonomous) fail("AUTONOMY_CONSENT_REQUIRED", options.mode ?? "");
     if (adapter.promptVia === "arg" && process.platform === "win32" && options.prompt.length > WINDOWS_ARGV_PROMPT_LIMIT)
       fail("PROMPT_TOO_LONG_FOR_ARGV");
-    const args = adapter.args(
-      { prompt: options.prompt, model: options.model, effort: options.effort, mode: options.mode, threadId: options.threadId, directory: options.directory },
-      mode,
-    );
+    const request = { prompt: options.prompt, model: options.model, effort: options.effort, mode: options.mode, threadId: options.threadId, directory: options.directory } as Parameters<typeof adapter.args>[0];
+    let tempDir: string | undefined;
+    let patch: ReturnType<NonNullable<typeof adapter.patch>> = null;
+    try {
+      patch = adapter.patch?.(request) ?? null;
+    } catch (error) {
+      fail("MODEL_UNSUPPORTED", String((error as Error).message).replace(/^MODEL_UNSUPPORTED:\s*/, ""));
+    }
+    if (patch) {
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-run-"));
+      request.patchFile = path.join(tempDir, "patch.yml");
+      fs.writeFileSync(request.patchFile, patch.yaml, { mode: 0o600 });
+      if (!options.model) options = { ...options, model: patch.model };
+    }
+    const args = adapter.args(request, mode);
     const protocol = adapter.protocol;
     const launch = launchArgs(options.executable, args);
     const proc = spawn(launch.command, launch.args, {
@@ -495,6 +511,8 @@ export class LocalRunners {
       lastEventAt: 0,
       protocol,
       jsonl: protocol === "jsonl" ? newJsonlState() : undefined,
+      tempDir,
+      stderr: [],
     };
     this.runs.set(run.id, run);
     this.emit(run, "unknown", "Starting local agent; execution not confirmed");
@@ -534,6 +552,7 @@ export class LocalRunners {
     });
     proc.stderr.on("data", (b) => {
       run.log = [...run.log, String(b).slice(0, 2000)].slice(-100);
+      run.stderr = [...run.stderr, String(b).slice(0, 2000)].slice(-20);
     });
     proc.on("error", (error) => {
       this.processes.delete(proc);
@@ -547,7 +566,9 @@ export class LocalRunners {
       if (!run.finished && (protocol === "jsonl" || protocol === "text")) {
         const text = run.jsonl ? jsonlMessage(run.jsonl) : run.output;
         const failed = code !== 0 || Boolean(run.jsonl?.error);
-        const detail = failed ? [run.jsonl?.error, run.log.slice(-3).join("\n")].filter(Boolean).join("\n") : "";
+        const stderr = run.stderr.join("").trim().slice(-2000);
+        const reported = run.jsonl?.error ?? "";
+        const detail = failed ? [reported, stderr && !(reported && stderr.includes(reported)) ? stderr : ""].filter(Boolean).join("\n") : "";
         this.emit(run, failed ? "error" : "idle", [text, detail].filter(Boolean).join("\n") || `Agent exited (${code})`, "history", failed ? "failed" : "completed");
         this.finish(run);
         return;
@@ -798,6 +819,10 @@ export class LocalRunners {
   }
   private finish(run: Run) {
     run.finished = true;
+    if (run.tempDir) {
+      try { fs.rmSync(run.tempDir, { recursive: true, force: true }); } catch {}
+      run.tempDir = undefined;
+    }
     this.runs.delete(run.id);
     clearInterval(run.heartbeat);
     for (const pending of run.pending.values())

@@ -121,7 +121,8 @@ export const HARNESS_IDS = [
 ] as const;
 /**
  * How a client can be launched in the background, and how strongly that path
- * has been verified: "verified" = real sessions in earlier releases;
+ * has been verified: "verified" = real sessions completed through HAICoMo
+ * (Codex and Claude in earlier releases; Cursor and DeepSeek Harness in 0.5.0);
  * "local" = flags and error paths checked against the CLI installed on the
  * development Mac (success path still needs the user's account);
  * "documented" = adapted from the vendor's published headless flags only.
@@ -130,9 +131,9 @@ export const HARNESS_IDS = [
 export const BACKGROUND_EVIDENCE = {
   codex: "verified",
   claude: "verified",
-  cursor: "local",
+  cursor: "verified",
   "kimi-code": "local",
-  "deepseek-harness": "local",
+  "deepseek-harness": "verified",
   codebuddy: "documented",
   qoder: "documented",
   "gemini-cli": "documented",
