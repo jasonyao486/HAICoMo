@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import { ProjectStore } from "../../src/core/store";
 import { readSnapshot } from "../../src/core/files";
 import { defaultSettings } from "../../src/shared/settings";
+import { removeTestDirectory } from "./cleanup";
 const screens = path.resolve(process.env.HAICOMO_EVIDENCE_DIR ?? "validation/0.3.0/screens");
 const current = (page: Page) => page.locator(".workspace-frame:not([hidden])");
 function fixture(root: string) {
@@ -50,25 +51,27 @@ test("0.3.0 relay: form creates a timer relay, the scheduler starts the fixture 
     await expect(dialog.getByLabel("本地客户端")).toHaveValue("codex");
     await expect(dialog.getByRole("button", { name: "保存并启用" })).toBeEnabled({ timeout: 20000 });
     await dialog.locator(".relay-hms input").nth(2).fill("3");
-    await dialog.getByLabel("模式").selectOption("never");
+    await dialog.getByLabel("模式", { exact: true }).selectOption("never");
     await dialog.getByLabel("推理强度").selectOption("high");
     await page.screenshot({ path: path.join(screens, "relay-form.png") });
     await dialog.getByRole("button", { name: "保存并启用" }).click();
-    const row = frame.locator("tr[data-relay-id]");
+    const row = frame.locator(".relay-card[data-relay-id]");
     await expect(row).toHaveCount(1);
     await expect(row).toHaveAttribute("data-status", "scheduled");
     await expect(frame.locator(".badge-relay-scheduled")).toBeVisible();
+    await expect(row.locator(".relay-flow-node[data-step-label=A1]")).toBeVisible();
     await page.screenshot({ path: path.join(screens, "relay-table.png") });
-    await expect(row).toHaveAttribute("data-status", "fired", { timeout: 30000 });
+    await expect(row).toHaveAttribute("data-status", "completed", { timeout: 30000 });
     await expect.poll(() => readSnapshot(dir).handoffs.length, { timeout: 15000 }).toBe(1);
     const snapshot = readSnapshot(dir);
-    expect(snapshot.relays[0].status).toBe("fired");
-    expect(snapshot.relays[0].handoff.mode).toBe("never");
-    expect(snapshot.relays[0].handoff.effort).toBe("high");
+    expect(snapshot.relays[0].status).toBe("completed");
+    expect(snapshot.relays[0].stages[0].steps[0].mode).toBe("never");
+    expect(snapshot.relays[0].stages[0].steps[0].effort).toBe("high");
     expect(snapshot.handoffs[0].mode).toBe("relay");
+    expect(snapshot.handoffs[0].relayStage).toBe(0);
     expect(snapshot.handoffs[0].prompt).toContain("spec.md");
-    expect(snapshot.handoffs[0].sessionId).toBe(snapshot.relays[0].resultRunId);
-    await expect.poll(() => readSnapshot(dir).sessions.filter((s: any) => s.sessionId === snapshot.relays[0].resultRunId && s.lifecycle === "history").length, { timeout: 15000 }).toBe(1);
+    expect(snapshot.handoffs[0].sessionId).toBe(snapshot.relays[0].stages[0].steps[0].runId);
+    await expect.poll(() => readSnapshot(dir).sessions.filter((s: any) => s.sessionId === snapshot.relays[0].stages[0].steps[0].runId && s.lifecycle === "history").length, { timeout: 15000 }).toBe(1);
     const requests = fs.readFileSync(path.join(root, "requests.jsonl"), "utf8");
     expect(requests).toContain('"approvalPolicy":"never"');
     expect(requests).toContain('"effort":"high"');
@@ -80,8 +83,8 @@ test("0.3.0 relay: form creates a timer relay, the scheduler starts the fixture 
     await second.getByRole("radio", { name: "指定日期时间" }).check();
     await second.getByLabel("模型").fill("gpt-6-astra");
     await second.getByRole("button", { name: "保存为暂停" }).click();
-    await expect(frame.locator("tr[data-relay-id]")).toHaveCount(2);
-    await expect(frame.locator("tr[data-status=paused]")).toHaveCount(1);
+    await expect(frame.locator(".relay-card[data-relay-id]")).toHaveCount(2);
+    await expect(frame.locator(".relay-card[data-status=paused]")).toHaveCount(1);
     // Visual view in default and enhanced style.
     await frame.getByRole("button", { name: "可视化", exact: true }).click();
     await expect(frame.locator(".relay-row.visual")).toHaveCount(2);
@@ -89,15 +92,15 @@ test("0.3.0 relay: form creates a timer relay, the scheduler starts the fixture 
     await expect(frame.locator(".relay-row.visual .figure-stick").first()).toBeVisible();
     await page.screenshot({ path: path.join(screens, "relay-visual-default.png") });
     await page.evaluate(async () => { const b = await window.haicomo.request("bootstrap"); await window.haicomo.request("settings.patch", { base: b.settings, next: { ...b.settings, enhanced: true } }); });
-    // The fired relay used the client default model (no family → client icon); the paused one names a GPT model → atlas character.
+    // The completed relay used the client default model (no family → client icon, at the desk); the paused one names a GPT model → atlas character on the sofa.
     await expect(frame.locator(".relay-row.visual .figure-atlas")).toHaveCount(1);
     await expect(frame.locator(".relay-row.visual .figure-stick")).toHaveCount(1);
     await expect(frame.locator(".relay-scene.enhanced").first()).toBeVisible();
     await page.screenshot({ path: path.join(screens, "relay-visual-enhanced.png") });
     await page.evaluate(async () => { const b = await window.haicomo.request("bootstrap"); await window.haicomo.request("settings.patch", { base: b.settings, next: { ...b.settings, enhanced: false, locale: "en-US" } }); });
     await expect(frame.locator(".page-heading h1")).toHaveText("Relay tasks (experimental)");
-    await frame.getByRole("button", { name: "Table", exact: true }).click();
-    await expect(frame.locator("tr[data-relay-id]")).toHaveCount(2);
+    await frame.getByRole("button", { name: "Text", exact: true }).click();
+    await expect(frame.locator(".relay-card[data-relay-id]")).toHaveCount(2);
     await page.screenshot({ path: path.join(screens, "relay-table-en.png") });
     // One shortcut, one new tab.
     await page.keyboard.press(process.platform === "darwin" ? "Meta+t" : "Control+t");
@@ -105,7 +108,7 @@ test("0.3.0 relay: form creates a timer relay, the scheduler starts the fixture 
     expect(errors).toEqual([]);
   } finally {
     await app.close();
-    fs.rmSync(root, { recursive: true, force: true });
+    await removeTestDirectory(root);
   }
 });
 
@@ -135,6 +138,6 @@ test("0.3.0 lock left by another computer is explained and can be taken over aft
     expect(fs.existsSync(path.join(dir, ".haicomo/.gitignore"))).toBe(true);
   } finally {
     await app.close();
-    fs.rmSync(root, { recursive: true, force: true });
+    await removeTestDirectory(root);
   }
 });

@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { ProjectStore } from "../../src/core/store";
 import { dictionaries } from "../../src/ui/i18n";
+import { removeTestDirectory } from "./cleanup";
 const screens = path.resolve(process.env.HAICOMO_EVIDENCE_DIR ?? "validation/0.2.3/screens");
 test("0.2.3 settings popovers preserve drafts, dismiss accessibly and stay below the trigger in every locale", async () => {
   test.setTimeout(120000);
@@ -66,5 +67,5 @@ test("0.2.3 settings popovers preserve drafts, dismiss accessibly and stay below
     await expect(current.locator(".settings-page .muted.path")).toHaveCount(0);
     await expect(current.locator(".legal-panel")).toContainText("ZipZipPipe");
     expect(errors).toEqual([]);
-  } finally { await app.close(); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await app.close(); await removeTestDirectory(root); }
 });

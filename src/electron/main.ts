@@ -16,6 +16,7 @@ import {
   nativeImage,
   powerMonitor,
   session,
+  Notification,
   type UtilityProcess,
 } from "electron";
 import { launchWindowsTerminal } from "./windows-terminal";
@@ -32,11 +33,11 @@ import {
   type ProjectEntry,
 } from "../core/files";
 import { LocalRunners, findExecutable, supportedEfforts } from "../providers/local";
-import type { Settings, Recent, Workspace, Capabilities } from "../shared/domain";
+import type { Settings, Recent, Workspace, Capabilities, AgentDetection } from "../shared/domain";
 import { assertTaskRunnable, inferFamily } from "../shared/domain";
 import { z } from "zod";
 import { detectClients, detectClient } from "../providers/registry";
-import { HARNESS_IDS } from "../shared/clients";
+import { HARNESS_IDS, BACKGROUND_HARNESS_IDS, CLIENTS, clientName, isBackgroundHarness, type BackgroundHarnessId } from "../shared/clients";
 import { InstallGate, resumeTabSchema, type ResumeWindow } from "../core/install";
 import { UpdateController, updateCacheLeftovers, type UpdateSource } from "../core/updates";
 import { createReleaseResolver, isOfficialTagFeed, OFFICIAL_RELEASES, releaseTarget, type HttpGet, type ReleaseOrigins } from "../core/release-feed";
@@ -47,7 +48,8 @@ import { settingsSchema, defaultSettings, mergeSettings, applySettingsEdits } fr
 import { openLegalLink } from "../shared/legal";
 import { legacyPreview } from "../core/legacy";
 import { isRelaySystemCommand } from "../core/store";
-import { relayPredecessor, type Relay } from "../shared/relay";
+import { relayDecisionReport, relayPredecessor, relayReportName, relayStepActor, relayTitle, RELAY_ARMED_STATUSES, type Relay, type RelayStep } from "../shared/relay";
+import { autoDecide } from "../shared/autonomy";
 import { RelayScheduler } from "./relay";
 
 // This file is present only in separately named, locally signed upgrade fixtures.
@@ -88,6 +90,8 @@ const legacySelections = new Map<string, string>();
 const closeAllowed = new Set<number>();
 const replacingProjects = new Set<string>();
 const startingProjects = new Map<string, number>();
+/** Projects a window is opening right now: releasing one must wait until the window is bound to it. */
+const openingProjects = new Map<string, number>();
 let quitRequested = false;
 const defaults = defaultSettings;
 function configFile(name: string) {
@@ -121,9 +125,9 @@ function writeSettings(value: Settings) {
 }
 // Main-process strings (native dialogs, menu, tray) in the three resource languages.
 const MAIN_TEXT = {
-  "zh-CN": { file: "文件", newTab: "新建标签页", closeTab: "关闭当前标签", closeWindow: "关闭窗口", quitQuestion: "本地智能体仍在运行。退出并请求取消？", quitRelays: "已设定的接力任务在应用关闭期间不会执行。", keepRunning: "保持运行", quit: "退出", trayOpen: "打开 HAICoMo 窗口", trayQuit: "退出 HAICoMo", trayTooltip: "HAICoMo 正在后台运行智能体或接力任务" },
-  "zh-TW": { file: "檔案", newTab: "新增分頁", closeTab: "關閉目前分頁", closeWindow: "關閉視窗", quitQuestion: "本機智慧體仍在執行。結束並要求取消？", quitRelays: "已設定的接力任務在應用程式關閉期間不會執行。", keepRunning: "保持執行", quit: "結束", trayOpen: "開啟 HAICoMo 視窗", trayQuit: "結束 HAICoMo", trayTooltip: "HAICoMo 正在背景執行智慧體或接力任務" },
-  en: { file: "File", newTab: "New tab", closeTab: "Close current tab", closeWindow: "Close window", quitQuestion: "Local agents are running. Quit and request cancellation?", quitRelays: "Scheduled relay tasks do not run while the app is closed.", keepRunning: "Keep running", quit: "Quit", trayOpen: "Open HAICoMo window", trayQuit: "Quit HAICoMo", trayTooltip: "HAICoMo is running agents or relay tasks in the background" },
+  "zh-CN": { file: "文件", newTab: "新建标签页", closeTab: "关闭当前标签", closeWindow: "关闭窗口", quitQuestion: "本地智能体仍在运行。退出并请求取消？", quitRelays: "已设定的接力任务在应用关闭期间不会执行。", keepRunning: "保持运行", quit: "退出", trayOpen: "打开 HAICoMo 窗口", trayQuit: "退出 HAICoMo", trayTooltip: "HAICoMo 正在后台运行智能体或接力任务", quitRelayQuestion: "接力仍在进行中。仍要退出吗？", quitRelayStages: "多阶段接力正在进行。退出后下一阶段不会开始，重新打开后需要你继续或重试。", relayBlocked: "接力已暂停，需要你处理", relayCompleted: "接力已完成", relayFailed: "接力未能启动", relayMissed: "接力错过了计划时间", relayQuestion: "智能体在等待你的回答" },
+  "zh-TW": { file: "檔案", newTab: "新增分頁", closeTab: "關閉目前分頁", closeWindow: "關閉視窗", quitQuestion: "本機智慧體仍在執行。結束並要求取消？", quitRelays: "已設定的接力任務在應用程式關閉期間不會執行。", keepRunning: "保持執行", quit: "結束", trayOpen: "開啟 HAICoMo 視窗", trayQuit: "結束 HAICoMo", trayTooltip: "HAICoMo 正在背景執行智慧體或接力任務", quitRelayQuestion: "接力仍在進行中。仍要結束嗎？", quitRelayStages: "多階段接力正在進行。結束後下一階段不會開始，重新開啟後需要你繼續或重試。", relayBlocked: "接力已暫停，需要你處理", relayCompleted: "接力已完成", relayFailed: "接力未能啟動", relayMissed: "接力錯過了排定時間", relayQuestion: "智慧體在等待你的回答" },
+  en: { file: "File", newTab: "New tab", closeTab: "Close current tab", closeWindow: "Close window", quitQuestion: "Local agents are running. Quit and request cancellation?", quitRelays: "Scheduled relay tasks do not run while the app is closed.", keepRunning: "Keep running", quit: "Quit", trayOpen: "Open HAICoMo window", trayQuit: "Quit HAICoMo", trayTooltip: "HAICoMo is running agents or relay tasks in the background", quitRelayQuestion: "A relay is still in progress. Quit anyway?", quitRelayStages: "A multi-stage relay is in progress. Its next stage will not start while the app is closed; after reopening you will need to continue or retry it.", relayBlocked: "Relay paused: needs your attention", relayCompleted: "Relay completed", relayFailed: "Relay could not start", relayMissed: "Relay missed its scheduled time", relayQuestion: "An agent is waiting for your answer" },
 } as const;
 function mainText(key: keyof (typeof MAIN_TEXT)["en"]) {
   const locale = settings().locale;
@@ -440,23 +444,25 @@ async function hasArmedRelays(directory: string) {
   if (scheduler.armed(directory)) return true;
   try {
     const view: Workspace = await request("view", directory);
-    return view.state.relays.some((r) => r.enabled && ["scheduled", "firing"].includes(r.status));
+    return view.state.relays.some((r) => r.enabled && RELAY_ARMED_STATUSES.includes(r.status));
   } catch {
     return false;
   }
 }
+const directoryInUse = (directory: string) =>
+  stopping ||
+  startingProjects.has(directory) ||
+  openingProjects.has(directory) ||
+  runners.active().some((r) => r.directory === directory) ||
+  [...windowProjects.values()].some((m) =>
+    [...m.values()].some((p) => p.directory === directory),
+  );
 async function releaseDirectory(directory: string) {
-  if (
-    stopping ||
-    startingProjects.has(directory) ||
-    runners.active().some((r) => r.directory === directory) ||
-    [...windowProjects.values()].some((m) =>
-      [...m.values()].some((p) => p.directory === directory),
-    )
-  )
-    return;
+  if (directoryInUse(directory)) return;
   if (openedDirectories.has(directory)) {
     if (await hasArmedRelays(directory)) { syncTray(); return; }
+    // Checked again after the relay lookup: a window may have opened the project or a run started meanwhile.
+    if (directoryInUse(directory)) return;
     await request("close", directory).catch(() => {});
     openedDirectories.delete(directory);
     scheduler.forget(directory);
@@ -513,7 +519,14 @@ function startWorker() {
 let relayTickTimer: ReturnType<typeof setTimeout> | null = null;
 function scheduleRelayTick(delay = 300) {
   if (relayTickTimer) return;
-  relayTickTimer = setTimeout(() => { relayTickTimer = null; void scheduler.tick().then(syncTray); }, delay);
+  relayTickTimer = setTimeout(() => {
+    relayTickTimer = null;
+    void scheduler.tick().then(() => {
+      syncTray();
+      // A relay that finished in a closed tab must not pin its project until quit.
+      for (const directory of [...openedDirectories.keys()]) void releaseDirectory(directory);
+    });
+  }, delay);
   relayTickTimer.unref?.();
 }
 const runners = new LocalRunners(
@@ -526,10 +539,43 @@ const runners = new LocalRunners(
         ? ({ id: e.projectId, epoch: e.epoch } as ProjectEntry)
         : openedDirectories.get(directory),
     )
-      .then(() => { if (e.lifecycle === "history") scheduleRelayTick(); })
+      .then(() => {
+        if (e.lifecycle === "history" || e.endReason) {
+          relayRuns.delete(e.sessionId);
+          scheduleRelayTick();
+        }
+      })
       .catch((error) => broadcast({ event: "warning", error: String(error) }));
   },
   (p) => {
+    // Consented autonomous relays: answer with the recommended option and record it; anything only a human can answer is forwarded.
+    const link = relayRuns.get(p.runId);
+    if (link?.autonomous) {
+      const outcome = autoDecide(p.method, p.params, p.directory);
+      if (outcome.kind === "answer") {
+        setImmediate(() => {
+          try {
+            runners.respond(p.runId, p.id, p.method, outcome.allow, outcome.answers);
+          } catch (error) {
+            broadcast({ event: "warning", directory: p.directory, error: String(error) });
+            return;
+          }
+          for (const d of outcome.decisions)
+            void recordRelayDecision(link, {
+              stepId: link.stepId,
+              kind: p.method.includes("requestUserInput") ? "auto-answer" : d.reason === "destructive" ? "auto-decline" : "auto-approve",
+              method: p.method,
+              question: d.question,
+              options: d.options,
+              choice: d.choice,
+              reason: d.reason,
+            });
+        });
+        return;
+      }
+      void recordRelayDecision(link, { stepId: link.stepId, kind: "waiting-human", method: p.method, question: outcome.question, options: [], choice: "", reason: outcome.reason });
+      notify(mainText("relayQuestion"), outcome.question);
+    }
     for (const w of BrowserWindow.getAllWindows())
       for (const [binding, entry] of projectBindings(w))
         if (
@@ -555,65 +601,185 @@ function configuredPath(id: string) {
   const prefs = settings();
   return prefs.clientPaths[id] || (id === "codex" ? prefs.codexPath : id === "claude" ? prefs.claudePath : "");
 }
-function capabilityKey(provider: "codex" | "claude", executable: string) {
+function capabilityKey(provider: string, executable: string) {
   let key = `${provider}:${executable}`;
   try { const s = fs.statSync(executable); key += `:${s.mtimeMs}:${s.size}`; } catch {}
   return key;
 }
-async function capability(provider: "codex" | "claude", fresh = false): Promise<Capabilities> {
+async function capability(provider: BackgroundHarnessId, fresh = false): Promise<Capabilities> {
   const configured = configuredPath(provider);
   const key = capabilityKey(provider, findExecutable(provider, configured));
   const hit = capabilityCache.get(provider);
   if (!fresh && hit && hit.key === key && Date.now() - hit.at < 600000) return hit.value;
   const value = await detectClient(provider, configured);
   capabilityCache.set(provider, { key, at: Date.now(), value });
+  rememberCapability(value);
   return value;
 }
-/** Shared checks for a human handoff and a relay start; throws domain codes. */
-async function prepareStart(provider: "codex" | "claude", model: string | undefined, effort: string | undefined, mode: string | undefined) {
-  const cap = await capability(provider);
-  if (!cap.background) throw new Error(cap.reason || "BACKGROUND_UNSUPPORTED");
-  if (mode && !cap.modes.includes(mode)) throw new Error(`MODE_UNSUPPORTED: ${mode}`);
+/**
+ * The session's latest detection, shared by every tab and window and cleared
+ * only when the app quits. Concurrent requests (a click, an editor opening, the
+ * optional launch check) share one run instead of spawning every CLI twice.
+ */
+let lastDetection: AgentDetection | null = null;
+let detecting: Promise<AgentDetection> | null = null;
+const detectionPaths = () => Object.fromEntries(CLIENTS.map((c) => [c.id, configuredPath(c.id) || ""])) as AgentDetection["paths"];
+function publishDetection() {
+  broadcast({ event: "detection", detection: lastDetection, running: Boolean(detecting) });
+}
+function runDetection(trigger: AgentDetection["trigger"]): Promise<AgentDetection> {
+  if (detecting) return detecting;
+  const started = Date.now();
+  const prefs = settings();
+  const paths = detectionPaths();
+  detecting = (async () => {
+    const caps = await detectClients(prefs);
+    for (const cap of caps)
+      if (isBackgroundHarness(cap.provider))
+        capabilityCache.set(cap.provider, { key: capabilityKey(cap.provider, findExecutable(cap.provider, configuredPath(cap.provider))), at: Date.now(), value: cap });
+    lastDetection = { at: new Date().toISOString(), durationMs: Date.now() - started, trigger, paths, caps };
+    return lastDetection;
+  })().finally(() => {
+    detecting = null;
+    publishDetection();
+  });
+  publishDetection();
+  return detecting;
+}
+/** A start-time re-check updates the shared record so Settings never shows an outdated "available". */
+function rememberCapability(cap: Capabilities) {
+  if (!lastDetection) return;
+  const caps = lastDetection.caps.map((c) => (c.provider === cap.provider ? cap : c));
+  lastDetection = { ...lastDetection, caps, paths: { ...lastDetection.paths, [cap.provider]: configuredPath(cap.provider) || "" } };
+  publishDetection();
+}
+const executableUsable = (file: string) => {
+  try {
+    fs.accessSync(file, process.platform === "win32" ? fs.constants.F_OK : fs.constants.X_OK);
+    return fs.statSync(file).isFile();
+  } catch {
+    return false;
+  }
+};
+/**
+ * Shared checks for a human handoff and a relay start; throws domain codes.
+ * `autonomous` is true only for a relay whose owner consented to unattended
+ * runs: then the client's own unattended mode is the only mode accepted.
+ */
+async function prepareStart(provider: string, model: string | undefined, effort: string | undefined, mode: string | undefined, autonomous = false) {
+  if (!isBackgroundHarness(provider)) throw new Error(`MANUAL_HANDOFF_ONLY: ${clientName(provider)}`);
+  let cap = await capability(provider);
+  // The cached result can predate an uninstall, move or update: re-check before relying on it.
+  if (cap.executable && !executableUsable(cap.executable)) {
+    capabilityCache.delete(provider);
+    cap = await capability(provider, true);
+  }
+  if (autonomous ? !cap.relayReady : !cap.background) {
+    // Always "CODE: client — detail" so the renderer can translate it and name the client.
+    const raw = (cap.reason || (cap.autonomyOnly ? "AUTONOMY_CONSENT_REQUIRED" : "BACKGROUND_UNSUPPORTED")).replace(/^(Error:\s*)+/, "");
+    const match = /^([A-Z][A-Z_]+)(?::\s*([\s\S]*))?$/.exec(raw);
+    const detail = (match ? match[2] : raw)?.slice(0, 300);
+    throw new Error(`${match ? match[1] : "BACKGROUND_UNSUPPORTED"}: ${clientName(provider)}${detail ? ` — ${detail}` : ""}`);
+  }
+  if (autonomous) {
+    if (mode && mode !== cap.autonomousMode && !cap.modes.includes(mode)) throw new Error(`MODE_UNSUPPORTED: ${mode}`);
+  } else if (mode && !cap.modes.includes(mode)) throw new Error(`MODE_UNSUPPORTED: ${mode}`);
   if (effort && !supportedEfforts(cap, model).includes(effort)) throw new Error("EFFORT_UNSUPPORTED_FOR_MODEL");
   return cap;
+}
+/** Runs started by relays, so the permission handler knows which may be answered automatically. */
+type RelayRunLink = { directory: string; relayId: string; stepId: string; autonomous: boolean; identity: ProjectEntry };
+const relayRuns = new Map<string, RelayRunLink>();
+async function recordRelayDecision(link: RelayRunLink, entry: Record<string, unknown>) {
+  try {
+    await request("command", link.directory, { id: randomUUID(), type: "relay.decision", payload: { relayId: link.relayId, entry } }, link.identity);
+  } catch (error) {
+    broadcast({ event: "warning", directory: link.directory, error: `relay decision not recorded: ${String(error)}` });
+  }
+}
+function notify(title: string, body: string) {
+  if (testing) return;
+  try {
+    if (Notification.isSupported()) new Notification({ title, body: body.slice(0, 240) }).show();
+  } catch {}
+}
+/** The decision record is rebuilt from the database; the Markdown file is a convenience copy inside .haicomo. */
+function writeRelayReport(directory: string, relay: Relay, state: Workspace["state"]) {
+  const file = path.join(directory, ".haicomo", "relay-decisions", relayReportName(relay));
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  atomicWrite(file, relayDecisionReport(relay, state, settings().locale));
+  return file;
+}
+/** The mode a relay step actually runs with: consented autonomous relays use the client's own unattended mode. */
+async function relayStepMode(relay: Relay, step: RelayStep) {
+  if (!relay.autonomy.enabled || !isBackgroundHarness(step.provider)) return step.mode || undefined;
+  const cap = await capability(step.provider);
+  return cap.autonomousMode ?? (step.mode || undefined);
+}
+async function precheckRelaySteps(relay: Relay, steps: RelayStep[]) {
+  for (const step of steps)
+    await prepareStart(step.provider, step.model || undefined, step.effort || undefined, await relayStepMode(relay, step), relay.autonomy.enabled);
 }
 const scheduler = new RelayScheduler({
   locale: () => settings().locale,
   directories: () => [...openedDirectories.keys()],
   view: (directory) => request("view", directory),
   command: (directory, type, payload) => request("command", directory, { id: randomUUID(), type, payload }),
-  start: async (directory, relay: Relay, state, prompt) => {
+  activeRunIds: () => runners.active().map((r) => r.runId),
+  start: async (directory, { relay, stageIndex, step, state, prompt }) => {
     const identity = openedDirectories.get(directory);
     if (!identity) throw new Error("PROJECT_NOT_OPEN");
+    if (stopping) throw new Error("APP_QUITTING");
     if (replacingProjects.has(directory)) throw new Error("PROJECT_REPLACED");
     const checked = resolveEntry(identity.entryPath);
     if (checked.id !== identity.id || checked.epoch !== identity.epoch) throw new Error("PROJECT_REPLACED");
     if (installGate.active || updates.state.status === "installing") throw new Error("UPDATE_IN_PROGRESS");
-    const cap = await prepareStart(relay.handoff.provider, relay.handoff.model || undefined, relay.handoff.effort || undefined, relay.handoff.mode || undefined);
+    const autonomous = relay.autonomy.enabled;
+    const mode = await relayStepMode(relay, step);
+    const cap = await prepareStart(step.provider, step.model || undefined, step.effort || undefined, mode, autonomous);
     const predecessor = relayPredecessor(relay, state);
-    const threadId = relay.handoff.continueThread ? predecessor?.threadId : relay.handoff.threadId || undefined;
+    const threadId = step.resumeThreadId || (stageIndex === 0 && step.continueThread ? predecessor?.threadId : step.threadId || undefined);
     startingProjects.set(directory, (startingProjects.get(directory) ?? 0) + 1);
+    // Registered before the process starts: the first question can arrive with the start acknowledgement.
+    const runId = randomUUID();
+    relayRuns.set(runId, { directory, relayId: relay.id, stepId: step.id, autonomous, identity });
     try {
       const result = await runners.start({
-        provider: relay.handoff.provider,
+        runId,
+        provider: step.provider as BackgroundHarnessId,
         executable: cap.executable,
         directory,
-        taskId: relay.taskId,
+        taskId: step.taskId,
         projectId: identity.id,
         epoch: identity.epoch,
         prompt,
-        model: relay.handoff.model || undefined,
-        effort: relay.handoff.effort || undefined,
-        mode: relay.handoff.mode || undefined,
+        model: step.model || undefined,
+        effort: step.effort || undefined,
+        mode,
         threadId,
+        autonomous,
       });
-      const model = relay.handoff.model || cap.models?.find((m) => m.isDefault)?.id || "";
-      return { runId: result.runId, threadId: result.threadId, to: inferFamily(model) ?? `client:${relay.handoff.provider}` };
+      const model = step.model || cap.models?.find((m) => m.isDefault)?.id || "";
+      return { runId: result.runId, threadId: result.threadId, to: relayStepActor({ model, provider: step.provider }) };
+    } catch (error) {
+      // A start that failed before a run existed leaves no link behind.
+      if (!runners.active().some((r) => r.runId === runId)) relayRuns.delete(runId);
+      throw error;
     } finally {
       const remaining = (startingProjects.get(directory) ?? 1) - 1;
       if (remaining) startingProjects.set(directory, remaining);
       else startingProjects.delete(directory);
     }
+  },
+  attention: (directory, relay, state) => {
+    try {
+      writeRelayReport(directory, relay, state);
+    } catch (error) {
+      broadcast({ event: "warning", directory, error: `relay decision record not written: ${String(error)}` });
+    }
+    const title = relay.status === "completed" ? mainText("relayCompleted") : relay.status === "failed" ? mainText("relayFailed") : relay.status === "missed" ? mainText("relayMissed") : mainText("relayBlocked");
+    notify(title, `${relayTitle(relay, state)}${relay.statusReason ? ` · ${relay.statusReason}` : ""}`);
+    void releaseDirectory(directory);
   },
   warn: (directory, message) => broadcast({ event: "warning", directory, error: message }),
 });
@@ -655,7 +821,19 @@ async function pickDirectory(
   });
   return result.canceled ? null : result.filePaths[0];
 }
+/** Marks the project as opening until the window is bound, so a concurrent release cannot close it underneath. */
 async function openProject(win: BrowserWindow, input: string, takeoverLock = false) {
+  const { directory } = resolveEntry(input);
+  openingProjects.set(directory, (openingProjects.get(directory) ?? 0) + 1);
+  try {
+    return await openProjectNow(win, input, takeoverLock);
+  } finally {
+    const remaining = (openingProjects.get(directory) ?? 1) - 1;
+    if (remaining) openingProjects.set(directory, remaining);
+    else openingProjects.delete(directory);
+  }
+}
+async function openProjectNow(win: BrowserWindow, input: string, takeoverLock = false) {
   const entry = resolveEntry(input),
     { directory } = entry;
   const duplicate = [...openedDirectories.values(), ...recents()].find(
@@ -829,6 +1007,9 @@ else {
     if (app.isReady()) routeFile(file);
     else app.once("ready", () => setTimeout(() => routeFile(file), 50));
   });
+  // Windows shows toast notifications (relay paused/completed) only for an app whose
+  // AppUserModelID matches its Start-menu shortcut; the NSIS installer uses the appId.
+  if (process.platform === "win32") app.setAppUserModelId("app.haicomo.desktop");
   app.whenReady().then(() => {
     startWorker();
     configureMenu();
@@ -851,6 +1032,12 @@ else {
         broadcast({ event: "warning", error: String(error) });
       }
     };
+    // Optional agent detection after launch: in the background once the window is up, never before it.
+    const firstDetection = testing ? Number(process.env.HAICOMO_TEST_AUTO_DETECT_MS || 0) : 2500;
+    if (firstDetection > 0 && settings().autoDetectAgents)
+      setTimeout(() => {
+        if (!stopping && settings().autoDetectAgents) void runDetection("startup").catch((error) => broadcast({ event: "warning", error: `agent detection: ${String(error)}` }));
+      }, firstDetection).unref();
     const firstAutomaticCheck = testing ? Number(process.env.HAICOMO_TEST_AUTO_CHECK_MS || 0) : 10000;
     if (firstAutomaticCheck > 0) {
       setTimeout(() => automaticUpdateCheck(true), firstAutomaticCheck).unref();
@@ -1099,15 +1286,35 @@ else {
               throw new Error("RUN_STILL_ACTIVE");
             if (typeof payload.type === "string" && isRelaySystemCommand(payload.type)) throw new Error("UNKNOWN_COMMAND");
             if (!dir) throw new Error("NO_PROJECT");
-            if (payload.type === "relay.fireNow") {
+            if (payload.type === "relay.fireNow" || payload.type === "relay.retry") {
               const current: Workspace = await projectRequest("view");
               const relay = current.state.relays.find((r) => r.id === payload.payload?.relayId);
               if (!relay) throw new Error("RELAY_NOT_FOUND");
-              await prepareStart(relay.handoff.provider, relay.handoff.model || undefined, relay.handoff.effort || undefined, relay.handoff.mode || undefined);
+              const ids: string[] | undefined = Array.isArray(payload.payload?.stepIds) ? payload.payload.stepIds : undefined;
+              const steps = payload.type === "relay.fireNow" ? relay.stages[0].steps : relay.stages[relay.stageIndex].steps.filter((s) => !ids || ids.includes(s.id));
+              await precheckRelaySteps(relay, steps);
             }
             result = await projectRequest("command", payload);
-            if (typeof payload.type === "string" && payload.type.startsWith("relay.")) scheduleRelayTick(50);
+            if (typeof payload.type === "string" && (payload.type.startsWith("relay.") || payload.type === "session.untrack")) scheduleRelayTick(50);
             break;
+          case "relay.report": {
+            if (!dir) throw new Error("NO_PROJECT");
+            const current: Workspace = await projectRequest("view");
+            const relay = current.state.relays.find((r) => r.id === payload.relayId);
+            if (!relay) throw new Error("RELAY_NOT_FOUND");
+            const markdown = relayDecisionReport(relay, current.state, settings().locale);
+            if (payload.action === "open") {
+              const file = writeRelayReport(dir, relay, current.state);
+              const error = await shell.openPath(file);
+              if (error) shell.showItemInFolder(file);
+              result = { file };
+            } else if (payload.action === "export") {
+              const r = await dialog.showSaveDialog(win, { defaultPath: relayReportName(relay), filters: [{ name: "Markdown", extensions: ["md"] }] });
+              if (!r.canceled && r.filePath) atomicWrite(r.filePath, markdown);
+              result = r.canceled ? null : { file: r.filePath };
+            } else result = { markdown, file: path.join(dir, ".haicomo", "relay-decisions", relayReportName(relay)) };
+            break;
+          }
           case "project.export": {
             if (!dir) throw new Error("NO_PROJECT");
             const r = await dialog.showSaveDialog(win, {
@@ -1189,7 +1396,7 @@ else {
             updates.setSource(updateSource(value));
             const previous = settings();
             writeSettings(value);
-            for (const id of ["codex", "claude"] as const)
+            for (const id of BACKGROUND_HARNESS_IDS)
               if ((previous.clientPaths[id] ?? "") !== (value.clientPaths[id] ?? "")) capabilityCache.delete(id);
             broadcast({ event: "settings", settings: value });
             configureMenu();
@@ -1215,14 +1422,12 @@ else {
               relays: scheduler.summary().map((r) => ({ ...r, entryPath: openedDirectories.get(r.directory)?.entryPath })),
             };
             break;
-          case "providers.detect": {
-            const caps = await detectClients(settings());
-            for (const cap of caps)
-              if (cap.provider === "codex" || cap.provider === "claude")
-                capabilityCache.set(cap.provider, { key: capabilityKey(cap.provider, findExecutable(cap.provider, configuredPath(cap.provider))), at: Date.now(), value: cap });
-            result = caps;
+          case "providers.detect":
+            result = (await runDetection(payload?.trigger === "recheck" ? "recheck" : "manual")).caps;
             break;
-          }
+          case "providers.detection":
+            result = { detection: lastDetection, running: Boolean(detecting) };
+            break;
           case "providers.open": {
             const id = z.enum(HARNESS_IDS).parse(payload.provider);
             const cap = await detectClient(id, configuredPath(id));
@@ -1259,7 +1464,7 @@ else {
             try {
               const data = z
                 .object({
-                  provider: z.enum(["codex", "claude"]),
+                  provider: z.enum(BACKGROUND_HARNESS_IDS as [BackgroundHarnessId, ...BackgroundHarnessId[]]),
                   taskId: z.string(),
                   prompt: z.string().min(1).max(100000),
                   model: z.string().max(200).optional(),
@@ -1466,12 +1671,12 @@ else {
           });
       return;
     }
-    if (!quitting && runners.active().length) {
+    if (!quitting && (runners.active().length || scheduler.inProgress())) {
       void dialog
         .showMessageBox({
           type: "question",
-          message: mainText("quitQuestion"),
-          detail: scheduler.armed() ? mainText("quitRelays") : undefined,
+          message: runners.active().length ? mainText("quitQuestion") : mainText("quitRelayQuestion"),
+          detail: scheduler.inProgress() ? mainText("quitRelayStages") : scheduler.armed() ? mainText("quitRelays") : undefined,
           buttons: [mainText("keepRunning"), mainText("quit")],
           defaultId: 0,
           cancelId: 0,

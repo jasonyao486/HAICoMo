@@ -64,7 +64,7 @@ Tools: `haicomo_read`, `haicomo_submit_proposal`, `haicomo_receipt`, `haicomo_pr
 
 ## v2 identity, migration and incremental receipt
 
-Task assignees are `human`, a model-family ID, or `client:<harnessId>`. A proposal actor has `name`, optional `harnessId`, nullable `family`, actual `model` and optional `avatarId`. A harness is never evidence of the model in use. Events retain the v1 `provider` alias and normalise it with `harnessId`; unknown models retain a client avatar.
+Task assignees are `human`, a model-family ID, or `client:<harnessId>`. A proposal actor has `name`, optional `harnessId`, nullable `family`, actual `model` and optional `avatarId`. A harness is never evidence of the model in use. Valid harness ids (0.5.0): `codex`, `claude`, `workbuddy`, `pi`, `github-copilot`, `opencode`, `cursor`, `trae`, `qoder`, `codebuddy`, `kimi-code`, `grok-bot`, `deepseek-harness`, `gemini-cli`, `qwen-code` and `external`; the ids `kimi`, `grok` and `deepseek` remain model families. Relays in `snapshot.json` are human-configured and read-only to agents; a later relay stage receives earlier stages' final messages in its prompt, not through the file protocol. Events retain the v1 `provider` alias and normalise it with `harnessId`; unknown models retain a client avatar.
 
 Artifacts are objects `{ "id": "readme", "label": "README", "path": "README.md" }`, never strings. Approval does not copy artifact contents; revisions and audited values refer to relative paths.
 

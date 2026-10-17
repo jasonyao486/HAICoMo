@@ -245,9 +245,11 @@ test("automatic update checks default on, survive older settings files and save 
   assert.equal(defaultSettings.autoCheckUpdates, true);
   const old = settingsSchema.parse({ locale: "zh-CN", theme: "light", enhanced: false, reducedMotion: false, accent: "#347965", codexPath: "", claudePath: "", updateFeed: "" });
   assert.equal(old.autoCheckUpdates, true);
+  assert.equal(old.autoDetectAgents, false);
+  assert.equal(defaultSettings.autoDetectAgents, false);
   const next = { ...old, autoCheckUpdates: false, userName: "Reviewer", clientPaths: Object.fromEntries(HARNESS_IDS.map((id) => [id, `/bin/${id}`])) };
   const edits = settingsEdits(old, { ...next, locale: "en-GB", theme: "dark", enhanced: true, reducedMotion: true, accent: "#000000", avatarInitials: "AB", updateFeed: "https://example.org/" });
-  assert.equal(edits.length, 20);
+  assert.equal(edits.length, 9 + HARNESS_IDS.length);
   const saved = applySettingsEdits(old, edits);
   assert.equal(saved.autoCheckUpdates, false);
   assert.equal(applySettingsEdits(old, [{ kind: "preference", key: "autoCheckUpdates", before: true, after: false }]).autoCheckUpdates, false);

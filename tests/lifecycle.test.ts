@@ -240,7 +240,7 @@ test("v3 migration preserves legacy unknown outcomes, while future lost runs sta
       next.close();
     } catch {}
   });
-  assert.equal(next.state().schemaVersion, 5);
+  assert.equal(next.state().schemaVersion, 6);
   const legacy = next.state().sessions[0];
   assert.equal(legacy.status, "waiting");
   assert.equal(legacy.lifecycle, "history");

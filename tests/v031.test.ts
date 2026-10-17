@@ -67,7 +67,7 @@ function oldProject(dir: string) {
 test("v4 migration backs up once and initializes independent counts without recounting deleted history", t => {
   const dir = setup(t); oldProject(dir);
   let store = new ProjectStore(dir);
-  assert.equal(store.state().schemaVersion, 5); assert.equal(store.state().historyStats.acceptanceReturns, 1);
+  assert.equal(store.state().schemaVersion, 6); assert.equal(store.state().historyStats.acceptanceReturns, 1);
   const backup = path.join(dir, ".haicomo/backups/pre-v5.haicomo.zip"); assert.ok(fs.existsSync(backup));
   const bytes = fs.readFileSync(backup), row = store.queryAudit().items.find(a => a.action === "task.return")!;
   store.command({ id: randomUUID(), type: "audit.delete", payload: { auditId: row.id } }); store.close();
@@ -94,7 +94,7 @@ test("a failure inside the v5 migration transaction rolls back state and retries
   db.exec("DROP TRIGGER reject_migration"); db.close();
   assert.ok(fs.existsSync(path.join(dir, ".haicomo/backups/pre-v5.haicomo.zip")));
   const reopened = new ProjectStore(dir);
-  assert.equal(reopened.state().schemaVersion, 5);
+  assert.equal(reopened.state().schemaVersion, 6);
   assert.equal(reopened.view().metrics.acceptanceReturns, 1); reopened.close();
 });
 

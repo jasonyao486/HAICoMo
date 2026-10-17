@@ -7,7 +7,7 @@ import { createDemo } from "../../scripts/create-demo";
 import { defaultSettings } from "../../src/shared/settings";
 import { ProjectStore } from "../../src/core/store";
 import { publishProposal } from "../../src/core/files";
-import { closeTestApp } from "./cleanup";
+import { closeTestApp, removeTestDirectory } from "./cleanup";
 
 const version = JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
 
@@ -123,10 +123,12 @@ test("0.4.0 project search spans the overview cards, filters four scopes and ope
     const icon = frame.locator('.client-config .client-name img[src$="workbuddy-app.png"]');
     await expect(icon).toHaveCount(1);
     expect(await icon.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBe(256);
-    await frame.locator('.capability .client-name img[src$="workbuddy-app.png"]').scrollIntoViewIfNeeded();
+    // A cold detection can take several seconds (DeepSeek Harness boots its own runtime).
+    await expect(frame.locator('.client-config[data-client="workbuddy"] .client-status')).toBeVisible({ timeout: 30000 });
+    await frame.locator('.client-config[data-client="workbuddy"]').scrollIntoViewIfNeeded();
     await shot("v040-agent-icons");
     await frame.locator(".update-panel").scrollIntoViewIfNeeded();
     await shot("v040-update-panel");
     expect(errors).toEqual([]);
-  } finally { await closeTestApp(app); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await closeTestApp(app); await removeTestDirectory(root); }
 });

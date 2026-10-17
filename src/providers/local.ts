@@ -15,12 +15,21 @@ import {
   type RunEvent,
 } from "../shared/domain";
 import { APP_VERSION } from "../shared/version";
+import type { BackgroundHarnessId } from "../shared/clients";
+import {
+  adapterFor,
+  helpChoices,
+  newJsonlState,
+  readJsonlEvent,
+  jsonlMessage,
+  FORBIDDEN_MODES,
+  WINDOWS_ARGV_PROMPT_LIMIT,
+  type JsonlState,
+  type ModeLaunch,
+} from "./adapters";
 const exec = promisify(execFile);
 
-/** Modes the application will offer. Permission bypass is never offered. */
-export const FORBIDDEN_MODES = ["bypassPermissions", "dangerously-skip-permissions", "danger-full-access"];
-export const CODEX_MODES = ["on-request", "never", "on-failure", "untrusted"];
-export const CLAUDE_FALLBACK_MODES = ["default", "plan", "acceptEdits"];
+export { FORBIDDEN_MODES, CODEX_MODES, CLAUDE_FALLBACK_MODES, helpChoices } from "./adapters";
 
 /**
  * npm installs on Windows expose `<name>.cmd` shims that `spawn` cannot run
@@ -63,20 +72,6 @@ function launchArgs(executable: string, args: string[]) {
   return { command: launch.command, args: [...launch.prefix, ...args], env: launch.env ?? process.env };
 }
 
-/** Parse commander-style help text: `--flag <x> ... (choices: "a", "b")` or `(a, b, c)`. */
-export function helpChoices(help: string, flag: string): string[] {
-  const start = help.indexOf(flag);
-  if (start < 0) return [];
-  const window = help.slice(start, start + 600);
-  const next = window.slice(flag.length).search(/\n\s*-{1,2}[a-zA-Z]/);
-  const scope = next >= 0 ? window.slice(0, flag.length + next) : window;
-  const choices = /choices:\s*([^)]*)\)/i.exec(scope) ?? /\(([^)]*)\)/.exec(scope.replace(/<[^>]*>/g, ""));
-  if (!choices) return [];
-  return choices[1]
-    .split(",")
-    .map((v) => v.trim().replace(/^["']|["']$/g, ""))
-    .filter((v) => /^[\w-]+$/.test(v));
-}
 export function probeCodex(executable: string) {
   const launch = launchArgs(executable, ["app-server", "--listen", "stdio://"]);
   const proc = spawn(launch.command, launch.args, {
@@ -166,7 +161,7 @@ export function probeCodex(executable: string) {
   );
 }
 export type RunOptions = {
-  provider: "codex" | "claude";
+  provider: BackgroundHarnessId;
   executable: string;
   directory: string;
   taskId: string;
@@ -177,6 +172,14 @@ export type RunOptions = {
   effort?: string;
   mode?: string;
   threadId?: string;
+  /** Set only for relays the user explicitly consented to run unattended. */
+  autonomous?: boolean;
+  /**
+   * Caller-chosen run id, so the caller can register the run before the
+   * process starts: a client may ask its first question in the same output
+   * burst that acknowledges the start.
+   */
+  runId?: string;
 };
 export type PermissionRequest = {
   runId: string;
@@ -206,46 +209,45 @@ type Run = {
   serverRequests: Map<number | string, { method: string; params: any }>;
   output: string;
   lastEventAt: number;
+  protocol: "codex-app-server" | "claude-stream" | "jsonl" | "text";
+  jsonl?: JsonlState;
+  /** Private temporary folder for a per-run overlay; removed when the run finishes. */
+  tempDir?: string;
+  /** The client's own stderr, kept apart from HAICoMo's status lines for failure messages. */
+  stderr: string[];
 };
 
-export function findExecutable(provider: "codex" | "claude", configured = "") {
+export function findExecutable(provider: string, configured = "") {
   if (configured) {
     if (!path.isAbsolute(configured) || !fs.existsSync(configured)) return "";
     return configured;
   }
+  const adapter = adapterFor(provider);
+  const names = adapter?.executableNames ?? [provider];
   const paths = [
     ...(process.env.PATH ?? "").split(path.delimiter),
     path.join(os.homedir(), ".local", "bin"),
     "/opt/homebrew/bin",
     "/usr/local/bin",
+    ...(adapter?.extraDirs(process.platform) ?? []),
   ];
-  if (process.platform === "win32") {
-    if (process.env.APPDATA) paths.push(path.join(process.env.APPDATA, "npm"));
-    if (process.env.LOCALAPPDATA) paths.push(path.join(process.env.LOCALAPPDATA, "Programs", provider));
-  }
-  if (process.platform === "darwin" && provider === "codex")
-    paths.push(
-      "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS",
-    );
+  if (process.platform === "win32" && process.env.APPDATA) paths.push(path.join(process.env.APPDATA, "npm"));
   for (const dir of paths)
-    for (const name of process.platform === "win32"
-      ? [`${provider}.exe`, `${provider}.cmd`, provider]
-      : [provider]) {
-      const file = path.join(dir, name);
-      try {
-        fs.accessSync(file, fs.constants.X_OK);
-        if (fs.statSync(file).isFile()) return file;
-      } catch {}
-    }
+    for (const base of names)
+      for (const name of process.platform === "win32" ? [`${base}.exe`, `${base}.cmd`, base] : [base]) {
+        const file = path.join(dir, name);
+        try {
+          fs.accessSync(file, fs.constants.X_OK);
+          if (fs.statSync(file).isFile()) return file;
+        } catch {}
+      }
   return "";
 }
-export async function detect(
-  provider: "codex" | "claude",
-  configured = "",
-): Promise<Capabilities> {
+export async function detect(provider: string, configured = ""): Promise<Capabilities> {
+  const adapter = adapterFor(provider);
   const executable = findExecutable(provider, configured),
     base: Capabilities = {
-      provider,
+      provider: provider as Capabilities["provider"],
       installed: false,
       executable,
       version: "",
@@ -257,43 +259,46 @@ export async function detect(
       modes: [],
       reason: "NOT_INSTALLED",
     };
-  if (!executable) return base;
+  if (!adapter) return { ...base, reason: "MANUAL_HANDOFF_ONLY" };
+  if (!executable) return configured ? { ...base, reason: "CONFIGURED_PATH_NOT_FOUND" } : base;
   try {
     const versionLaunch = launchArgs(executable, ["--version"]);
     const { stdout } = await exec(versionLaunch.command, versionLaunch.args, { timeout: 7000, env: versionLaunch.env });
-    const helpLaunch = launchArgs(executable, provider === "codex" ? ["app-server", "--help"] : ["--help"]);
-    const { stdout: help } = await exec(helpLaunch.command, helpLaunch.args, { timeout: 7000, env: helpLaunch.env });
+    const helpLaunch = launchArgs(executable, adapter.helpArgs);
+    const { stdout: helpOut, stderr: helpErr } = await exec(helpLaunch.command, helpLaunch.args, { timeout: 15000, env: helpLaunch.env });
+    const help = `${helpOut}\n${helpErr}`;
+    const headless = adapter.requiredHelp.every((flag) => help.includes(flag));
     let models: Capabilities["models"];
     let discoveryError = "";
-    if (provider === "codex" && help.includes("--listen"))
+    if (provider === "codex" && headless)
       try {
         models = (await probeCodex(executable)).models;
       } catch (error) {
         discoveryError = String(error);
       }
-    const reported = provider === "claude" ? helpChoices(help, "--permission-mode") : [];
-    const modes = (
-      provider === "codex" ? CODEX_MODES : reported.length ? reported : CLAUDE_FALLBACK_MODES
-    ).filter((m) => !FORBIDDEN_MODES.includes(m));
+    else models = adapter.models?.();
+    const modes = adapter.modes(help).filter((m) => !FORBIDDEN_MODES.includes(m));
     const efforts = provider === "claude" && help.includes("--effort") ? helpChoices(help, "--effort") : [];
+    const autonomous = headless ? adapter.autonomousMode(help) : null;
     return {
       ...base,
       installed: true,
-      version: stdout.trim(),
-      background:
-        provider === "codex"
-          ? help.includes("--listen") && !discoveryError
-          : help.includes("stream-json"),
-      resume: provider === "codex" || help.includes("--resume"),
-      model: provider === "codex" || help.includes("--model"),
+      version: stdout.trim().split(/\r?\n/)[0] ?? "",
+      background: headless && !discoveryError && !adapter.autonomyOnly,
+      autonomousMode: autonomous ?? undefined,
+      autonomyOnly: Boolean(adapter.autonomyOnly) || undefined,
+      relayReady: headless && !discoveryError,
+      resume: adapter.resume(help),
+      model: adapter.model(help),
       effort: Boolean(models?.some((m) => m.efforts.length)) || efforts.length > 0,
       models,
       efforts,
       modes,
-      reason: discoveryError,
+      reason: discoveryError || (headless ? "" : "HEADLESS_FLAGS_NOT_FOUND"),
     };
   } catch (e) {
-    return { ...base, reason: String(e) };
+    // Found but it would not run (permissions, damaged install, a launcher that needs set-up first).
+    return { ...base, installed: true, reason: `EXECUTABLE_FAILED: ${String((e as Error).message ?? e).split(/\r?\n/)[0].slice(0, 300)}` };
   }
 }
 /** Effort values valid for a provider/model pair, or null when unconstrained. */
@@ -443,6 +448,14 @@ export class LocalRunners {
   async start(options: RunOptions) {
     if (!options.prompt.trim()) fail("PROMPT_REQUIRED");
     if (!path.isAbsolute(options.executable)) fail("EXECUTABLE_REQUIRED");
+    if (options.runId !== undefined && (!/^[\w-]{8,100}$/.test(options.runId) || this.runs.has(options.runId))) fail("RUN_ID_INVALID");
+    // The client may have been uninstalled, moved or replaced since it was detected.
+    try {
+      fs.accessSync(options.executable, process.platform === "win32" ? fs.constants.F_OK : fs.constants.X_OK);
+      if (!fs.statSync(options.executable).isFile()) throw new Error("not a file");
+    } catch {
+      fail("EXECUTABLE_MISSING", options.executable);
+    }
     if (options.mode && FORBIDDEN_MODES.includes(options.mode)) fail("MODE_UNSUPPORTED", options.mode);
     if (
       this.active().some(
@@ -453,34 +466,47 @@ export class LocalRunners {
       )
     )
       fail("SESSION_ALREADY_RUNNING");
-    const args =
-      options.provider === "codex"
-        ? ["app-server", "--listen", "stdio://"]
-        : [
-            "-p",
-            "--output-format",
-            "stream-json",
-            "--verbose",
-            "--include-partial-messages",
-            "--permission-mode",
-            options.mode || "default",
-            ...(options.model ? ["--model", options.model] : []),
-            ...(options.effort ? ["--effort", options.effort] : []),
-            ...(options.threadId ? ["--resume", options.threadId] : []),
-          ];
+    const adapter = adapterFor(options.provider);
+    if (!adapter) fail("BACKGROUND_UNSUPPORTED", options.provider);
+    let mode: ModeLaunch;
+    try {
+      mode = adapter.mode(options.mode);
+    } catch (error) {
+      fail("MODE_UNSUPPORTED", String((error as Error).message).replace(/^MODE_UNSUPPORTED:\s*/, ""));
+    }
+    // Unattended flags are honoured only for relays whose owner consented to them.
+    if ((mode.autonomous || adapter.autonomyOnly) && !options.autonomous) fail("AUTONOMY_CONSENT_REQUIRED", options.mode ?? "");
+    if (adapter.promptVia === "arg" && process.platform === "win32" && options.prompt.length > WINDOWS_ARGV_PROMPT_LIMIT)
+      fail("PROMPT_TOO_LONG_FOR_ARGV");
+    const request = { prompt: options.prompt, model: options.model, effort: options.effort, mode: options.mode, threadId: options.threadId, directory: options.directory } as Parameters<typeof adapter.args>[0];
+    let tempDir: string | undefined;
+    let patch: ReturnType<NonNullable<typeof adapter.patch>> = null;
+    try {
+      patch = adapter.patch?.(request) ?? null;
+    } catch (error) {
+      fail("MODEL_UNSUPPORTED", String((error as Error).message).replace(/^MODEL_UNSUPPORTED:\s*/, ""));
+    }
+    if (patch) {
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-run-"));
+      request.patchFile = path.join(tempDir, "patch.yml");
+      fs.writeFileSync(request.patchFile, patch.yaml, { mode: 0o600 });
+      if (!options.model) options = { ...options, model: patch.model };
+    }
+    const args = adapter.args(request, mode);
+    const protocol = adapter.protocol;
     const launch = launchArgs(options.executable, args);
     const proc = spawn(launch.command, launch.args, {
       cwd: options.directory,
       stdio: "pipe",
       shell: false,
       windowsHide: true,
-      env: launch.env,
+      env: mode.env ? { ...launch.env, ...mode.env } : launch.env,
     });
     this.processes.set(proc, options);
     const run: Run = {
       process: proc,
       options,
-      id: randomUUID(),
+      id: options.runId ?? randomUUID(),
       threadId: options.threadId,
       turnStarted: false,
       status: "unknown",
@@ -498,6 +524,10 @@ export class LocalRunners {
       serverRequests: new Map(),
       output: "",
       lastEventAt: 0,
+      protocol,
+      jsonl: protocol === "jsonl" ? newJsonlState() : undefined,
+      tempDir,
+      stderr: [],
     };
     this.runs.set(run.id, run);
     this.emit(run, "unknown", "Starting local agent; execution not confirmed");
@@ -520,6 +550,13 @@ export class LocalRunners {
       while ((i = buffer.indexOf("\n")) >= 0) {
         const line = buffer.slice(0, i);
         buffer = buffer.slice(i + 1);
+        if (protocol === "text") {
+          if (line.trim()) {
+            run.output = `${run.output}${run.output ? "\n" : ""}${line}`.slice(-12000);
+            this.emit(run, "running", run.output);
+          }
+          continue;
+        }
         try {
           this.message(run, JSON.parse(line));
         } catch (e) {
@@ -530,6 +567,7 @@ export class LocalRunners {
     });
     proc.stderr.on("data", (b) => {
       run.log = [...run.log, String(b).slice(0, 2000)].slice(-100);
+      run.stderr = [...run.stderr, String(b).slice(0, 2000)].slice(-20);
     });
     proc.on("error", (error) => {
       this.processes.delete(proc);
@@ -539,6 +577,17 @@ export class LocalRunners {
     });
     proc.on("exit", (code) => {
       this.processes.delete(proc);
+      // Exit-terminated protocols: the exit code is the completion signal.
+      if (!run.finished && (protocol === "jsonl" || protocol === "text")) {
+        const text = run.jsonl ? jsonlMessage(run.jsonl) : run.output;
+        const failed = code !== 0 || Boolean(run.jsonl?.error);
+        const stderr = run.stderr.join("").trim().slice(-2000);
+        const reported = run.jsonl?.error ?? "";
+        const detail = failed ? [reported, stderr && !(reported && stderr.includes(reported)) ? stderr : ""].filter(Boolean).join("\n") : "";
+        this.emit(run, failed ? "error" : "idle", [text, detail].filter(Boolean).join("\n") || `Agent exited (${code})`, "history", failed ? "failed" : "completed");
+        this.finish(run);
+        return;
+      }
       if (!run.finished)
         this.emit(
           run,
@@ -563,7 +612,7 @@ export class LocalRunners {
             ...(options.threadId ? { threadId: options.threadId } : {}),
             cwd: options.directory,
             ...(options.model ? { model: options.model } : {}),
-            approvalPolicy: options.mode && CODEX_MODES.includes(options.mode) ? options.mode : "on-request",
+            approvalPolicy: options.mode || "on-request",
             sandbox: "workspace-write",
           },
         );
@@ -583,7 +632,8 @@ export class LocalRunners {
           proc.once("error", reject);
         });
         turnSent = true;
-        proc.stdin.end(options.prompt);
+        if (adapter.promptVia === "stdin") proc.stdin.end(options.prompt);
+        else proc.stdin.end();
       }
       return { runId: run.id, threadId: run.threadId, status: "started" };
     } catch (e) {
@@ -662,6 +712,12 @@ export class LocalRunners {
         if (!run.serverRequests.size) this.emit(run, "running");
       } else if (m.method === "item/started" && !run.serverRequests.size)
         this.emit(run, "running");
+    } else if (run.protocol === "jsonl" && run.jsonl) {
+      const seen = readJsonlEvent(run.jsonl, m);
+      if (run.jsonl.threadId) run.threadId = run.jsonl.threadId;
+      if (run.jsonl.model && !run.options.model) run.options.model = run.jsonl.model;
+      if (seen.text) this.emit(run, "running", jsonlMessage(run.jsonl));
+      else if (run.status === "unknown") this.emit(run, "running");
     } else {
       if (m.session_id) run.threadId = m.session_id;
       if (m.type === "result") {
@@ -778,6 +834,10 @@ export class LocalRunners {
   }
   private finish(run: Run) {
     run.finished = true;
+    if (run.tempDir) {
+      try { fs.rmSync(run.tempDir, { recursive: true, force: true }); } catch {}
+      run.tempDir = undefined;
+    }
     this.runs.delete(run.id);
     clearInterval(run.heartbeat);
     for (const pending of run.pending.values())

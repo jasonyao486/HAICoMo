@@ -5,7 +5,7 @@ import path from "node:path";
 import { createDemo } from "../../scripts/create-demo";
 import { defaultSettings } from "../../src/shared/settings";
 import { dictionaries } from "../../src/ui/i18n";
-import { closeTestApp } from "./cleanup";
+import { closeTestApp, removeTestDirectory } from "./cleanup";
 
 const version = JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
 
@@ -72,5 +72,5 @@ test("0.4.1 settings end with their last section: no blank window scrolling on a
     await page.waitForTimeout(300);
     expect((await windowLayout(page)).scrollY).toBe(0);
     await page.screenshot({ path: path.join(screenshots, "v041-settings-end-dark.png") });
-  } finally { await closeTestApp(app); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await closeTestApp(app); await removeTestDirectory(root); }
 });

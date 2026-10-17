@@ -185,9 +185,12 @@ export type Handoff = {
   at: string;
   mode: "copy" | "foreground" | "background" | "relay";
   relayId?: string;
+  relayStage?: number;
+  relayStepId?: string;
+  relayAttempt?: number;
 };
 export type ProjectState = {
-  schemaVersion: 5;
+  schemaVersion: 6;
   id: string;
   epoch: string;
   revision: number;
@@ -295,6 +298,7 @@ export type Settings = {
   clientPaths: Record<string, string>;
   updateFeed: string;
   autoCheckUpdates: boolean;
+  autoDetectAgents: boolean;
 };
 export type Recent = {
   id: string;
@@ -327,7 +331,27 @@ export type Capabilities = {
   modes: string[];
   /** Provider-level effort values (Claude); Codex efforts live per model. */
   efforts?: string[];
+  /** The client's unattended mode, offered only inside a relay the user consented to run autonomously. */
+  autonomousMode?: string;
+  /** The client has no permission system; it can only run in consented autonomous relays. */
+  autonomyOnly?: boolean;
+  /** Headless flags were found, so relays may use it (possibly only autonomously). */
+  relayReady?: boolean;
   reason: string;
+};
+
+/**
+ * The latest agent detection of this app session (kept in the main process,
+ * never persisted): every tab and window shows it until the app quits.
+ * `paths` are the configured client paths it was run with, so a later path
+ * edit can be recognised as making that client's row stale.
+ */
+export type AgentDetection = {
+  at: string;
+  durationMs: number;
+  trigger: "manual" | "startup" | "recheck";
+  paths: Partial<Record<string, string>>;
+  caps: Capabilities[];
 };
 
 export function fail(code: string, detail = ""): never {
@@ -537,7 +561,7 @@ export function newState(
   at: string,
 ): ProjectState {
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     id,
     epoch,
     revision: 0,

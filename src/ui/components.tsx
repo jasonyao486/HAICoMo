@@ -153,12 +153,14 @@ export function Modal({
   children,
   wide = false,
   closeLabel = "Close",
+  className = "",
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   wide?: boolean;
   closeLabel?: string;
+  className?: string;
 }) {
   const tab = useTab();
   const ref = useRef<HTMLDialogElement>(null);
@@ -178,7 +180,7 @@ export function Modal({
       <div className="modal-backdrop" aria-hidden="true" />
       <dialog
         ref={ref}
-        className={wide ? "modal wide" : "modal"}
+        className={["modal", wide ? "wide" : "", className].filter(Boolean).join(" ")}
         aria-modal="true"
         onKeyDown={(e) => {
           if (e.key === "Escape" && !e.defaultPrevented) {
@@ -1059,7 +1061,7 @@ export function HandoffDialog({
     }
   };
   useEffect(() => {
-    void api("providers.detect")
+    void api("providers.detect", { trigger: "recheck" })
       .then(setCaps)
       .catch((e) => setError(errorText(e, t)));
   }, []);
@@ -1313,7 +1315,7 @@ export function HandoffDialog({
         <p className="muted full">
           {cap?.background ? t("sendHint") : t("manualCapability")}{" "}
           {cap ? `${cap.version || t(cap.installed ? "available" : "unavailable")}` : ""}
-          {cap?.reason && <span>{cap.reason}</span>}
+          {cap?.reason && <span>{errorText(new Error(cap.reason), t)}</span>}
         </p>
         {error && <div className="error-box full">{error}</div>}
         {info && <div className="notice full">{info}</div>}

@@ -2318,3 +2318,101 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
   .topbar { flex-wrap: wrap; gap: 8px; height: auto; padding-block: 10px; }
   .topbar-actions { flex-wrap: wrap; }
 }
+
+/* 0.5.0: multi-stage relays — flowchart cards, one desk for the working stage and one three-seat sofa per waiting stage. */
+.relay-row.visual { display: flex; flex-direction: column; gap: 4px; }
+.relay-empty-preview > .relay-row.visual { display: flex; }
+.relay-stage-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.relay-stage-strip > .relay-arrow { width: 24px; }
+/* Scenes share the row's full width; furniture keeps its size, centred in the scene. */
+.relay-scene { flex: 1 1 296px; min-width: 296px; width: auto; height: 176px; }
+/* Visible furniture is centred vertically in the 176 px scene: bottom = (176 − visible height) / 2 − transparent bottom margin.
+   Painted desk 108 px visible, 31 px margin; painted sofa 97 px, 19 px; SVG desk 83 px, 1 px; SVG sofa 68 px, 0 px. */
+.relay-scene .furniture { bottom: 45px; }
+.relay-scene.workstation .furniture-desk { bottom: 45px; }
+.relay-scene.workstation.enhanced .furniture-desk { bottom: 3px; }
+.relay-scene.sofa .furniture-sofa { bottom: 54px; }
+.relay-scene.sofa.enhanced .furniture-sofa { bottom: 20px; }
+/* Working agents walk in the free band below the desk. */
+.relay-actor { bottom: 8px; transform: translateX(-50%); }
+/* Seated agents keep their offset from the seat cushions (SVG +15 px, painting +50 px above the drawing's bottom). */
+.relay-scene.sofa .relay-actor.seated, .relay-scene.sofa.enhanced .relay-actor.seated { transform: translateX(-50%); bottom: 69px; }
+.relay-scene.sofa.enhanced .relay-actor.seated { bottom: 70px; }
+.relay-scene-label { position: absolute; top: 6px; left: 8px; font-size: 11px; color: var(--muted); background: color-mix(in srgb, var(--panel) 70%, transparent); border-radius: 6px; padding: 1px 6px; pointer-events: none; }
+.relay-card-list { display: flex; flex-direction: column; gap: 14px; }
+.relay-card { padding: 12px 14px; }
+.relay-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.relay-card-head .relay-caption { padding-top: 0; }
+.relay-card-head .relay-actions { flex: 0 0 auto; }
+.relay-caption .link { padding: 0; }
+.relay-flow { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px 30px; }
+.relay-flow-stage { position: relative; display: flex; flex-direction: column; gap: 6px; flex: 1 1 210px; min-width: 210px; max-width: 320px; padding: 8px; border: 1px dashed var(--line); border-radius: 12px; }
+.relay-flow-stage + .relay-flow-stage::before { content: "→"; position: absolute; left: -23px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 18px; }
+.relay-flow-stage[data-stage-state="current"] { border-style: solid; border-color: #529b77; }
+.relay-flow-stage[data-stage-state="done"] { opacity: 0.78; }
+.relay-flow-stage-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); min-height: 22px; }
+.relay-flow-node { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.relay-flow-node > .icon-button { align-self: flex-end; margin-top: -30px; }
+.relay-flow-node.selected { border-color: #529b77; box-shadow: 0 0 0 2px color-mix(in srgb, #529b77 30%, transparent); }
+.relay-node-main { display: flex; align-items: flex-start; gap: 8px; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; }
+button.relay-node-main { cursor: pointer; }
+.relay-node-label { min-width: 22px; font-size: 12px; font-weight: 700; color: var(--muted); line-height: 24px; }
+.relay-node-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.relay-node-text strong { font-size: 13px; overflow-wrap: anywhere; }
+.relay-node-text small { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+.relay-step-state { font-size: 11px; font-weight: 600; color: var(--muted); }
+.relay-step-state.state-running, .relay-step-state.state-starting { color: #2f7d58; }
+.relay-step-state.state-completed, .relay-step-state.state-overridden { color: #3d7b5c; }
+.relay-step-state.state-stopped, .relay-step-state.state-start-failed { color: #c64f3f; }
+.relay-step-state.state-needs-human { color: #b8741f; }
+.relay-flow-stage.relay-flow-add { flex: 0 0 auto; min-width: 0; max-width: none; justify-content: center; align-items: center; border: 0; padding: 0; }
+.relay-flow-stage.relay-flow-add::before { content: none; }
+.relay-add { align-self: flex-start; }
+.relay-step-editor .form-grid { margin-top: 4px; }
+.relay-autonomy { display: flex; flex-direction: column; gap: 6px; }
+.relay-autonomy.on { border-color: #d89e5c; background: color-mix(in srgb, #d89e5c 7%, transparent); }
+.relay-autonomy-flags { font-size: 12px; }
+.relay-autonomy-flags ul { margin: 4px 0 0 18px; padding: 0; }
+.relay-autonomy-badge { margin-left: 6px; display: inline-flex; align-items: center; gap: 3px; color: #a3641a; background: color-mix(in srgb, #d89e5c 16%, transparent); }
+.relay-report { white-space: pre-wrap; font-size: 12px; max-height: 60vh; overflow: auto; background: var(--bg); padding: 12px; border-radius: 8px; }
+.badge-relay-running i { background: #529b77; }
+.badge-relay-completed i { background: #3d7b5c; }
+@media (max-width: 760px) {
+  .relay-flow { flex-direction: column; }
+  .relay-flow-stage { max-width: none; }
+  .relay-flow-stage + .relay-flow-stage::before { content: "↓"; left: 50%; top: -24px; transform: translateX(-50%); }
+  .relay-card-head { flex-direction: column; }
+}
+/* 0.5.0: the relay editor is wide enough for stages A, B and C side by side; narrow windows scroll the flow instead of wrapping a stage. */
+.modal.wide.relay-editor { width: min(1280px, 96vw); }
+.relay-flow.relay-flow-edit { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+.relay-flow-edit > .relay-flow-stage { flex: 1 1 0; min-width: 230px; max-width: none; }
+.relay-flow-edit > .relay-flow-stage.relay-flow-add { flex: 0 0 auto; min-width: 0; }
+/* 0.5.0: Settings → Local agents is one table: name | detection result | reset, then the path row. */
+.client-list { margin-top: 6px; }
+.client-list .client-config { margin: 0; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.client-list .client-config-title { display: grid; grid-template-columns: 180px minmax(0, 1fr) auto; align-items: center; gap: 8px 20px; margin-bottom: 10px; }
+.client-list .client-name { font-size: 13px; font-weight: 600; min-width: 0; }
+.client-detect { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-width: 0; font-size: 12px; line-height: 1.6; color: var(--text); }
+.client-detect > span { overflow-wrap: anywhere; }
+.client-detect .client-evidence, .client-detect .client-version { color: var(--muted); }
+.client-detect .client-reason { color: #b8741f; }
+.client-status { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); }
+.client-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.client-status.found { background: color-mix(in srgb, #529b77 16%, transparent); color: #2f7d58; }
+.client-detected { display: block; margin-top: 8px; font-size: 11px; color: var(--muted); }
+.settings-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 18px; }
+.settings-actions .button { margin: 0; }
+@media (max-width: 760px) {
+  .client-list .client-config-title { grid-template-columns: 1fr auto; }
+  .client-list .client-detect { grid-column: 1 / -1; grid-row: 2; }
+}
+/* 0.5.0: session detection record and stale-path warnings. */
+.detect-summary { margin: 4px 0 0; font-size: 12px; }
+.client-detect.stale > :not(.client-stale) { opacity: 0.45; text-decoration: line-through; text-decoration-thickness: 1px; }
+.client-stale { color: #b8741f; font-weight: 600; }
+.client-detected.stale { opacity: 0.45; text-decoration: line-through; }
+.relay-step-warning { color: #b8741f; font-size: 11px; line-height: 1.5; }
+@keyframes haicomo-spin { to { transform: rotate(360deg); } }
+.spin { animation: haicomo-spin 0.9s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }

@@ -5,6 +5,7 @@ import path from "node:path";
 import { ProjectStore } from "../../src/core/store";
 import { readSnapshot } from "../../src/core/files";
 import { dictionaries } from "../../src/ui/i18n";
+import { removeTestDirectory } from "./cleanup";
 const version = JSON.parse(fs.readFileSync("package.json", "utf8")).version;
 const screens = path.resolve("validation/0.2.4/screens");
 const keys = ["overview", "taskList", "proposals", "relay", "timeline", "dependencies", "mindmap", "office", "notes", "history", "analytics", "archive"] as const;
@@ -63,7 +64,7 @@ test("0.2.4 sidebar order, reserved pages and retained tabs in four locales and 
     }
     expect(readSnapshot(dir)).toEqual(before);
     expect(errors).toEqual([]);
-  } finally { await app.close(); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await app.close(); await removeTestDirectory(root); }
 });
 
 test("update journal restores reserved scheduled pages onto the relay page without creating work", async () => {
@@ -101,5 +102,5 @@ test("update journal restores reserved scheduled pages onto the relay page witho
     expect((await page.evaluate(() => window.haicomo.request("bootstrap"))).projects).toHaveLength(2);
     for (const tab of tabs) expect(readSnapshot(path.dirname(tab.entryPath)).tasks).toEqual([]);
     expect(fs.existsSync(path.join(root, "profile/pending-update.json"))).toBe(false);
-  } finally { await app.close(); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await app.close(); await removeTestDirectory(root); }
 });

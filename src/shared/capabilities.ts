@@ -17,6 +17,16 @@ export const MODE_LABEL_KEYS: Record<string, string> = {
   never: "modeNever",
   "on-failure": "modeOnFailure",
   untrusted: "modeUntrusted",
+  "ask-when-needed": "modeAskWhenNeeded",
+  "never-ask": "modeNeverAsk",
+  "workspace-write": "modeWorkspaceWrite",
+  "read-only": "modeReadOnly",
+  auto_edit: "modeAutoEdit",
+  yolo: "modeYolo",
+  force: "modeForce",
+  ask: "modeAsk",
+  "allow-all-tools": "modeAllowAllTools",
+  unrestricted: "modeUnrestricted",
 };
 /** Visible terminal flags that mirror a background mode/effort choice. */
 export function modeArguments(provider: string, mode: string, effort: string): string[] {

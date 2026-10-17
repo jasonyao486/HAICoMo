@@ -7,6 +7,7 @@ import path from "node:path";
 import http from "node:http";
 import { createHash, randomBytes } from "node:crypto";
 import { zipSync } from "fflate";
+import { removeTestDirectory } from "./cleanup";
 test("update source failure, checksum rejection and concurrent retry retain truthful UI state", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-update-fail-"));
   const good = randomBytes(262144), sha = createHash("sha512").update(good).digest("base64");
@@ -38,7 +39,7 @@ test("update source failure, checksum rejection and concurrent retry retain trut
     await page.evaluate(() => window.haicomo.request("updates.defer"));
     await expect(page.locator(".update-panel").getByRole("button", { name: "重启并安装", exact: true })).toBeVisible();
     await expect(page.locator(".update-banner")).toHaveCount(0);
-  } finally { await app.close().catch(() => {}); await new Promise<void>((r) => server.close(() => r())); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await app.close().catch(() => {}); await new Promise<void>((r) => server.close(() => r())); await removeTestDirectory(root); }
 });
 test("local update feed: explicit check, checksum download, progress and separate install choice", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-update-")),
@@ -124,7 +125,7 @@ test("local update feed: explicit check, checksum download, progress and separat
   } finally {
     await app.close();
     await new Promise<void>((r) => server.close(() => r()));
-    fs.rmSync(root, { recursive: true, force: true });
+    await removeTestDirectory(root);
   }
 });
 // A loopback copy of the GitHub release API stands in for the official source.
@@ -201,7 +202,7 @@ test("official source: release notes, progress with speed, cancel, resume and se
     await page.screenshot({ path: "test-results/update-official-downloaded.png" });
     expect(seen.payload).toBe(2);
     expect(await page.evaluate(() => window.haicomo.request("updates.install"))).toEqual({ verified: true, installed: false, reason: "TEST_MODE" });
-  } finally { await app.close().catch(() => {}); await new Promise<void>((r) => server.close(() => r())); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await app.close().catch(() => {}); await new Promise<void>((r) => server.close(() => r())); await removeTestDirectory(root); }
 });
 test("automatic checks only notify, respect the switch and report GitHub rate limits", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-update-auto-"));
@@ -232,5 +233,5 @@ test("automatic checks only notify, respect the switch and report GitHub rate li
     await page.locator(".update-panel").getByRole("button", { name: "检查更新", exact: true }).click();
     await expect(page.locator(".update-panel [role=alert]")).toContainText("GitHub 暂时限制");
     await app.close();
-  } finally { await new Promise<void>((r) => server.close(() => r())); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await new Promise<void>((r) => server.close(() => r())); await removeTestDirectory(root); }
 });

@@ -3,7 +3,7 @@ import path from "node:path";
 import os from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { CLIENTS, type HarnessId } from "../shared/clients";
+import { CLIENTS, isBackgroundHarness, type HarnessId } from "../shared/clients";
 import type { Capabilities, Settings } from "../shared/domain";
 import { detect } from "./local";
 import { windowsStoreApps, type DesktopApps } from "./windows-apps";
@@ -86,9 +86,13 @@ export async function detectClient(
   configured = "",
 ): Promise<Capabilities> {
   const found = discoverClient(id, configured, process.platform, await windowsStoreApps());
-  if (id === "codex" || id === "claude") {
+  if (isBackgroundHarness(id)) {
     const cap = await detect(id, configured && found.appPath === configured ? "" : configured);
     const { appPath } = found;
+    if (!cap.executable && appPath) {
+      const version = await bundleVersion(appPath);
+      return { ...cap, appPath, version, open: true, installed: true, reason: "MANUAL_HANDOFF_ONLY" };
+    }
     return {
       ...cap,
       appPath,
@@ -96,21 +100,7 @@ export async function detectClient(
       installed: cap.installed || Boolean(appPath),
     };
   }
-  let version = "";
-  if (found.appPath.endsWith(".app"))
-    try {
-      version = (
-        await exec(
-          "/usr/libexec/PlistBuddy",
-          [
-            "-c",
-            "Print :CFBundleShortVersionString",
-            path.join(found.appPath, "Contents", "Info.plist"),
-          ],
-          { timeout: 3000 },
-        )
-      ).stdout.trim();
-    } catch {}
+  const version = await bundleVersion(found.appPath);
   const installed = Boolean(found.appPath || found.executable);
   return {
     provider: id,
@@ -130,6 +120,16 @@ export async function detectClient(
         ? "CONFIGURED_PATH_NOT_FOUND"
         : "NOT_INSTALLED",
   };
+}
+async function bundleVersion(appPath: string) {
+  if (!appPath.endsWith(".app")) return "";
+  try {
+    return (
+      await exec("/usr/libexec/PlistBuddy", ["-c", "Print :CFBundleShortVersionString", path.join(appPath, "Contents", "Info.plist")], { timeout: 3000 })
+    ).stdout.trim();
+  } catch {
+    return "";
+  }
 }
 export async function detectClients(settings: Settings) {
   return Promise.all(

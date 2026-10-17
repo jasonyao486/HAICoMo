@@ -7,6 +7,7 @@ import { defaultSettings } from "../../src/shared/settings";
 import { readSnapshot } from "../../src/core/files";
 import { ProjectStore } from "../../src/core/store";
 import { dictionaries } from "../../src/ui/i18n";
+import { removeTestDirectory } from "./cleanup";
 
 const version = JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
 
@@ -55,8 +56,10 @@ test("Public demo: 60 tasks, graphs, assets, audit deletion and four locales", a
     }
     await nav("relay"); await frame.getByRole("button", { name: dictionaries["en-GB"].relayVisualView, exact: true }).click();
     await expect(frame.locator("img.furniture-desk")).toHaveAttribute("src", /studio-desk.png$/);
-    await expect(frame.locator("img.furniture-sofa")).toHaveAttribute("src", /studio-sofa.png$/);
-    await expect.poll(() => frame.locator("img.furniture-sofa").evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0)).toBe(true);
+    // The demo relay has two stages: one three-seat sofa per waiting stage.
+    await expect(frame.locator("img.furniture-sofa")).toHaveCount(2);
+    await expect(frame.locator("img.furniture-sofa").first()).toHaveAttribute("src", /studio-sofa.png$/);
+    await expect.poll(() => frame.locator("img.furniture-sofa").first().evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0)).toBe(true);
     await shot("relay-enhanced"); await change({ theme: "dark" }); await shot("relay-dark"); await change({ theme: "light" });
     // Empty preview is presentation-only: no agents, relay records or scheduler work.
     await page.evaluate(async () => {
@@ -116,5 +119,5 @@ test("Public demo: 60 tasks, graphs, assets, audit deletion and four locales", a
       await expect(frame.locator(".legal-panel")).toContainText("MIT");
     }
     expect(errors).toEqual([]);
-  } finally { await app.close(); fs.rmSync(root, { recursive: true, force: true }); }
+  } finally { await app.close(); await removeTestDirectory(root); }
 });

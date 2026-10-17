@@ -1,4 +1,4 @@
-# Public artwork — 0.3.1
+# Public artwork — 0.5.0
 
 Runtime files are in `assets/runtime/local-assets/`, with per-file provenance, licence, adaptation description, size and SHA-256 in `assets/manifest.json`. Vite copies only this curated directory. Original videos, private correspondence, rejected variants and historical references stay outside the public repository and installers.
 
@@ -31,6 +31,16 @@ Input image: edit target, the existing sage-green two-seater sofa. Preserve the 
 Change its perspective ONLY: turn the sofa to face directly toward the viewer with zero left/right yaw or floor-plane rotation. Make the long top and front seat edges horizontally level across the canvas, with symmetric left and right arms. The camera is centred slightly above eye level, tilted down approximately 25 degrees, so both seat cushions are clearly visible from above and face the viewer, ready for characters to sit naturally. The sofa should be two-person width, centred, complete, and framed in a landscape image.
 No people, text, logos, room or floor. Actual transparent alpha background, no coloured haze, halo, glow or opaque rectangular shadow. Preserve the reference's material colours and hand-painted texture; do not retain the original diagonal three-quarter yaw.
 ```
+
+### 0.5.0: three-seat sofa (placeholder) and equal widths
+
+The relay scene now seats up to three waiting agents per sofa (one sofa per waiting stage), so `studio-sofa.png` must show three seats. Until a newly painted three-seat sofa is supplied, the file is a **placeholder** spliced from the 0.3.1 two-seat painting: a pillow-free centre cushion (source columns 770–1030 followed by 510–770) was inserted at the centre seam, giving 2056×1024 pixels with an opaque extent of x 43–2013. No pixels were repainted. Default mode draws its three-seat sofa and three-workstation desk as inline SVG in `src/ui/figures.tsx` (`Sofa()`, `Workstation()`), so it needs no image.
+
+Desk and sofa are displayed at the same visible width (`FURNITURE_WIDTH` = 264 CSS px). Because the paintings carry transparent margins, `figures.tsx` scales each `<img>` by its measured ratio of image width to opaque width (`DESK_VISIBLE_RATIO` = 1619/1519, `SOFA_VISIBLE_RATIO` = 2056/1971). Seats and workstations sit at 22 %, 50 % and 78 % of that width (`SLOT_FRACTIONS`).
+
+Scenes fill the relay row: the desk scene and each sofa scene share the row's width (`flex: 1 1 296px`), while the furniture keeps its size and stays centred. Vertically, each drawing's visible part is centred in the 176 px scene (bottom = (176 − visible height) / 2 − transparent bottom margin), leaving the band below the desk for working agents to walk in; seated agents move with the cushions.
+
+Replacement brief for the three-seat painting: same hand-painted style, fine pencil outlines, woven sage fabric, cream piped cushions and brass feet as the current sofa; facing straight forward from a slightly elevated camera with level seat edges; **three equal seat cushions** whose centres fall near 22 %, 50 % and 78 % of the sofa's width; landscape canvas around 2:1; real transparent alpha with no haze or opaque shadow; tightly framed. After replacing the file, update its `bytes`, `sha256` and `changes` in `assets/manifest.json` (`npm run check:assets` fails otherwise) and re-measure `SOFA_VISIBLE_RATIO`.
 
 Environment artwork is offered under CC BY 4.0 to the extent rights are held; credit HAICoMo contributors and identify changes. Character and brand rights remain separate.
 
