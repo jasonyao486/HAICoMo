@@ -71,12 +71,12 @@ test('missing credentials and failed operations preserve cleanup and do not expo
 });
 test('failed signing checks name the command and output, never credentials', () => {
   const cwd = path.join(os.tmpdir(), 'haicomo-release-cwd'), password = 'abcd-efgh-ijkl-mnop', team = 'TEAM123456';
-  const dmg = path.join(cwd, 'release/0.5.0/HAICoMo-0.5.0-arm64.dmg');
+  const dmg = path.join(cwd, 'release', '0.5.0', 'HAICoMo-0.5.0-arm64.dmg'), outside = path.join(os.tmpdir(), 'elsewhere', 'HAICoMo.app');
   const failure = toolFailure('xcrun', ['stapler', 'validate', dmg], { status: 65, stdout: `Processing: ${dmg}\n`, stderr: `CloudKit query failed for ${team} using ${password}\n` }, [password, team, undefined], cwd);
-  assert.equal(failure.message, `Apple tool check failed: xcrun stapler validate release/0.5.0/HAICoMo-0.5.0-arm64.dmg exited 65: CloudKit query failed for [redacted] using [redacted] Processing: ${dmg}`);
+  assert.equal(failure.message, `Apple tool check failed: xcrun stapler validate ${path.join('release', '0.5.0', 'HAICoMo-0.5.0-arm64.dmg')} exited 65: CloudKit query failed for [redacted] using [redacted] Processing: ${dmg}`);
   assert.ok(isSafeReleaseError(failure.message));
-  const long = toolFailure('spctl', ['--assess', '/tmp/x/HAICoMo.app'], { status: 3, stderr: 'x'.repeat(1000) }, [], cwd);
-  assert.equal(long.message, `Apple tool check failed: spctl --assess /tmp/x/HAICoMo.app exited 3: ${'x'.repeat(400)}`);
+  const long = toolFailure('spctl', ['--assess', outside], { status: 3, stderr: 'x'.repeat(1000) }, [], cwd);
+  assert.equal(long.message, `Apple tool check failed: spctl --assess ${outside} exited 3: ${'x'.repeat(400)}`);
   assert.match(toolFailure('ditto', ['-x', '-k', 'a.zip', 'out'], { status: null, error: { code: 'ETIMEDOUT' }, signal: 'SIGTERM' }).message, /ditto -x -k a\.zip out stopped \(ETIMEDOUT\): no output$/);
   assert.match(toolFailure('codesign', ['-dvv', 'a.app'], { status: 1, stderr: '' }).message, /exited 1: no output$/);
   for (const [cmd, args] of [['xcrun', ['notarytool', 'submit', 'a.zip', '--password', password]], ['security', ['import', 'p.p12', '-P', password]]] as const)
