@@ -129,3 +129,9 @@ See [0.3.4 Windows acceptance, failure analysis and screenshot](TESTING-0.3.4-WI
 | DETECT-06 | Detection results last for the app session (all pages, tabs and windows), reset only on quit; optional background detection at launch (off by default); edited paths mark a row stale; concurrent detections share one run | `lastDetection`/`runDetection` in `main.ts`, `providers.detection`, `detection` broadcast, `autoDetectAgents` setting; `tests/e2e/v050.spec.ts` (leave and return, stale path, launch detection) |
 | DETECT-07 | A client that disappeared or changed after detection is caught before any start, with a translated reason naming the client; sign-in/quota failures pause a relay as "needs you"; relay steps warn when the latest detection marks their client unavailable | `prepareStart` re-check, `EXECUTABLE_MISSING` in the runner, `CONFIGURED_PATH_NOT_FOUND`/`EXECUTABLE_FAILED`, `humanBlocker`, `clientUsable`; unit cases in `adapters`, `providers`, `relay-stages`; e2e vanished-client refusal |
 
+## After 0.5.0: release diagnostics and test timing
+
+| ID | Requirement | Implementation / evidence |
+| --- | --- | --- |
+| REL-DIAG-05 | A failed Mac release stage names the failing signing check without exposing credentials | `toolFailure` and `isSafeReleaseError` in `scripts/mac-release-state.mjs`; `check`/`assess` in `scripts/release-mac.mjs`, with one retry for `stapler validate` and `spctl --assess`; `tests/mac-release.test.ts` covers redaction, refusing notarytool/security, truncation and the safe prefixes. Prompted by the undiagnosed `finalize` (run 39028470032) and `package` (run 39030052278) failures. Not yet exercised by a real CI failure |
+| TEST-POLL-05 | E2E checks of files written by a UI save wait for that save | `tests/e2e/v032.spec.ts` polls `snapshot.json` and the saved settings; Windows main run 39028470032, attempt 1 (job 117384026985) read the snapshot before the task save committed |

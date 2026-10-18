@@ -70,8 +70,10 @@ test("home is independent of tabs: 20 logo clicks, retained task/settings drafts
     await current(page).locator(".sidebar-bottom button").click();
     await expect(current(page).getByLabel("用户名", { exact: true })).toHaveValue("Home settings draft");
     await current(page).locator(".settings-panel").first().locator("button.primary").click();
-    expect((await page.evaluate(() => window.haicomo.request("bootstrap"))).settings.userName).toBe("Home settings draft");
-    expect(readSnapshot(a.directory).tasks[0].title).toBe("Retained draft");
+    await expect.poll(async () => (await page.evaluate(() => window.haicomo.request("bootstrap"))).settings.userName).toBe("Home settings draft");
+    // Nothing above waits for the task dialog's save, which can still be
+    // committing on a slow runner.
+    await expect.poll(() => readSnapshot(a.directory).tasks[0].title).toBe("Retained draft");
     await current(page).locator(".brand").click();
     await current(page).getByRole("button", { name: "新建项目", exact: true }).click();
     await current(page).getByLabel("项目名称", { exact: true }).fill("Unsaved new project");
