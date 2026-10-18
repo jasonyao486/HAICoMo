@@ -1,6 +1,6 @@
 # 0.5.0 verification status
 
-Status: **release in progress.** macOS was implemented, verified and reviewed locally on the development Mac (2026-10-15/16, rounds 1–3 below; the user approved the macOS candidate). Windows verification runs on native GitHub Windows runners and publication follows the gates in [RELEASE](RELEASE.md); both are recorded in the sections at the end. Nothing here is claimed for Windows from a Mac run. Synthetic projects, fixture agents and isolated profiles only; no real Codex or Claude session was started.
+Status: **published.** [v0.5.0](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.5.0) has been a public pre-release on both platforms since 2026-10-18 00:11 UTC. The tag points to `4cd3307`, the GitHub-signed merge of [pull request #3](https://github.com/jasonyao486/HAICoMo/pull/3), which GitHub shows as "Verified". macOS was implemented, verified and reviewed locally on the development Mac (2026-10-15/16, rounds 1–3 below; the user approved the macOS candidate). Windows evidence comes from native GitHub Windows runners only. Nothing here is claimed for Windows from a Mac run. Synthetic projects, fixture agents and isolated profiles only; no real Codex or Claude session was started.
 
 ## Changes
 
@@ -126,14 +126,15 @@ Local re-check after these fixes: typecheck; 134 unit tests in 21 files (run per
 
 ## Windows (native CI)
 
-Pending. The pull-request and main `verify.yml` runs on `windows-2025` cover:
-- unit and Electron suites;
-- packaging and the packaged-app suite;
-- a real standard-user install, reinstall and uninstall;
-- the 0.3.5 → 0.5.0 upgrade (which also runs the v5 → v6 migration on a real installed project);
-- an in-app update to a fixture build.
+Passed on `windows-2025` for release commit `4cd3307`, the GitHub-signed merge of [pull request #3](https://github.com/jasonyao486/HAICoMo/pull/3): main run [39028470032](https://github.com/jasonyao486/HAICoMo/actions/runs/39028470032), attempt 2, job 117387979901 (2026-10-17 11:44–12:10 UTC). The job covered:
+- unit tests and the Electron suite against the source build;
+- packaging and in-app update metadata;
+- the packaged-app suite, including the in-app update to a next-version fixture build;
+- installation into an isolated directory;
+- a real standard-user token run of the installer: 0.3.5 is downloaded from its release and its hash checked; it is installed, then upgraded to 0.5.0 (which also runs the v5 → v6 migration on an installed project). Settings must survive the upgrade, and the registration must be current-user only. Reinstall and uninstall follow;
+- package checksums.
 
-Results, run IDs and job IDs are recorded here once they finish.
+Attempt 1 (job 117384026985) failed one older test, `v032.spec.ts` (from 0.3.2). It reads `snapshot.json` once, about 1.7 s after clicking Save, without waiting; on that runner the save had not committed yet. Saving Settings alone took 1.3 s in the same test. The identical tree had passed this test in the pull-request run [38931260663](https://github.com/jasonyao486/HAICoMo/actions/runs/38931260663). Only the failed Windows job was re-run, which keeps the release on the signed merge commit. The test should poll the snapshot like the other specs do; that change follows separately.
 
 Known Windows limits:
 - The new adapters' Windows install locations have not been exercised with the real CLIs; CI uses fixture agents.
@@ -142,5 +143,30 @@ Known Windows limits:
 
 ## Publication
 
-Pending. The release is created from the GitHub-made pull-request merge commit, so the `v0.5.0` tag carries GitHub's "Verified" signature. It requires the maintainer's fresh-account DMG first-open attestation, which is supplied by the maintainer only.
+**Mac (main run [39031088943](https://github.com/jasonyao486/HAICoMo/actions/runs/39031088943), commit `4cd3307`).**
+- The first main run [39028470032](https://github.com/jasonyao486/HAICoMo/actions/runs/39028470032) signed the app and notarised it: app submission `d7d8e0d4…` and DMG submission `5a9fb6f1…`, both Accepted. Its final `finalize` check then failed. A resumed run [39030052278](https://github.com/jasonyao486/HAICoMo/actions/runs/39030052278) failed at `package`, the check of the accepted app. The script hides tool output there to protect credentials, so the failing command is unknown.
+- On the development Mac, every `finalize` check passed on the exact saved files: stapling and `stapler validate` for the app and DMG, Developer ID signature with hardened runtime, `spctl` "Notarized Developer ID" for the app, DMG and the ZIP's app, the ZIP app's `app.asar` hash, and `latest-mac.yml` generation.
+- A second resume, 39031088943, reused the same accepted submissions without resubmitting. It passed the signed-candidate suite (36 passed, 4 skipped), `finalize` (19 s) and the final packaged-app suite. The two failures are recorded as transient but unexplained. The release script will be changed to name the failing tool without exposing credentials.
 
+**Windows.** Main run 39028470032, attempt 2; see "Windows (native CI)" above.
+
+**First-open acceptance.**
+- The maintainer created a fresh macOS account on the development Mac, downloaded the run 39031088943 artifact in Safari, opened the DMG and installed HAICoMo.
+- The DMG's SHA-256 was `b44a769b2f3415b578ab9fa1e61863bca10823dbeb30c6915fbec51a8cfda849`. It was supplied by the maintainer only, and the publication gate checked it against the verification report before publishing.
+
+**Publish run [39081749205](https://github.com/jasonyao486/HAICoMo/actions/runs/39081749205)** (inputs: `verification_run=39031088943`, `windows_verification_run=39028470032`). It passed:
+- Mac provenance, the first-open evidence and the Windows files;
+- creation of the `v0.5.0` pre-release, with update metadata uploaded last;
+- anonymous public downloads checked against their hashes.
+
+Published assets (SHA-256 from the release's own checksum files, downloaded anonymously afterwards):
+
+| Asset | SHA-256 |
+|---|---|
+| `HAICoMo-0.5.0-arm64.dmg` | `b44a769b2f3415b578ab9fa1e61863bca10823dbeb30c6915fbec51a8cfda849` |
+| `HAICoMo-0.5.0-arm64-mac.zip` | `ce078bd3dd84ea8ea9e16661792841c4334b2b31f26d0265ceaac9a2851e9793` |
+| `latest-mac.yml` | `51c81213798be04a9bcd7db1e090f65d2a14e31c67dcc7e7260c4125c0722755` |
+| `HAICoMo-0.5.0-windows-x64-setup.exe` | `88b717a4838c9992463108dbbab6c175f10938e537944670e24f78ce546621ae` |
+| `latest.yml` | `56c063b55bbff12178e2b3e2c03f427ec4a9fef9b2934408f5196cedcb658905` |
+
+`mac-release-verification.json` records `notarized`, `stapled` and `gatekeeper` as true, source and build commit `4cd3307`, and the first-open method and hash. Both `latest*.yml` files name version 0.5.0 and the SHA-512 of the published ZIP and installer, so 0.4.0 and 0.4.1 users get it through **Check for updates**.
