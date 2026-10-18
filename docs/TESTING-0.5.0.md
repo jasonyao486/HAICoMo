@@ -170,3 +170,14 @@ Published assets (SHA-256 from the release's own checksum files, downloaded anon
 | `latest.yml` | `56c063b55bbff12178e2b3e2c03f427ec4a9fef9b2934408f5196cedcb658905` |
 
 `mac-release-verification.json` records `notarized`, `stapled` and `gatekeeper` as true, source and build commit `4cd3307`, and the first-open method and hash. Both `latest*.yml` files name version 0.5.0 and the SHA-512 of the published ZIP and installer, so 0.4.0 and 0.4.1 users get it through **Check for updates**.
+
+## Local delivery on the development Mac (2026-10-18)
+
+The fresh-account install had left `/Applications/HAICoMo.app` (official 0.5.0) owned by that account, which would block in-app updates from the main account. The maintainer re-owned it with `sudo chown -R`. The official 0.5.0 was then archived (`release/archives`, app `app.asar` `e65039c5…`) and replaced by the official 0.4.1 from its rollback archive (Gatekeeper: "Notarized Developer ID").
+
+The installed 0.4.1 then **updated itself from the public GitHub releases**: built-in official source, isolated synthetic profile, automatic checks off. The synthetic project was created by 0.4.1's own store (schema v5) from a temporary worktree at `v0.4.1`. The update went: check → "有可用更新 0.5.0" → download (39 s) → restart and install → native relaunch. Afterwards:
+- `/Applications/HAICoMo.app` is 0.5.0, its `app.asar` matches the release (`e65039c5…`), and strict code signing, Gatekeeper and the stapled ticket pass;
+- the project tab was restored with “已更新至 0.5.0”, and the project was backed up as `pre-v6.haicomo.zip` before its v5 → v6 migration;
+- a second check against GitHub reported "up to date", the Settings page ends at its last section, and the updater cache is empty.
+
+The user's real settings and projects were not used. Only `/Applications/HAICoMo.app` is registered with LaunchServices. The replaced copy and the superseded local candidate archive were moved to the Trash, not deleted. The user's Windows computer is updated by the user in-app; that machine was not reached from here.
