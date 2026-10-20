@@ -40,6 +40,7 @@ Gemini CLI, Qwen Code, OpenCode, GitHub Copilot CLI, CodeBuddy and Qoder CLI are
 | Install | `npm run install:local:mac` replaced `/Applications/HAICoMo.app` (0.5.0 official) with the 0.6.0 candidate; the replaced 0.5.0 is kept as `release/archives/app.haicomo.desktop-0.5.0-074ba8f2….zip` for rollback |
 | Registrations | One stale LaunchServices entry for an old copy in the Trash was unregistered (files untouched); exactly one registration remains: `/Applications/HAICoMo.app` |
 | Installed-app checks | Isolated synthetic profiles: `tests/e2e/v060.spec.ts` (four locales) and `tests/e2e/v050.spec.ts` against the installed executable, 6/6 passed |
+| Reinstall after the host-channel fix | Candidate rebuilt from `44ea229` and installed the same way; the bundle contains `--permission-prompt-tool=stdio`; one registration; installed-app checks 6/6 passed again. The 0.5.0 rollback archive is unchanged |
 
 ## Outstanding before publication
 
