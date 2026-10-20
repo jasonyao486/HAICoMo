@@ -20,6 +20,7 @@ Thumbs.db
 *.sqlite-*
 *.db
 handoff/
+docs_ignore/
 legacy/
 prd_draft.md
 public/

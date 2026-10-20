@@ -10,9 +10,21 @@ import { BACKGROUND_EVIDENCE, type BackgroundHarnessId } from "../shared/clients
  * manual handoff instead of being started with arguments it does not accept.
  * Arguments are always arrays; nothing is interpolated into a shell.
  */
-export type Protocol = "codex-app-server" | "claude-stream" | "jsonl" | "text";
+export type Protocol = "codex-app-server" | "claude-stream" | "jsonl" | "text" | "acp";
 export type ModeLaunch = { args: string[]; env?: Record<string, string>; autonomous: boolean };
-export type LaunchRequest = { prompt: string; model?: string; effort?: string; mode?: string; threadId?: string; directory: string; patchFile?: string };
+export type LaunchRequest = {
+  prompt: string;
+  model?: string;
+  effort?: string;
+  mode?: string;
+  threadId?: string;
+  directory: string;
+  patchFile?: string;
+  /** Claude only: permission prompts are answered by HAICoMo over the stream-json control channel. */
+  hostPermissions?: boolean;
+  /** Extra writable roots (the main project's `.haicomo` while a relay step works in a git worktree). */
+  extraDirs?: string[];
+};
 /** A per-run configuration overlay written to a private temporary file (DeepSeek Harness `--patch`). */
 export type RunPatch = { yaml: string; model: string };
 export type ProviderAdapter = {
@@ -40,6 +52,15 @@ export type ProviderAdapter = {
   patch?: (request: LaunchRequest) => RunPatch | null;
   /** Model suggestions known without a network call. */
   models?: () => { id: string; name: string; efforts: string[]; isDefault: boolean }[] | undefined;
+  /**
+   * Agent Client Protocol launch, preferred when the installed CLI's own help
+   * names it: returns the arguments that start the stdio ACP server, or null.
+   */
+  acp?: { helpArgs?: string[]; args: (help: string) => string[] | null };
+  /** Claude only: the CLI can hand its permission prompts to the host (`--permission-prompts host`). */
+  hostPermissions?: (help: string) => boolean;
+  /** Whether the CLI accepts `--add-dir` for extra writable roots. */
+  addDir?: (help: string) => boolean;
 };
 
 /** Modes the application will never offer or pass, autonomous or not. */
@@ -77,6 +98,13 @@ function table(entries: Record<string, ModeLaunch>, fallback = "") {
     return entries[key] ?? unsupported(key);
   };
 }
+/** Every ACP launch HAICoMo may pass; anything else is refused at start. */
+export const ACP_LAUNCHES = [["acp"], ["--acp"], ["--experimental-acp"]];
+/** `--acp` (stable) or `--experimental-acp`, as named by the installed CLI's help. */
+export const acpFlag = (help: string) => (/(^|[\s,])--acp\b/.test(help) ? ["--acp"] : help.includes("--experimental-acp") ? ["--experimental-acp"] : null);
+/** An `acp` subcommand listed in commander-style help ("  acp [options]  Run … as an Agent Client Protocol server"). */
+export const acpCommand = (help: string) => (/^\s+acp\b/m.test(help) ? ["acp"] : null);
+const addDirs = (r: LaunchRequest) => (r.extraDirs ?? []).flatMap((dir) => ["--add-dir", dir]);
 const offered = (entries: Record<string, ModeLaunch>) => () => Object.entries(entries).filter(([, m]) => !m.autonomous).map(([id]) => id);
 const home = () => os.homedir();
 const userBin = (...parts: string[]) => () => [path.join(home(), ...parts)];
@@ -104,17 +132,21 @@ const claudeLike = (
   },
   args: (r, mode) => [
     "-p",
+    ...(r.hostPermissions ? ["--input-format", "stream-json"] : []),
     "--output-format",
     "stream-json",
     ...(extra.verbose === false ? [] : ["--verbose"]),
     ...(extra.partial ? ["--include-partial-messages"] : []),
+    ...(r.hostPermissions ? ["--permission-prompts", "host"] : []),
     ...mode.args,
     ...(r.model ? ["--model", r.model] : []),
     ...(extra.effort && r.effort ? ["--effort", r.effort] : []),
     ...(r.threadId ? ["--resume", r.threadId] : []),
+    ...addDirs(r),
   ],
   resume: (help) => help.includes("--resume"),
   model: (help) => help.includes("--model"),
+  addDir: (help) => help.includes("--add-dir"),
 });
 
 const CURSOR_MODES: Record<string, ModeLaunch> = {
@@ -176,6 +208,7 @@ export const ADAPTERS: Record<BackgroundHarnessId, ProviderAdapter> = {
   },
   claude: {
     ...claudeLike("claude", ["claude"], { partial: true, effort: true }),
+    hostPermissions: (help) => help.includes("--permission-prompts") && help.includes("--input-format"),
     extraDirs: (platform) => (platform === "win32" && process.env.LOCALAPPDATA ? [path.join(process.env.LOCALAPPDATA, "Programs", "claude")] : []),
   },
   cursor: {
@@ -198,10 +231,12 @@ export const ADAPTERS: Record<BackgroundHarnessId, ProviderAdapter> = {
       ...(r.threadId ? ["--resume", r.threadId] : []),
       "--workspace",
       r.directory,
+      ...addDirs(r),
       r.prompt,
     ],
     resume: (help) => help.includes("--resume"),
     model: (help) => help.includes("--model"),
+    addDir: (help) => help.includes("--add-dir"),
   },
   "kimi-code": {
     id: "kimi-code",
@@ -222,9 +257,12 @@ export const ADAPTERS: Record<BackgroundHarnessId, ProviderAdapter> = {
       ...mode.args,
       ...(r.model ? ["--model", r.model] : []),
       ...(r.threadId ? ["--session", r.threadId] : []),
+      ...addDirs(r),
     ],
     resume: (help) => help.includes("--session"),
     model: (help) => help.includes("--model"),
+    addDir: (help) => help.includes("--add-dir"),
+    acp: { args: acpCommand },
   },
   "deepseek-harness": {
     id: "deepseek-harness",
@@ -254,7 +292,7 @@ export const ADAPTERS: Record<BackgroundHarnessId, ProviderAdapter> = {
       return d ? [{ id: d.model, name: `${d.model} (DeepSeek Harness default)`, efforts: [], isDefault: true }] : undefined;
     },
   },
-  codebuddy: claudeLike("codebuddy", ["codebuddy"]),
+  codebuddy: { ...claudeLike("codebuddy", ["codebuddy"]), acp: { args: acpFlag } },
   qoder: {
     id: "qoder",
     executableNames: ["qodercli"],
@@ -269,6 +307,7 @@ export const ADAPTERS: Record<BackgroundHarnessId, ProviderAdapter> = {
     args: (r, mode) => ["--print", r.prompt, "--output-format", "stream-json", ...mode.args, ...(r.model ? ["--model", r.model] : [])],
     resume: () => false,
     model: (help) => help.includes("--model"),
+    acp: { args: acpFlag },
   },
   "gemini-cli": approvalCli("gemini-cli", "gemini"),
   "qwen-code": approvalCli("qwen-code", "qwen"),
@@ -287,6 +326,7 @@ export const ADAPTERS: Record<BackgroundHarnessId, ProviderAdapter> = {
     args: (r) => ["run", "--format", "json", ...(r.model ? ["--model", r.model] : []), ...(r.threadId ? ["--session", r.threadId] : []), r.prompt],
     resume: (help) => help.includes("--session"),
     model: (help) => help.includes("--model"),
+    acp: { helpArgs: ["--help"], args: acpCommand },
   },
   "github-copilot": {
     id: "github-copilot",
@@ -302,6 +342,7 @@ export const ADAPTERS: Record<BackgroundHarnessId, ProviderAdapter> = {
     args: (r, mode) => ["--prompt", r.prompt, ...mode.args, ...(r.model ? ["--model", r.model] : []), ...(r.threadId ? ["--resume", r.threadId] : [])],
     resume: (help) => help.includes("--resume"),
     model: (help) => help.includes("--model"),
+    acp: { args: acpFlag },
   },
   pi: {
     id: "pi",
@@ -318,6 +359,23 @@ export const ADAPTERS: Record<BackgroundHarnessId, ProviderAdapter> = {
     resume: () => false,
     model: (help) => help.includes("--model"),
     autonomyOnly: true,
+  },
+  // Hermes Agent (Nous Research): ACP server (`hermes acp`) when listed, else the documented one-shot chat query.
+  hermes: {
+    id: "hermes",
+    executableNames: ["hermes"],
+    extraDirs: userBin(".local", "bin"),
+    helpArgs: ["chat", "--help"],
+    requiredHelp: ["--query", "--quiet"],
+    protocol: "text",
+    promptVia: "arg",
+    modes: () => [],
+    autonomousMode: () => null,
+    mode: table({}),
+    args: (r) => ["chat", "--quiet", ...(r.model ? ["--model", r.model] : []), "--query", r.prompt],
+    resume: () => false,
+    model: (help) => help.includes("--model"),
+    acp: { helpArgs: ["--help"], args: acpCommand },
   },
 };
 function approvalCli(id: "gemini-cli" | "qwen-code", name: string): ProviderAdapter {
@@ -343,6 +401,7 @@ function approvalCli(id: "gemini-cli" | "qwen-code", name: string): ProviderAdap
     ],
     resume: (help) => help.includes("--resume"),
     model: (help) => help.includes("--model"),
+    acp: { args: acpFlag },
   };
 }
 const SAFE_ID = /^[\w.:/-]{1,100}$/;

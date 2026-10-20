@@ -36,7 +36,7 @@ import {
 } from "../shared/domain";
 import { ModelPortrait, Avatar, Badge, Empty, TaskList } from "./components";
 import { formatDate, formatDuration, type Translate } from "./i18n";
-import { CLIENTS, clientName, isClientActor } from "../shared/clients";
+import { CLIENTS_BY_NAME, clientName, isClientActor } from "../shared/clients";
 import type { UpdateState } from "../core/updates";
 import { useApi, useTab, useDirty } from "./api";
 
@@ -499,7 +499,7 @@ export function SettingsView({
           {detecting ? t("detectRunning") : detection ? fillText(t("detectLastRun"), { time: new Date(detection.at).toLocaleTimeString(settings.locale), trigger: t(detection.trigger === "startup" ? "detectTriggerStartup" : detection.trigger === "recheck" ? "detectTriggerRecheck" : "detectTriggerManual"), seconds: (detection.durationMs / 1000).toFixed(1) }) : t("detectNever")}
         </p>
         <div className="client-list">
-          {CLIENTS.map((c) => {
+          {CLIENTS_BY_NAME.map((c) => {
             const cap = caps.find((x) => x.provider === c.id);
             const capability = !cap
               ? ""
@@ -524,6 +524,11 @@ export function SettingsView({
                         {cap.version && <span className="client-version">{cap.version}</span>}
                         {capability && <span>{capability}</span>}
                         <span className="client-evidence">{t("backgroundEvidence")}: {evidenceLabel(c.id, t)}</span>
+                        {cap.channel && (cap.background || cap.relayReady) && (
+                          <span className="client-channel" data-channel={cap.channel}>
+                            {t("channelLabel")}: {t(cap.channel === "acp" ? "channelAcp" : cap.channel === "host" ? "channelHost" : "channelCli")}
+                          </span>
+                        )}
                         {reason && <span className="client-reason">{reason}</span>}
                       </>
                     ) : (

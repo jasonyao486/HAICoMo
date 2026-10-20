@@ -79,6 +79,8 @@ import { Records } from "./Records";
 import { ModeToggle, UserAvatar } from "./Identity";
 import { defaultSettings, settingsEdits } from "../shared/settings";
 import { Office } from "./Office";
+import { DeliveryRecord, ReturnDialog } from "./Review";
+import { structuredHandoff } from "../shared/autonomy";
 
 const defaults = defaultSettings;
 const modules = [
@@ -101,6 +103,7 @@ type Editor =
   | { kind: "note"; note: Partial<Note> | null }
   | { kind: "proposal"; record: ProposalRecord }
   | { kind: "handoff"; task: Task }
+  | { kind: "return"; task: Task }
   | { kind: "agent"; family: string }
   | { kind: "project" }
   | { kind: "connect" }
@@ -328,7 +331,7 @@ export function App() {
               key={name}
               title={t(pageLabel(name))}
               disabled={!workspace}
-              className={`${view === name && workspace ? "selected" : ""} ${name === "office" ? "nav-separator" : ""}`}
+              className={`${view === name && workspace ? "selected" : ""} ${name === "office" || name === "timeline" ? "nav-separator" : ""}`}
               onClick={() => navigate(name)}
             >
               <Icon size={19} />
@@ -871,6 +874,7 @@ export function App() {
             setEditor(null);
           }}
           onHandoff={(task) => setEditor({ kind: "handoff", task })}
+          onReturn={(task) => setEditor({ kind: "return", task })}
         />
       )}
       {workspace && editor?.kind === "legacy" && (
@@ -937,6 +941,15 @@ export function App() {
         />
       )}
       {workspace && editor?.kind === "connect" && <ConnectAgent workspace={workspace} t={t} onClose={() => setEditor(null)} />}
+      {workspace && editor?.kind === "return" && (
+        <ReturnDialog
+          task={editor.task}
+          workspace={workspace}
+          t={t}
+          onClose={() => setEditor(null)}
+          onComplete={(next) => (next ? setWorkspace(next) : void refresh())}
+        />
+      )}
       {workspace && editor?.kind === "handoff" && (
         <HandoffDialog
           task={editor.task}
@@ -1046,6 +1059,10 @@ export function App() {
                       {s.provider} · {s.threadId ?? s.sessionId} ·{" "}
                       {s.endedAt ?? s.at}
                     </small>
+                    {(() => {
+                      const record = structuredHandoff(s.lastMessage);
+                      return record ? <DeliveryRecord session={s} record={record} t={t} /> : null;
+                    })()}
                     <pre>{s.lastMessage}</pre>
                   </details>
                 ))}

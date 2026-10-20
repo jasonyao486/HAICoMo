@@ -7,6 +7,8 @@ import {
   relayProgress,
   relayTitle,
   RELAY_ARMED_STATUSES,
+  stageUsesWorktrees,
+  stepLabel,
   type Relay,
   type RelayStep,
   type RelayStepState,
@@ -26,7 +28,9 @@ export type RelaySummary = {
   steps: { label: string; provider: string; taskId: string; state: RelayStepState; stage: number }[];
 };
 export const ARMED_RELAY_STATUSES: Relay["status"][] = RELAY_ARMED_STATUSES;
-export type RelayStartRequest = { relay: Relay; stageIndex: number; step: RelayStep; state: ProjectState; prompt: string };
+/** A step's git working copy, as the worktree hook prepared it. */
+export type RelayWorkCopy = { path: string; branch: string; cwd: string };
+export type RelayStartRequest = { relay: Relay; stageIndex: number; step: RelayStep; state: ProjectState; prompt: string; workCopy?: RelayWorkCopy | null };
 export type SchedulerHooks = {
   /** Directories whose stores are open and may hold relays. */
   directories: () => string[];
@@ -41,6 +45,10 @@ export type SchedulerHooks = {
   warn?: (directory: string, message: string) => void;
   /** Called after a relay reaches a state a human should look at (blocked, failed, completed, missed). */
   attention?: (directory: string, relay: Relay, state: ProjectState) => void;
+  /** Creates (or reuses) a step's git working copy; throws a WORKTREE_* error when the repository is not ready. */
+  worktree?: (directory: string, relay: Relay, stageIndex: number, step: RelayStep, label: string) => Promise<RelayWorkCopy | null>;
+  /** Commits and merges one completed step's working copy; throws a WORKTREE_* error (a conflict is aborted first). */
+  merge?: (directory: string, relay: Relay, step: RelayStep, label: string, state: ProjectState) => Promise<{ commit: string; removed: boolean }>;
 };
 /**
  * Main-process scheduler for relays. It only acts on projects that are open in
@@ -150,6 +158,21 @@ export class RelayScheduler {
           else if (next.action === "block") after = await this.hooks.command(directory, "relay.blocked", { ...guard, reason: next.reason, stepId: next.stepId });
           else if (next.action === "missed") after = await this.hooks.command(directory, "relay.missed", { ...guard, dueAt: next.dueAt });
           else if (next.action === "complete") after = await this.hooks.command(directory, "relay.completed", guard);
+          else if (next.action === "merge") {
+            const stepIndex = relay.stages[next.stage].steps.findIndex((s) => s.id === next.stepId);
+            const step = relay.stages[next.stage].steps[stepIndex];
+            try {
+              if (!this.hooks.merge) throw new Error("WORKTREE_FAILED: merging is not available");
+              const merged = await this.hooks.merge(directory, relay, step, stepLabel(next.stage, stepIndex), view.state);
+              after = await this.hooks.command(directory, "relay.stepMerged", { ...guard, stepId: step.id, commit: merged.commit, removed: merged.removed });
+              // The next working copy (or the next stage) follows straight away.
+              this.queued = true;
+            } catch (error) {
+              const text = String((error as Error)?.message ?? error);
+              const code = /^(WORKTREE_[A-Z_]+)/.exec(text)?.[1] ?? "WORKTREE_FAILED";
+              after = await this.hooks.command(directory, "relay.blocked", { ...guard, reason: code, stepId: step.id, error: text });
+            }
+          }
           else if (next.action === "claim") {
             if (view.agentGuideError) {
               after = await this.hooks.command(directory, "relay.blocked", { ...guard, reason: view.agentGuideError });
@@ -193,12 +216,15 @@ export class RelayScheduler {
       if (this.stopped) throw new Error("APP_QUITTING");
       let result: RelayStartResult | null = null;
       let prompt = "";
+      let workCopy: RelayWorkCopy | null = null;
       try {
         assertRelayStepRunnable(state.tasks.find((t) => t.id === step.taskId), state, exempt);
-        prompt = composeRelayStepPrompt(current, k, step, state, directory, this.hooks.locale?.());
-        result = await this.hooks.start(directory, { relay: current, stageIndex: k, step, state, prompt });
+        if (stageUsesWorktrees(current, k) && this.hooks.worktree)
+          workCopy = await this.hooks.worktree(directory, current, k, step, stepLabel(k, current.stages[k].steps.findIndex((s) => s.id === step.id)));
+        prompt = composeRelayStepPrompt(current, k, step, state, directory, this.hooks.locale?.(), { workCopy: workCopy?.cwd });
+        result = await this.hooks.start(directory, { relay: current, stageIndex: k, step, state, prompt, workCopy });
       } catch (error) {
-        view = await this.hooks.command(directory, "relay.stepFailed", { relayId: current.id, expectedRevision: current.revision, stepId: step.id, error: String(error) });
+        view = await this.hooks.command(directory, "relay.stepFailed", { relayId: current.id, expectedRevision: current.revision, stepId: step.id, error: String(error), ...(workCopy ? { worktree: workCopy } : {}) });
         current = view.state.relays.find((r) => r.id === relay.id)!;
         continue;
       }
@@ -208,6 +234,7 @@ export class RelayScheduler {
         stepId: step.id,
         runId: result.runId,
         handoff: { id: randomUUID(), to: result.to, prompt },
+        ...(workCopy ? { worktree: workCopy } : {}),
       });
       current = view.state.relays.find((r) => r.id === relay.id)!;
     }

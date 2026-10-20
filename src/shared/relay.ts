@@ -12,7 +12,7 @@ import {
   type Task,
 } from "./domain";
 import { HARNESS_IDS, clientName, isBackgroundHarness, isClientActor } from "./clients";
-import { humanBlocker, needsHuman, selfReportedDecisions } from "./autonomy";
+import { humanBlocker, needsHuman, selfReportedDecisions, structuredHandoff, withoutHandoff } from "./autonomy";
 
 /**
  * A relay is a human-configured chain of up to three stages (A → B → C). Each
@@ -44,6 +44,8 @@ export const RELAY_PREDECESSOR_WINDOW_MS = 24 * 3600000;
 export const RELAY_MAX_STAGES = 3;
 export const RELAY_MAX_STEPS = 3;
 export const RELAY_RESULT_EXCERPT_CHARS = 4000;
+/** With a delivery record the excerpt is only background, so it is shorter. */
+export const RELAY_RECORD_EXCERPT_CHARS = 1500;
 export const RELAY_MAX_TOTAL_PROMPT_CHARS = 200000;
 export const RELAY_STEP_LOST_GRACE_MS = 60000;
 export const RELAY_MAX_DECISIONS = 300;
@@ -92,6 +94,8 @@ export const relayValuesSchema = z
     afterSessionId: idSchema.nullable().default(null),
     trigger: relayTriggerSchema,
     autonomy: relayAutonomySchema.default({ enabled: false, consentedAt: null }),
+    /** Git projects: each step of a stage with two or more steps works in its own worktree, merged when the stage completes. */
+    worktrees: z.boolean().optional(),
     stages: z.array(relayStageValuesSchema).min(1).max(RELAY_MAX_STAGES),
   })
   .strict();
@@ -107,7 +111,13 @@ export type RelayStep = Omit<RelayStepValues, "id"> & {
   resumeThreadId: string | null;
   /** A human marked the step handled after intervening (e.g. finished it in the foreground). */
   overriddenAt: string | null;
+  /** The git worktree the step works in (relays with `worktrees`), and when it was merged back. */
+  worktree?: RelayWorktree | null;
 };
+export type RelayWorktree = { path: string; branch: string; cwd: string; mergedAt: string | null; commit?: string; removed?: boolean };
+/** Steps of a stage use worktrees only when the relay asks for them and the stage runs two or more in parallel. */
+export const stageUsesWorktrees = (relay: Pick<RelayValues, "worktrees"> & { stages: { steps: unknown[] }[] }, stageIndex: number) =>
+  Boolean(relay.worktrees) && (relay.stages[stageIndex]?.steps.length ?? 0) >= 2;
 export type RelayStage = { steps: RelayStep[] };
 export type RelayDecisionEntry = {
   id: string;
@@ -337,6 +347,7 @@ export function relayProgress(
 
 export type RelayAction =
   | { action: "idle" | "wait"; reason?: string }
+  | { action: "merge"; stage: number; stepId: string }
   | { action: "interrupt" }
   | { action: "claim"; stage: number; dueAt?: string | null }
   | { action: "block"; reason: string; stepId?: string }
@@ -374,6 +385,9 @@ export function relayNext(
       stepId: first.step.id,
     };
   if (!p.stageComplete) return { action: "wait", reason: "STAGE_RUNNING" };
+  // A completed stage's working copies are merged, one at a time, before anything else happens.
+  const unmerged = relay.stages[k].steps.find((s) => s.worktree && !s.worktree.mergedAt);
+  if (unmerged) return { action: "merge", stage: k, stepId: unmerged.id };
   if (k >= relay.stages.length - 1) return { action: "complete" };
   const completedAt = p.stageCompletedAt ? Date.parse(p.stageCompletedAt) : ctx.now;
   const requested = relay.fireRequestedAt ? Date.parse(relay.fireRequestedAt) : 0;
@@ -492,6 +506,7 @@ export function composeRelayPrompt(
   directory: string,
   locale: Settings["locale"] = "en-GB",
   unattended = false,
+  workCopy?: string,
 ): string {
   const predecessor = relayPredecessor(relay, state);
   const referenceId = relay.referenceTaskId ?? predecessor?.taskIds[0] ?? relay.taskId;
@@ -507,7 +522,7 @@ export function composeRelayPrompt(
     predecessor
       ? `${predecessor.harnessId ?? predecessor.provider} · ${predecessor.model}${predecessor.threadId ? ` · session ${predecessor.threadId}` : ""}${predecessor.endedAt ? ` · ended ${predecessor.endedAt}` : ""}`
       : undefined,
-    { unattended },
+    { unattended, workCopy },
   );
 }
 /** Prompt for any step; later stages carry the earlier stages' results (tail excerpts of their final messages). */
@@ -518,16 +533,19 @@ export function composeRelayStepPrompt(
   state: ProjectState,
   directory: string,
   locale: Settings["locale"] = "en-GB",
-  opts: { placeholder?: boolean } = {},
+  opts: { placeholder?: boolean; workCopy?: string } = {},
 ): string {
   const unattended = relay.autonomy.enabled;
-  if (stageIndex === 0) return composeRelayPrompt({ ...step, afterSessionId: relay.afterSessionId }, state, directory, locale, unattended);
+  if (stageIndex === 0) return composeRelayPrompt({ ...step, afterSessionId: relay.afterSessionId }, state, directory, locale, unattended, opts.workCopy);
   const reference = state.tasks.find((t) => t.id === (step.referenceTaskId ?? step.taskId));
   if (!reference) throw new Error("TASK_NOT_FOUND");
   const results: RelayPromptResult[] = relay.stages.slice(0, stageIndex).flatMap((stage, si) =>
     stage.steps.map((s, ti) => {
       const session = s.runId ? state.sessions.find((x) => x.sessionId === s.runId) : undefined;
-      const message = session?.lastMessage || session?.message || "";
+      const full = session?.lastMessage || session?.message || "";
+      const record = structuredHandoff(full);
+      const message = record ? withoutHandoff(full) : full;
+      const limit = record ? RELAY_RECORD_EXCERPT_CHARS : RELAY_RESULT_EXCERPT_CHARS;
       return {
         label: stepLabel(si, ti),
         agent: clientName(s.provider),
@@ -536,13 +554,14 @@ export function composeRelayStepPrompt(
         endReason: session?.endReason ?? "",
         endedAt: session?.endedAt ?? "",
         threadId: session?.threadId,
-        excerpt: message.slice(-RELAY_RESULT_EXCERPT_CHARS),
-        truncated: message.length > RELAY_RESULT_EXCERPT_CHARS,
+        excerpt: message.slice(-limit),
+        truncated: message.length > limit,
         placeholder: opts.placeholder || !session,
+        record,
       };
     }),
   );
-  return composeAgentPrompt(directory, state, locale, step.taskId, step.prompt, reference, undefined, { results, unattended });
+  return composeAgentPrompt(directory, state, locale, step.taskId, step.prompt, reference, undefined, { results, unattended, workCopy: opts.workCopy });
 }
 
 /** Task ids an audit record of a relay command refers to (v5 single-task and v6 shapes). */

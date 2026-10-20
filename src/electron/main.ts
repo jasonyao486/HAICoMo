@@ -34,6 +34,7 @@ import {
 } from "../core/files";
 import { LocalRunners, findExecutable, supportedEfforts } from "../providers/local";
 import type { Settings, Recent, Workspace, Capabilities, AgentDetection } from "../shared/domain";
+import { gitTopLevel, mergeWorktree, prepareWorktree } from "../core/worktree";
 import { assertTaskRunnable, inferFamily } from "../shared/domain";
 import { z } from "zod";
 import { detectClients, detectClient } from "../providers/registry";
@@ -714,8 +715,12 @@ function writeRelayReport(directory: string, relay: Relay, state: Workspace["sta
 async function relayStepMode(relay: Relay, step: RelayStep) {
   if (!relay.autonomy.enabled || !isBackgroundHarness(step.provider)) return step.mode || undefined;
   const cap = await capability(step.provider);
+  // ACP: HAICoMo answers the client's prompts itself, so no unattended flag is passed.
+  if (cap.channel === "acp") return step.mode || undefined;
   return cap.autonomousMode ?? (step.mode || undefined);
 }
+/** Channel fields every background start passes through from the detection. */
+const channelOf = (cap: Capabilities) => ({ channel: cap.channel, acpArgs: cap.acpArgs, cliReady: cap.cliReady, fallbackMode: cap.autonomousMode });
 async function precheckRelaySteps(relay: Relay, steps: RelayStep[]) {
   for (const step of steps)
     await prepareStart(step.provider, step.model || undefined, step.effort || undefined, await relayStepMode(relay, step), relay.autonomy.enabled);
@@ -726,7 +731,18 @@ const scheduler = new RelayScheduler({
   view: (directory) => request("view", directory),
   command: (directory, type, payload) => request("command", directory, { id: randomUUID(), type, payload }),
   activeRunIds: () => runners.active().map((r) => r.runId),
-  start: async (directory, { relay, stageIndex, step, state, prompt }) => {
+  worktree: async (directory, relay, _stageIndex, _step, label) => {
+    // Only git projects: elsewhere parallel steps keep sharing the project folder.
+    if (!(await gitTopLevel(directory))) return null;
+    const info = await prepareWorktree(directory, relay.id, label);
+    return { path: info.path, branch: info.branch, cwd: info.cwd };
+  },
+  merge: async (directory, relay, step, label, state) => {
+    const task = state.tasks.find((t) => t.id === step.taskId);
+    const message = `HAICoMo relay ${label}: ${task?.title ?? step.taskId}`.slice(0, 200);
+    return mergeWorktree(directory, step.worktree!, message);
+  },
+  start: async (directory, { relay, stageIndex, step, state, prompt, workCopy }) => {
     const identity = openedDirectories.get(directory);
     if (!identity) throw new Error("PROJECT_NOT_OPEN");
     if (stopping) throw new Error("APP_QUITTING");
@@ -758,6 +774,9 @@ const scheduler = new RelayScheduler({
         mode,
         threadId,
         autonomous,
+        ...channelOf(cap),
+        // In a working copy the agent edits there, and keeps write access to the project's protocol folder.
+        ...(workCopy ? { cwd: workCopy.cwd, extraDirs: [path.join(directory, ".haicomo")] } : {}),
       });
       const model = step.model || cap.models?.find((m) => m.isDefault)?.id || "";
       return { runId: result.runId, threadId: result.threadId, to: relayStepActor({ model, provider: step.provider }) };
@@ -1368,6 +1387,24 @@ else {
             result = { revealed: true, insideProject: !path.relative(dir, file).startsWith("..") && !path.isAbsolute(path.relative(dir, file)) };
             break;
           }
+          case "project.git":
+            // Read-only: whether the project folder is inside a git working tree (relay working copies).
+            if (!dir) throw new Error("NO_PROJECT");
+            result = { repo: Boolean(await gitTopLevel(dir)) };
+            break;
+          case "artifact.exists": {
+            // Read-only: which agent-reported paths exist, resolved like deliverable paths.
+            if (!dir) throw new Error("NO_PROJECT");
+            const values = z.array(z.string().min(1).max(4000)).max(50).parse(payload.paths);
+            result = values.map((value) => {
+              try {
+                return fs.existsSync(resolveArtifactPath(dir, value));
+              } catch {
+                return false;
+              }
+            });
+            break;
+          }
           case "artifact.pick": {
             if (!dir) throw new Error("NO_PROJECT");
             const r = await dialog.showOpenDialog(win, {
@@ -1503,6 +1540,7 @@ else {
                 projectId: binding!.id,
                 epoch: binding!.epoch,
                 executable: cap.executable,
+                ...channelOf(cap),
               });
             } finally {
               const remaining = (startingProjects.get(dir) ?? 1) - 1;

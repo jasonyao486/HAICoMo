@@ -90,6 +90,17 @@ const keys: Record<string, Key> = {
   PREDECESSOR_NOT_RUNNER: "errPredecessorNotFound",
   LOCK_NOT_FOREIGN: "errLockNotForeign",
   PROJECT_ALREADY_OPEN: "errProjectAlreadyOpen",
+  ACP_AUTH_REQUIRED: "errAcpAuthRequired",
+  ACP_START_FAILED: "errAcpStartFailed",
+  ACP_UNSUPPORTED: "errAcpUnsupported",
+  ACP_OPTION_UNSUPPORTED: "errAcpOptionUnsupported",
+  DIRECTORY_INVALID: "errDirectoryInvalid",
+  WORKTREE_DIRTY: "relayReasonWorktreeDirty",
+  WORKTREE_GIT: "relayReasonWorktreeGit",
+  WORKTREE_GIT_BUSY: "relayReasonWorktreeBusy",
+  WORKTREE_DETACHED: "relayReasonWorktreeDetached",
+  WORKTREE_IDENTITY: "relayReasonWorktreeIdentity",
+  WORKTREE_FAILED: "relayReasonWorktreeFailed",
 };
 // Unmapped errors keep their original text: a diagnostic message is never replaced by a generic label.
 // Codes whose details are structured data for a dialog, not text for a toast.

@@ -2416,3 +2416,33 @@ button.relay-node-main { cursor: pointer; }
 @keyframes haicomo-spin { to { transform: rotate(360deg); } }
 .spin { animation: haicomo-spin 0.9s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+/* 0.6.0: delivery records, the return dialog, channels and relay working copies. */
+.delivery-record { margin: 10px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 9px; background: color-mix(in srgb, var(--accent) 5%, transparent); font-size: 13px; }
+.delivery-record header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.delivery-record header small { color: var(--muted); }
+.delivery-record > p { margin: 4px 0 8px; font-size: 12px; }
+.delivery-record dl { margin: 0; display: grid; gap: 6px; }
+.delivery-record dl > div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; }
+.delivery-record dt { color: var(--muted); font-size: 12px; }
+.delivery-record dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.record-artifacts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.record-artifacts li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.record-artifacts code { overflow-wrap: anywhere; }
+.record-artifacts .link { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; }
+.record-missing { color: #c64f3f; }
+.return-target { display: grid; gap: 8px; }
+.return-target .check-row { display: flex; flex-direction: row; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--text); }
+.return-target input[type="radio"] { accent-color: var(--accent); margin: 2px 0 0; padding: 0; }
+.return-target .check-row small { color: var(--muted); }
+.return-other { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-left: 24px; }
+@media (max-width: 760px) { .return-other { grid-template-columns: 1fr; margin-left: 0; } }
+.permission-subject { display: block; margin: 8px 0; padding: 8px 10px; border-radius: 6px; background: var(--bg); overflow-wrap: anywhere; white-space: pre-wrap; }
+.client-detect .client-channel { color: var(--muted); }
+.client-detect .client-channel[data-channel="acp"], .client-detect .client-channel[data-channel="host"] { color: var(--accent); }
+.relay-worktrees { display: flex; flex-direction: column; gap: 6px; }
+.relay-worktrees.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.relay-worktrees-kept { display: block; color: var(--muted); overflow-wrap: anywhere; }
+.relay-caption .button.small { margin-top: 6px; align-self: flex-start; }
+.relay-record { margin: 4px 0 0; font-size: 12px; }
+.relay-record > summary { cursor: pointer; color: var(--accent); }
+.relay-record .delivery-record { margin: 6px 0 0; }
