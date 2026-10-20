@@ -7,7 +7,7 @@
 | 维度 | 当前完成程度 | 证据 | 还缺什么 |
 |---|---|---|---|
 | 管理 | 基本闭环完整 | 任务/子任务、前置、日期、备注、修订提案、人工验收、归档；`core.test.ts`、`v2.test.ts`、桌面测试 | 资源预算、成本、复杂里程碑及多用户权限模型未实现 |
-| 执行 | 13 个客户端有后台适配器（新增 Hermes）。支持时走 ACP（Kimi、Hermes、Gemini、Qwen、OpenCode、Copilot、CodeBuddy、Qoder）或 Claude 宿主通道。Codex、Claude（命令行）、Cursor、DeepSeek Harness 已实测；Kimi 的 ACP 握手已实测；其余按文档适配。Grok Bot/WorkBuddy/TRAE 仍半自动 | `providers/adapters.ts`、`providers/local.ts`、`adapters.test.ts`、`v060.test.ts`；2026-10-20 Kimi ACP 真实握手 | Claude 宿主通道成功路径待你重新登录后实测；Kimi 回合内容未实测（额度用尽）；Hermes 本机未安装；不能注入任意现有 GUI 会话 |
+| 执行 | 13 个客户端有后台适配器（新增 Hermes）。支持时走 ACP（Kimi、Hermes、Gemini、Qwen、OpenCode、Copilot、CodeBuddy、Qoder）或 Claude 宿主通道。Codex、Claude（命令行与宿主通道）、Cursor、DeepSeek Harness 已实测；Kimi 的 ACP 握手已实测；其余按文档适配。Grok Bot/WorkBuddy/TRAE 仍半自动 | `providers/adapters.ts`、`providers/local.ts`、`adapters.test.ts`、`v060.test.ts`；2026-10-20 Kimi ACP 真实握手 | Kimi 回合内容未实测（额度用尽）；Hermes 本机未安装；不能注入任意现有 GUI 会话 |
 | 监控 | 有状态、权限应答（Codex、ACP 客户端、Claude 宿主通道）、确认结束的取消、失联/未知、可观测时长 | runner 生命周期、后台任务、`office-updates.test.ts`、`tabs.spec.ts`、`v060.test.ts` | ACP 工具调用只记日志，尚未用于界面和可视化；全量对话流、可靠成本核算、外部运行的可信身份未实现 |
 | 交接 | 人工交接；附意见退回（原智能体或另选）；三阶段 × 三任务并行接力、阶段间结构化交付记录、git 工作副本与阶段合并、无人值守模式与决策记录 | `relay-stages.test.ts`、`relay.test.ts`、`v050.spec.ts`、`v060.test.ts`、`v060.spec.ts` | 交付记录为智能体自述、未核实；条件分支、超过 3×3 的工作流、OS 常驻服务、预算/成本上限、可证明的外部幂等执行 |
 | 跨机协作 | 关闭应用后的完整目录搬运可行 | 身份/epoch、锁接管、路径规范、备份恢复测试 | 同时在线编辑、冲突合并、分布式锁/事务、远程 runner 均未实现 |

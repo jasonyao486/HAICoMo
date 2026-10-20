@@ -137,7 +137,8 @@ const claudeLike = (
     "stream-json",
     ...(extra.verbose === false ? [] : ["--verbose"]),
     ...(extra.partial ? ["--include-partial-messages"] : []),
-    ...(r.hostPermissions ? ["--permission-prompts", "host"] : []),
+    // As the Agent SDK does for canUseTool: prompts arrive as stdio control requests.
+    ...(r.hostPermissions ? ["--permission-prompt-tool=stdio", "--permission-prompts", "host"] : []),
     ...mode.args,
     ...(r.model ? ["--model", r.model] : []),
     ...(extra.effort && r.effort ? ["--effort", r.effort] : []),
@@ -208,7 +209,7 @@ export const ADAPTERS: Record<BackgroundHarnessId, ProviderAdapter> = {
   },
   claude: {
     ...claudeLike("claude", ["claude"], { partial: true, effort: true }),
-    hostPermissions: (help) => help.includes("--permission-prompts") && help.includes("--input-format"),
+    hostPermissions: (help) => ["--permission-prompts", "--permission-prompt-tool", "--input-format"].every((flag) => help.includes(flag)),
     extraDirs: (platform) => (platform === "win32" && process.env.LOCALAPPDATA ? [path.join(process.env.LOCALAPPDATA, "Programs", "claude")] : []),
   },
   cursor: {

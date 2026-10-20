@@ -293,4 +293,4 @@ The comments are recorded in the activity log and counted as rework. If sending 
 
 ![Sidebar](images/0.6.0/en-GB/sidebar.png)
 
-Limits: Claude's host channel, Hermes and most ACP clients have not yet completed a run on a real account; follow the evidence level shown in Settings. A delivery record is reported by the agent, and HAICoMo only checks that the files exist. See [the testing record](TESTING-0.6.0.md).
+Limits: Claude's host channel has completed approve, deny and cancel on a real account, but Hermes and most ACP clients have not yet completed a run on one; follow the evidence level shown in Settings. A delivery record is reported by the agent, and HAICoMo only checks that the files exist. See [the testing record](TESTING-0.6.0.md).

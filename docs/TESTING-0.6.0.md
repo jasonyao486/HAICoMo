@@ -26,7 +26,7 @@ Status: **local candidate, not published.** 0.6.0 was implemented and verified o
 
 | Client | What was verified | What is still unverified |
 |---|---|---|
-| Claude Code 2.1.290 (`~/.local/bin/claude`) | Help lists `--permission-prompts` and `--input-format`; detection selects the host channel with unattended mode `default`. Three runs through HAICoMo's runner (approve, deny, cancel) reached Claude, which refused with "OAuth session expired and could not be refreshed"; HAICoMo recorded each as failed with that message | The success path (a `can_use_tool` prompt answered in HAICoMo) needs a fresh `claude` login on this Mac |
+| Claude Code 2.1.290 (`~/.local/bin/claude`) | Help lists `--permission-prompts`, `--permission-prompt-tool` and `--input-format`; detection selects the host channel with unattended mode `default`. **Verified end to end** after the maintainer's fresh login, through HAICoMo's runner in a temporary folder:<br>- **Approve**: a Write `can_use_tool` request reached HAICoMo; allowing it created `hello.txt` and the run ended `completed`.<br>- **Deny**: no file was written, Claude reported the decline, and the run ended `completed`.<br>- **Cancel while the prompt was pending**: the run ended `cancelled` and no file was written.<br>Two problems were found and fixed along the way:<br>- Before the fresh login, all three runs failed with "OAuth session expired", and HAICoMo reported the message.<br>- The first runs after the login showed that `--permission-prompts host` alone never asks the host; Claude denied the tool by itself. The Agent SDK also passes `--permission-prompt-tool=stdio`. HAICoMo now does the same, and the fixture reproduces the old behaviour | — |
 | Kimi Code CLI 2.2.0 | `kimi acp` listed; real `initialize` (protocol 1, `loadSession`, terminal sign-in method) and `session/new` (session id, model and thinking options) through HAICoMo's runner | The account's monthly quota is exhausted (CLI: 429). Over ACP Kimi then ends the turn at once with no reply and no error; HAICoMo now reports this as `ACP_EMPTY_TURN` (failed) instead of a delivery |
 | Hermes | — | Not installed on the development Mac; adapter follows vendor documentation |
 
@@ -44,6 +44,5 @@ Gemini CLI, Qwen Code, OpenCode, GitHub Copilot CLI, CodeBuddy and Qoder CLI are
 ## Outstanding before publication
 
 1. Maintainer acceptance of the installed Mac candidate.
-2. A fresh Claude Code login, then one live host-channel run (approve, deny, cancel) in a temporary folder.
-3. Native Windows runners (verify.yml) and the maintainer's Windows PC with the 0.6.0 installer from the pull request's CI.
-4. Merge on GitHub (Verified tag), main-branch signing and notarisation, the maintainer's fresh-account DMG first open, then `publish.yml`.
+2. Native Windows runners (verify.yml) and the maintainer's Windows PC with the 0.6.0 installer from the pull request's CI.
+3. Merge on GitHub (Verified tag), main-branch signing and notarisation, the maintainer's fresh-account DMG first open, then `publish.yml`.

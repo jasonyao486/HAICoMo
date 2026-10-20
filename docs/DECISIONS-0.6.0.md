@@ -40,7 +40,7 @@
 
 | # | 问题 | 选择 | 理由 | 若要改 |
 |---|---|---|---|---|
-| 16 | 何时启用 | 已安装的 Claude Code 帮助文本同时列出 `--permission-prompts` 和 `--input-format` 时，自动用 `--permission-prompts host` 加 stream-json 输入；否则保持原参数 | 由已安装版本决定，旧版本不受影响 | `ADAPTERS.claude.hostPermissions` |
+| 16 | 何时启用 | 已安装的 Claude Code 帮助文本同时列出 `--permission-prompts`、`--permission-prompt-tool` 和 `--input-format` 时，自动加上 `--permission-prompt-tool=stdio --permission-prompts host`，并用 stream-json 输入；否则保持原参数 | 由已安装版本决定，旧版本不受影响。实测发现只加 `--permission-prompts host` 时，Claude 不会向宿主提问，而是自己拒绝；官方 SDK 同样会传 `--permission-prompt-tool=stdio` | `ADAPTERS.claude.hostPermissions` |
 | 17 | 权限请求 | Claude 发来的 `can_use_tool` 转到 HAICoMo 的权限弹窗；允许时原样带回工具输入，拒绝时附说明 | 消息格式按官方 Agent SDK 0.3.304 的类型定义核对 | `hostControl()`、`respond()` |
 | 18 | 无人值守 | 权限模式用 `default`，由 HAICoMo 回答：Bash 命令过破坏性检查；写入项目目录外的文件拒绝；用户自己的 ask 规则强制的提问留给人 | 与 Codex、ACP 一致，比 `auto` 模式更可控 | `autoDecide()` |
 | 19 | 取消 | 先拒绝待答的权限请求，再发 interrupt 控制请求，等 Claude 返回结果后记为“已取消” | 能确认运行确实结束了，解决了原来“取消无法确认已结束”的问题 | `cancel()` |
@@ -97,6 +97,6 @@
 
 | # | 问题 | 处理 |
 |---|---|---|
-| 48 | 本机独立安装的 Claude Code 2.1.290 登录已过期（`OAuth session expired`） | 宿主通道的检测和失败报告都正确；成功路径要等你在终端里重新登录 Claude Code 后再测 |
+| 48 | 本机独立安装的 Claude Code 2.1.290 登录已过期（`OAuth session expired`） | 检测和失败报告都正确。你重新登录后，批准、拒绝、取消三条路径已全部实测通过（见第 16 条的参数修正） |
 | 49 | Kimi 本月额度已用完（429） | ACP 握手和建会话真实通过；回合内容无法验证；据此新增第 14 条的保护 |
 | 50 | 测试环境 | 真实测试在只保留 HOME、PATH、语言的干净环境中运行，不继承本会话的 `ANTHROPIC_*`、`CLAUDE_CODE_*` 变量 |

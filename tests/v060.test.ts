@@ -225,6 +225,8 @@ test("Claude host channel: detected from help, prompts answered in HAICoMo, inte
   assert.deepEqual(answer.response.response, { behavior: "allow", updatedInput: { file_path: "notes.md", content: "x" } });
   const args = r.requests().find((m) => m.args)?.args as string[];
   assert.ok(args.includes("--permission-prompts") && args[args.indexOf("--permission-prompts") + 1] === "host");
+  // Without the stdio prompt tool Claude never asks the host (found live with 2.1.290).
+  assert.ok(args.includes("--permission-prompt-tool=stdio"));
   assert.ok(args.includes("--input-format"));
 
   const d = runner(t, "claudehost");

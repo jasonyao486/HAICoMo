@@ -17,7 +17,7 @@ const HELP = {
   dsh: "Usage: dsh --profile headless [options] [task...]\n  --json  write newline-delimited run events\n  --session-id <id>",
   gemini: "-p, --prompt  --output-format (choices: \"text\", \"json\", \"stream-json\")  --approval-mode (choices: \"default\", \"auto_edit\", \"yolo\")  -m, --model",
   copilot: "-p, --prompt <text>  --allow-all-tools  --model <model>",
-  claudehost: "--resume --model <model> --output-format stream-json --input-format <format> (choices: \"text\", \"stream-json\") --permission-prompts <target> --add-dir <directories...> --permission-mode <mode> (choices: \"default\", \"plan\", \"acceptEdits\")",
+  claudehost: "--resume --model <model> --output-format stream-json --input-format <format> (choices: \"text\", \"stream-json\") --permission-prompts <target> (\"host\" (the SDK host or --permission-prompt-tool) or \"none\") --add-dir <directories...> --permission-mode <mode> (choices: \"default\", \"plan\", \"acceptEdits\")",
   hermes: "Usage: hermes [command]\n\nCommands:\n  chat        Chat with Hermes\n  acp         Run Hermes as an Agent Client Protocol (ACP) server\n",
   hermescli: "Usage: hermes [command]\n\nCommands:\n  chat        Chat with Hermes\n",
 };
@@ -135,6 +135,11 @@ function hostServer() {
     send({ type: "system", subtype: "init", session_id: "claude-session", model: "claude-fixture" });
     const has = (k) => prompt.split(/\r?\n/).includes(k);
     if (has("host-hold")) return;
+    // Like Claude Code 2.1.290: without the stdio prompt tool nothing is asked; the tool is denied in place.
+    if ((has("host-permission") || has("host-destructive")) && !args.includes("--permission-prompt-tool=stdio")) {
+      send({ type: "assistant", message: { content: [{ type: "text", text: "decision:auto-denied" }] } });
+      return result("decision:auto-denied");
+    }
     if (has("host-permission") || has("host-destructive")) {
       send({
         type: "control_request",
