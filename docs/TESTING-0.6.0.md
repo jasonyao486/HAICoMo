@@ -34,7 +34,12 @@ Gemini CLI, Qwen Code, OpenCode, GitHub Copilot CLI, CodeBuddy and Qoder CLI are
 
 ## Local candidate installation
 
-LOCAL_INSTALL
+| Step | Result |
+|---|---|
+| Build | `electron-builder` with the same options as `scripts/release-mac.mjs prepare` (arm64 `dir`, hardened runtime), signed with the login keychain's Developer ID Application identity (team `CXWHS9FG9S`), **not notarised**; `codesign --verify --deep --strict` passed |
+| Install | `npm run install:local:mac` replaced `/Applications/HAICoMo.app` (0.5.0 official) with the 0.6.0 candidate; the replaced 0.5.0 is kept as `release/archives/app.haicomo.desktop-0.5.0-074ba8f2….zip` for rollback |
+| Registrations | One stale LaunchServices entry for an old copy in the Trash was unregistered (files untouched); exactly one registration remains: `/Applications/HAICoMo.app` |
+| Installed-app checks | Isolated synthetic profiles: `tests/e2e/v060.spec.ts` (four locales) and `tests/e2e/v050.spec.ts` against the installed executable, 6/6 passed |
 
 ## Outstanding before publication
 
