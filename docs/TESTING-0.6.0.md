@@ -47,6 +47,7 @@ Gemini CLI, Qwen Code, OpenCode, GitHub Copilot CLI, CodeBuddy and Qoder CLI are
 | Run | Result |
 |---|---|
 | [39524605987](https://github.com/jasonyao486/HAICoMo/actions/runs/39524605987) (`ed95114`) | macOS passed. Windows: the unit-test step timed out after 5 minutes (0.5.0 needed 39–72 s) while `tests/v060.test.ts` was running. Two causes:<br>- **Test cleanup order.** The new tests removed their temporary folder before closing the project store. Windows cannot delete open files, so the store and its watchers stayed open and kept the test process alive. The tests now use the existing `temporaryDirectory`/`beforeRemove` helpers.<br>- **A real worktree bug.** Git reports canonical paths, so a project opened through a Windows 8.3 short name, another letter case or a symlink computed a wrong relative path and could not find its folder. `src/core/worktree.ts` now compares real paths, refuses a project outside its repository, and has a regression test (a project opened through a symlink or junction) that fails without the fix |
+| [39526869697](https://github.com/jasonyao486/HAICoMo/actions/runs/39526869697) (`79bb4da`) | The Windows hang is gone: 145 passed, 1 failed. The worktree test compared merged file bytes, and the runner's default `core.autocrlf=true` checked them out with CRLF. The test repository now pins `core.autocrlf=false`. Line-ending conversion in a user's repository follows the user's own git configuration |
 
 ## Outstanding before publication
 

@@ -306,6 +306,8 @@ function repo(t: any) {
   git("config", "user.name", "HAICoMo Test");
   git("config", "user.email", "test@example.invalid");
   git("config", "commit.gpgsign", "false");
+  // Windows runners default to core.autocrlf=true; the assertions compare exact bytes.
+  git("config", "core.autocrlf", "false");
   fs.writeFileSync(path.join(root, "app.txt"), "one\ntwo\nthree\n");
   git("add", "-A");
   git("commit", "-q", "-m", "init");
