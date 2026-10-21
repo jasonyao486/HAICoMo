@@ -45,7 +45,8 @@ test("0.4.0 project search spans the overview cards, filters four scopes and ope
   try {
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1440, 1000));
     await app.evaluate(({ app }, entry) => app.emit("open-file", { preventDefault() {} }, entry), entry);
-    await expect(frame.getByRole("heading", { name: "HAICoMo Demo", exact: true })).toBeVisible();
+    // A cold packaged start on a Windows runner can take more than 5 s to open the project.
+    await expect(frame.getByRole("heading", { name: "HAICoMo Demo", exact: true })).toBeVisible({ timeout: 30000 });
     const search = frame.locator(".project-search"), input = search.getByRole("searchbox", { name: "搜索项目" });
     // Same width as the three overview cards, placed above the task and team sections.
     const widths = async () => [(await search.boundingBox())!, (await frame.locator(".metric-grid").boundingBox())!, (await frame.locator(".overview-grid").boundingBox())!];

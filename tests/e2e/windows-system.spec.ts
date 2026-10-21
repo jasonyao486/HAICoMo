@@ -29,7 +29,8 @@ test("Windows manual client discovery, truthful handoff and background tray rest
   try {
     const page = await app.firstWindow();
     await app.evaluate(({ app }, file) => app.emit("open-file", { preventDefault() {} }, file), path.join(directory, "HAICoMo.haicomo"));
-    await expect(page.getByRole("heading", { name: "Windows integration", exact: true })).toBeVisible();
+    // A cold packaged start on a Windows runner can take more than 5 s to open the project.
+    await expect(page.getByRole("heading", { name: "Windows integration", exact: true })).toBeVisible({ timeout: 30000 });
     await app.evaluate(({ shell }) => { shell.openPath = async file => { (globalThis as any).__openedClient = file; return ""; }; });
     await page.getByRole("button", { name: "Synthetic handoff", exact: true }).click();
     await page.getByRole("button", { name: "Handoff", exact: true }).click();

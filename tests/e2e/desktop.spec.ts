@@ -258,9 +258,10 @@ test("project entries reopen persisted data and distinct projects remain isolate
   try {
     const page = await app.firstWindow();
     mark("window ready");
+    // A cold packaged start on a Windows runner can take more than 5 s to open the project.
     await expect(
       page.getByRole("heading", { name: "First project", exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 30000 });
     const view = await page.evaluate(
       (directory) => window.haicomo.request("project.open", { directory }),
       other,
