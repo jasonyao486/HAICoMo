@@ -64,7 +64,8 @@ test(`0.6.0 (${locale}): A–Z agents with channels, sidebar spacing, delivery r
   try {
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1440, 1000));
     await app.evaluate(({ app }, file) => app.emit("open-file", { preventDefault() {} }, file), path.join(dir, "HAICoMo.haicomo"));
-    await expect(frame.getByRole("heading", { name: text.project, exact: true })).toBeVisible();
+    // A cold packaged start on a Windows runner can take more than 5 s to open the project.
+    await expect(frame.getByRole("heading", { name: text.project, exact: true })).toBeVisible({ timeout: 30000 });
 
     // Sidebar: Relay → Timeline now has the same gap as Mind map → Collaboration office.
     const nav = frame.locator(".sidebar nav");

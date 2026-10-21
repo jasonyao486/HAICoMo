@@ -77,9 +77,11 @@ test("v2 desktop: full proposal count, filters, date dragging, keyboard, stale r
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   try {
+    // Opening the project at launch can take more than 5 s on a cold packaged
+    // start: Windows main run 39549876563 still showed the home view at 5 s.
     await expect(
       page.getByRole("heading", { name: "V2 verification", exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 30000 });
     await expect(page.getByRole("button", { name: /修订提案/ })).toContainText(
       "65",
     );

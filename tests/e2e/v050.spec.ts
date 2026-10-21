@@ -46,7 +46,8 @@ test("0.5.0 relay: three stages × three tasks, unattended answers recorded, des
   try {
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1440, 1000));
     await app.evaluate(({ app }, file) => app.emit("open-file", { preventDefault() {} }, file), path.join(dir, "HAICoMo.haicomo"));
-    await expect(frame.getByRole("heading", { name: "多阶段接力", exact: true })).toBeVisible();
+    // A cold packaged start on a Windows runner can take more than 5 s to open the project.
+    await expect(frame.getByRole("heading", { name: "多阶段接力", exact: true })).toBeVisible({ timeout: 30000 });
     await frame.locator(".sidebar nav").getByRole("button", { name: zh.relay, exact: true }).click();
 
     // Build A1 + A2 → B1 in the editor, unattended with explicit consent.
@@ -255,7 +256,8 @@ test("0.5.0 optional detection at launch fills Settings without a click and stay
   const page = await app.firstWindow(), frame = current(page);
   try {
     await app.evaluate(({ app }, file) => app.emit("open-file", { preventDefault() {} }, file), path.join(dir, "HAICoMo.haicomo"));
-    await expect(frame.getByRole("heading", { name: "Detect at launch", exact: true })).toBeVisible();
+    // A cold packaged start on a Windows runner can take more than 5 s to open the project.
+    await expect(frame.getByRole("heading", { name: "Detect at launch", exact: true })).toBeVisible({ timeout: 30000 });
     await expect.poll(() => page.evaluate(async () => (await window.haicomo.request("providers.detection")).detection?.trigger ?? null), { timeout: 30000 }).toBe("startup");
     await frame.getByRole("button", { name: "设置", exact: true }).click();
     const agents = frame.locator(".client-list");

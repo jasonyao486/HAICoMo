@@ -28,9 +28,10 @@ test("Public demo: 60 tasks, graphs, assets, audit deletion and four locales", a
   try {
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1440, 1000));
     await app.evaluate(({ app }, entry) => app.emit("open-file", { preventDefault() {}, }, entry), entry);
-    await expect(frame.locator(".sidebar-version")).toContainText(`version ${version}`);
+    // A cold packaged start on a Windows runner can take more than 5 s to open the project.
+    await expect(frame.locator(".sidebar-version")).toContainText(`version ${version}`, { timeout: 30000 });
     await expect(frame.locator(".sidebar")).not.toContainText("Personal preview");
-    await expect(frame.getByRole("heading", { name: "HAICoMo Demo", exact: true })).toBeVisible();
+    await expect(frame.getByRole("heading", { name: "HAICoMo Demo", exact: true })).toBeVisible({ timeout: 30000 });
     await nav("taskList"); await expect(frame.locator(".task-row")).toHaveCount(60); await shot("tasks");
     await nav("proposals"); await expect(frame.locator(".proposal-card")).toHaveCount(3); await shot("proposals");
     await nav("timeline"); await shot("timeline");

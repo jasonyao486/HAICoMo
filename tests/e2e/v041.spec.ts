@@ -37,7 +37,8 @@ test("0.4.1 settings end with their last section: no blank window scrolling on a
     expect(await windowLayout(page)).toMatchObject({ scrollY: 0, escaped: 0 });
     expect((await windowLayout(page)).document).toBeLessThanOrEqual((await windowLayout(page)).viewport);
     await app.evaluate(({ app }, entry) => app.emit("open-file", { preventDefault() {} }, entry), entry);
-    await expect(frame.locator(".workspace-switch")).toContainText("HAICoMo Demo");
+    // A cold packaged start on a Windows runner can take more than 5 s to open the project.
+    await expect(frame.locator(".workspace-switch")).toContainText("HAICoMo Demo", { timeout: 30000 });
     await frame.locator(".sidebar nav").getByTitle(words.overview, { exact: true }).click();
     await expect(frame.getByRole("heading", { name: "HAICoMo Demo", exact: true })).toBeVisible();
     for (const key of ["overview", "taskList", "proposals", "relay", "timeline", "dependencies", "mindmap", "office", "notes", "history", "analytics", "archive", "settings"] as const) {
