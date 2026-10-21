@@ -36,6 +36,28 @@ export function toolFailure(cmd, args, result, secrets = [], cwd = process.cwd()
   }
   return new Error(`Apple tool check failed: ${command} ${outcome}: ${output.slice(0, 400) || 'no output'}`);
 }
+// Lost connection, timeout, unknown or unreachable host, no network.
+export const isNetworkFailure = message => /NSURLErrorDomain Code=-(?:1001|1003|1004|1005|1006|1009)\b|network connection was lost|timed out/i.test(message ?? '');
+/**
+ * Runs an Apple tool check that depends on Apple's servers. A network failure
+ * gets up to four attempts in all, pausing networkDelaysMs before each retry;
+ * any other failure gets one retry after otherDelayMs. Each failure is logged;
+ * the last one is thrown unchanged, so it still names the tool.
+ */
+export async function retryAppleCheck(check, { sleep = ms => new Promise(resolve => setTimeout(resolve, ms)), warn = console.warn, networkDelaysMs = [15_000, 45_000, 90_000], otherDelayMs = 10_000 } = {}) {
+  let otherRetried = false;
+  for (let attempt = 1; ; attempt++) {
+    try { return await check(); }
+    catch (error) {
+      const network = isNetworkFailure(error?.message);
+      if (attempt > networkDelaysMs.length || (!network && otherRetried)) throw error;
+      const delay = network ? networkDelaysMs[attempt - 1] : otherDelayMs;
+      otherRetried ||= !network;
+      warn(`${error.message} ${network ? 'Network failure; attempt' : 'Attempt'} ${attempt + 1} in ${delay / 1000} s.`);
+      await sleep(delay);
+    }
+  }
+}
 // An existing formal release is the source of truth after interim files retire.
 // The caller downloads both files from the same public release into a separate directory.
 export function verifyPublishedMacBaseline(directory, candidate, version, reference) {

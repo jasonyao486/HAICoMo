@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { fileHash, isSafeReleaseError, isSubmissionId, releaseSecretNames, requireEnvironment, saveState, shownPath, submitNotarization, toolFailure, validateState, verifyArtifact, waitForAcceptance, withCleanup } from './mac-release-state.mjs';
+import { fileHash, isSafeReleaseError, isSubmissionId, releaseSecretNames, requireEnvironment, retryAppleCheck, saveState, shownPath, submitNotarization, toolFailure, validateState, verifyArtifact, waitForAcceptance, withCleanup } from './mac-release-state.mjs';
 import { assertApplicationSource } from './check-release-source.mjs';
 
 const command = process.argv[2];
@@ -30,16 +30,10 @@ function check(cmd, args) {
 }
 // stapler validate and spctl --assess rely on Apple's ticket service and the
 // Gatekeeper daemon. In 0.5.0, finalize and package each failed once on CI,
-// on files that then passed locally and in a resumed run. These two checks get
-// one more attempt after 10 s; the first failure is still logged.
-async function assess(cmd, args) {
-  try { return check(cmd, args); }
-  catch (error) {
-    console.warn(`${error.message} Retrying once in 10 s.`);
-    await wait(10_000);
-    return check(cmd, args);
-  }
-}
+// on files that then passed locally and in a resumed run; in 0.6.0, package
+// lost the connection to Apple (-1005) twice within 17 s. Network failures get
+// up to four attempts over about 2.5 minutes, others one retry (retryAppleCheck).
+const assess = (cmd, args) => retryAppleCheck(() => check(cmd, args));
 let state;
 const save = () => saveState(stateFile, state);
 const artifact = file => ({ file: path.basename(file), sha256: fileHash(file), status: 'Prepared' });
