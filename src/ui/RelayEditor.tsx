@@ -8,7 +8,7 @@ import {
   type Settings,
   type Workspace,
 } from "../shared/domain";
-import { BACKGROUND_EVIDENCE, CLIENTS, clientName, isBackgroundHarness } from "../shared/clients";
+import { BACKGROUND_EVIDENCE, CLIENTS_BY_NAME, clientName, isBackgroundHarness } from "../shared/clients";
 import { capabilityEfforts } from "../shared/capabilities";
 import {
   composeRelayStepPrompt,
@@ -87,10 +87,20 @@ export function RelayEditor({ relay, workspace, settings, t, onClose, onSaved }:
   const [autonomy, setAutonomy] = useState(relay?.autonomy.enabled ?? false);
   const [consent, setConsent] = useState(Boolean(relay?.autonomy.enabled && relay.autonomy.consentedAt));
   const [caps, setCaps] = useState<Capabilities[]>([]);
+  // null until the project folder has been checked for a git repository.
+  const [gitRepo, setGitRepo] = useState<boolean | null>(null);
+  const [worktrees, setWorktrees] = useState<boolean | null>(relay ? Boolean(relay.worktrees) : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
     void api("providers.detect", { trigger: "recheck" }).then(setCaps).catch((e) => setError(errorText(e, t)));
+    void api("project.git")
+      .then((r: { repo: boolean }) => {
+        setGitRepo(r.repo);
+        // New relays in git projects default to separate working copies.
+        setWorktrees((w) => (w === null ? r.repo : w));
+      })
+      .catch(() => setGitRepo(false));
   }, []);
   const [si, ti] = selected[0] < stages.length && selected[1] < stages[selected[0]].steps.length ? selected : [0, 0];
   const step = stages[si].steps[ti];
@@ -132,11 +142,12 @@ export function RelayEditor({ relay, workspace, settings, t, onClose, onSaved }:
       afterSessionId: afterSessionId || null,
       trigger: triggerKind === "delay" ? { kind: "delay", ms: (hours * 3600 + minutes * 60 + seconds) * 1000 } : { kind: "at", iso: new Date(at).toISOString() },
       autonomy: { enabled: autonomy, consentedAt },
+      ...(worktrees && gitRepo ? { worktrees: true } : {}),
       stages: stages.map((stage, a) => ({
         steps: stage.steps.map(({ key, ...s }) => ({ ...s, referenceTaskId: s.referenceTaskId || null, continueThread: a === 0 && s.continueThread })),
       })),
     });
-  const snapshot = JSON.stringify({ title, afterSessionId, triggerKind, hours, minutes, seconds, at, autonomy, consent, stages: stages.map((s) => s.steps.map(({ key, ...v }) => v)) });
+  const snapshot = JSON.stringify({ title, afterSessionId, triggerKind, hours, minutes, seconds, at, autonomy, consent, worktrees: relay ? Boolean(worktrees) : null, stages: stages.map((s) => s.steps.map(({ key, ...v }) => v)) });
   const [original] = useState(snapshot);
   const dirty = snapshot !== original;
   const draft = { afterSessionId: afterSessionId || null, autonomy: { enabled: autonomy, consentedAt }, stages: stages.map((s) => ({ steps: s.steps.map(({ key, ...v }) => ({ ...v, referenceTaskId: v.referenceTaskId || null })) })) };
@@ -261,7 +272,7 @@ export function RelayEditor({ relay, workspace, settings, t, onClose, onSaved }:
             <label>
               {t("provider")}
               <select aria-label={t("provider")} value={step.provider} onChange={(e) => update({ provider: e.target.value as DraftStep["provider"], model: "", effort: "", mode: "", continueThread: false })}>
-                {CLIENTS.filter((c) => isBackgroundHarness(c.id)).map((c) => {
+                {CLIENTS_BY_NAME.filter((c) => isBackgroundHarness(c.id)).map((c) => {
                   const known = capOf(c.id);
                   return (
                     <option key={c.id} value={c.id} disabled={!usable(c.id) && c.id !== step.provider}>
@@ -337,6 +348,14 @@ export function RelayEditor({ relay, workspace, settings, t, onClose, onSaved }:
             <ul>{warnings.map((w) => <li key={w.label}>{w.label}: {w.tasks.join(", ")}</li>)}</ul>
           </div>
         )}
+        <fieldset className={`full relay-worktrees ${worktrees && gitRepo ? "on" : ""}`}>
+          <legend>{t("relayWorktree")}</legend>
+          <label className="check">
+            <input type="checkbox" checked={Boolean(worktrees && gitRepo)} disabled={!gitRepo} onChange={(e) => setWorktrees(e.target.checked)} />
+            {t("relayWorktree")}
+          </label>
+          <small className="muted">{gitRepo === false ? t("relayWorktreeNoGit") : t("relayWorktreeHint")}</small>
+        </fieldset>
         <fieldset className={`full relay-autonomy ${autonomy ? "on" : ""}`}>
           <legend>{t("relayAutonomy")}</legend>
           <label className="check">
@@ -351,8 +370,11 @@ export function RelayEditor({ relay, workspace, settings, t, onClose, onSaved }:
                 <ul>
                   {allSteps.map((s) => {
                     const where = stages.findIndex((stage) => stage.steps.includes(s));
-                    const mode = autonomousMode(s.provider);
-                    return <li key={s.key}>{stepLabel(where, stages[where].steps.indexOf(s))} · {clientName(s.provider)}: {mode ? modeLabel(mode, t) : t("relayAutonomyNoFlag")}{s.provider === "codex" ? ` · ${t("relayAutonomyAnswered")}` : ""}</li>;
+                    const c = capOf(s.provider);
+                    // ACP and Claude's host channel ask HAICoMo, which answers like it does for Codex.
+                    const answered = s.provider === "codex" || c?.channel === "acp" || c?.channel === "host";
+                    const mode = c?.channel === "acp" ? undefined : autonomousMode(s.provider);
+                    return <li key={s.key}>{stepLabel(where, stages[where].steps.indexOf(s))} · {clientName(s.provider)}: {mode ? modeLabel(mode, t) : t("relayAutonomyNoFlag")}{answered ? ` · ${t("relayAutonomyAnswered")}` : ""}</li>;
                   })}
                 </ul>
               </div>

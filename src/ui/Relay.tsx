@@ -17,6 +17,8 @@ import { clientName } from "../shared/clients";
 import { useApi, useTab } from "./api";
 import { Avatar, Empty, Modal } from "./components";
 import { errorText } from "./errors";
+import { DeliveryRecord } from "./Review";
+import { structuredHandoff } from "../shared/autonomy";
 import { Figure, Sofa, Workstation, slotOffset, useAnimationClock, FURNITURE_WIDTH } from "./figures";
 import { MODE_LABEL_KEYS } from "../shared/capabilities";
 import type { Translate, Key } from "./i18n";
@@ -48,6 +50,8 @@ function reasonText(relay: Relay, t: Translate) {
   if (r === "START_FAILED" || r === "STEP_START_FAILED") return `${t("relayReasonStartFailed")}${relay.lastError ? `: ${startErrorText(relay.lastError, t)}` : ""}`;
   if (r === "INTERRUPTED") return t("relayReasonInterrupted");
   if (r === "NEEDS_HUMAN") return t("relayReasonNeedsHuman");
+  if (r === "WORKTREE_MERGE_CONFLICT") return fill(t("relayReasonWorktreeConflict"), { branch: /WORKTREE_MERGE_CONFLICT:\s*(\S+)/.exec(relay.lastError)?.[1] ?? "" });
+  if (r.startsWith("WORKTREE_")) return errorText(new Error(relay.lastError || r), t);
   if (r.startsWith("STEP_")) return `${t("relayReasonStepStopped")} (${r.slice(5).toLowerCase()})`;
   if (r === "manual") return t("relayReasonManual");
   if (r === "retry") return t("relayReasonRetry");
@@ -113,9 +117,16 @@ export function FlowNode({ label, actor, title, sub, state, t, selected, onClick
       </span>
     </>
   );
+  const record = state?.session?.lifecycle === "history" ? structuredHandoff(state.session.lastMessage || state.session.message) : null;
   return (
     <div className={`relay-flow-node ${selected ? "selected" : ""}`} data-step-state={s} data-step-label={label}>
       {onClick ? <button type="button" className="relay-node-main" onClick={onClick}>{content}</button> : <div className="relay-node-main">{content}</div>}
+      {record && state?.session && (
+        <details className="relay-record">
+          <summary>{t("recordTitle")}</summary>
+          <DeliveryRecord session={state.session} record={record} t={t} />
+        </details>
+      )}
       {children}
     </div>
   );
@@ -315,6 +326,21 @@ export function RelayPage({ workspace, settings, t, onEdit, onAgent, onChanged }
           {relayStarted(relay) && relay.status !== "completed" ? ` · ${stageName(relay.stageIndex, t)}` : ""}
         </small>
         {reason && <small className="relay-reason">{reason}</small>}
+        {relay.status === "blocked" && relay.statusReason.startsWith("WORKTREE_") && (
+          <button type="button" className="button small" onClick={() => void act("relay.resume", relay)}>
+            <Play size={14} />
+            {t(relay.statusReason === "WORKTREE_MERGE_CONFLICT" ? "relayMergedManually" : "relayMergeRetry")}
+          </button>
+        )}
+        {(() => {
+          // Copies of earlier attempts or unmerged stages stay on disk until the human removes them.
+          const kept = relay.stages.flatMap((stage) => stage.steps).filter((st) => st.worktree && !(st.worktree.mergedAt && st.worktree.removed));
+          return kept.length > 0 && ["blocked", "failed", "cancelled", "completed"].includes(relay.status) ? (
+            <small className="relay-worktrees-kept">
+              {t("relayWorktreeKept")}: {kept.map((st) => st.worktree!.branch).join(", ")}
+            </small>
+          ) : null;
+        })()}
       </div>
     );
   };

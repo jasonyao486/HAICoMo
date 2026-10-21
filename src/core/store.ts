@@ -66,7 +66,7 @@ export const CURRENT_SCHEMA = 6;
 // Written once if absent so a project kept in Git never commits the writer lock,
 // backups or staging folders, and never has proposal bytes rewritten by EOL
 // conversion (hash markers must match the exact bytes).
-const GITIGNORE = `# HAICoMo: machine-local and regenerable files\nwriter.lock\nbackups/\n*.tmp\n*.sqlite-journal\n.haicomo-stage-*\n.haicomo-restore-*\n.haicomo-history-restore-*\n`;
+const GITIGNORE = `# HAICoMo: machine-local and regenerable files\nwriter.lock\nbackups/\nworktrees/\n*.tmp\n*.sqlite-journal\n.haicomo-stage-*\n.haicomo-restore-*\n.haicomo-history-restore-*\n`;
 const GITATTRIBUTES = `# HAICoMo: proposal/event files are hashed byte-for-byte; never convert line endings\n* -text\nproject.sqlite binary\n`;
 const RELAY_SYSTEM_COMMANDS = [
   "relay.claim",
@@ -78,6 +78,7 @@ const RELAY_SYSTEM_COMMANDS = [
   "relay.missed",
   "relay.completed",
   "relay.decision",
+  "relay.stepMerged",
 ];
 const RELAY_HUMAN_COMMANDS = ["relay.pause", "relay.resume", "relay.cancel", "relay.fireNow", "relay.delete", "relay.retry", "relay.overrideStep"];
 /** Runtime fields start blank; step ids are assigned once and never reused within a relay. */
@@ -91,8 +92,11 @@ const relayValuesOf = (relay: Relay): RelayValues => ({
   afterSessionId: relay.afterSessionId,
   trigger: relay.trigger,
   autonomy: relay.autonomy,
-  stages: relay.stages.map((stage) => ({ steps: stage.steps.map(({ runId, firedAt, error, attempt, resumeThreadId, overriddenAt, ...values }) => values) })),
+  ...(relay.worktrees ? { worktrees: true } : {}),
+  stages: relay.stages.map((stage) => ({ steps: stage.steps.map(({ runId, firedAt, error, attempt, resumeThreadId, overriddenAt, worktree, ...values }) => values) })),
 });
+/** The working copy a scheduler start reports; paths must stay inside the project's .haicomo/worktrees. */
+const worktreeSchema = z.object({ path: z.string().min(1).max(4000), branch: z.string().regex(/^haicomo\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/), cwd: z.string().min(1).max(4000) }).strict();
 export const isRelaySystemCommand = (type: string) => RELAY_SYSTEM_COMMANDS.includes(type);
 const hostName = () => os.hostname();
 const sameHost = (hostname: unknown) =>
@@ -893,6 +897,16 @@ export class ProjectStore {
     }
     return changed;
   }
+  /** A reported working copy must live under this project's .haicomo/worktrees. */
+  private insideWorktrees(w: { path: string; branch: string; cwd: string }) {
+    const base = path.join(path.dirname(this.root), ".haicomo", "worktrees");
+    const inside = (p: string) => {
+      const r = path.relative(base, path.resolve(p));
+      return r !== "" && !r.startsWith("..") && !path.isAbsolute(r);
+    };
+    if (!inside(w.path) || !inside(w.cwd)) fail("WORKTREE_OUTSIDE_PROJECT");
+    return w;
+  }
   private relayOf(state: ProjectState, id: unknown, expectedRevision?: unknown, required = false): Relay {
     const relay = state.relays.find((r) => r.id === id);
     if (!relay) fail("RELAY_NOT_FOUND");
@@ -1277,6 +1291,7 @@ export class ProjectStore {
           step.error = "";
           step.attempt = (step.attempt ?? 0) + 1;
           step.resumeThreadId = null;
+          if (p.worktree) step.worktree = { ...this.insideWorktrees(worktreeSchema.parse(p.worktree)), mergedAt: null };
           const task = state.tasks.find((t) => t.id === step.taskId);
           const predecessor = relayPredecessor(relay, state);
           const from =
@@ -1309,6 +1324,13 @@ export class ProjectStore {
           step.error = String(p.error ?? "START_FAILED").slice(0, 4000);
           step.firedAt = at;
           step.attempt = (step.attempt ?? 0) + 1;
+          if (p.worktree) step.worktree = { ...this.insideWorktrees(worktreeSchema.parse(p.worktree)), mergedAt: null };
+        } else if (op.type === "relay.stepMerged") {
+          // The scheduler merged one completed step's working copy back into the user's branch.
+          if (relay.status !== "running" || !relayProgress(relay, state).stageComplete) fail("RELAY_STAGE_INCOMPLETE");
+          const step = stepIn(p.stepId);
+          if (!step.worktree || step.worktree.mergedAt) fail("RELAY_NOTHING_TO_MERGE");
+          step.worktree = { ...step.worktree, mergedAt: at, commit: String(p.commit ?? "").slice(0, 64), removed: p.removed === true };
         } else if (op.type === "relay.stageFired") {
           if (relay.status !== "firing") fail("RELAY_NOT_FIRING", relay.status);
           const steps = relay.stages[k].steps;
@@ -1331,6 +1353,7 @@ export class ProjectStore {
           if (!["scheduled", "running"].includes(relay.status)) fail("RELAY_NOT_SCHEDULED", relay.status);
           relay.status = "blocked";
           relay.statusReason = String(p.reason ?? "").slice(0, 200);
+          if (typeof p.error === "string") relay.lastError = p.error.slice(0, 4000);
         } else if (op.type === "relay.missed") {
           if (!["scheduled", "running"].includes(relay.status)) fail("RELAY_NOT_SCHEDULED", relay.status);
           relay.status = "missed";

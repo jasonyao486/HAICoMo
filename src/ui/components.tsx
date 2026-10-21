@@ -31,7 +31,7 @@ import {
   type TaskValues,
 } from "../shared/domain";
 import {
-  CLIENTS,
+  CLIENTS_BY_NAME,
   clientIcon,
   isClientActor,
   type HarnessId,
@@ -42,6 +42,7 @@ import { terminalCommand } from "../shared/terminal";
 import { capabilityEfforts, MODE_LABEL_KEYS, modeArguments } from "../shared/capabilities";
 import { type Translate, formatDate, type Key } from "./i18n";
 import { errorText } from "./errors";
+import { DeliveryRecord, latestRecord } from "./Review";
 
 export function Avatar({
   family,
@@ -292,6 +293,7 @@ export function TaskEditor({
   onSave,
   onAction,
   onHandoff,
+  onReturn,
 }: {
   task: Task | null;
   workspace: Workspace;
@@ -304,6 +306,7 @@ export function TaskEditor({
   ) => Promise<void>;
   onAction: (type: string, task: Task, reason?: string) => Promise<void>;
   onHandoff: (task: Task) => void;
+  onReturn: (task: Task) => void;
 }) {
   const { api, command } = useApi();
   const [values, setValues] = useState<TaskValues>(() =>
@@ -593,6 +596,20 @@ export function TaskEditor({
                 <Badge status={taskStatus(task, workspace.state.tasks)} t={t} />
               </h3>
               <p>{t("acceptHint")}</p>
+              {(() => {
+                const latest = latestRecord(task, workspace.state.sessions);
+                return latest ? (
+                  <DeliveryRecord
+                    session={latest.session}
+                    record={latest.record}
+                    t={t}
+                    existing={values.artifacts.map((a) => portableArtifactPath(a.path))}
+                    onAdd={(p) =>
+                      set("artifacts", [...values.artifacts, { id: crypto.randomUUID(), label: p.split(/[\\/]/).pop() || p, path: portableArtifactPath(p) }])
+                    }
+                  />
+                ) : null;
+              })()}
               {dirty && <p className="notice">{t("saveFirst")}</p>}
               <textarea
                 aria-label={t("reason")}
@@ -617,7 +634,10 @@ export function TaskEditor({
                   <button
                     type="button"
                     className="button"
-                    onClick={() => void run(() => act("task.return"))}
+                    onClick={() => {
+                      if (dirty) setError(t("saveFirst"));
+                      else onReturn(task);
+                    }}
                   >
                     {t("returnWork")}
                   </button>
@@ -918,6 +938,23 @@ export function ProposalReview({
   );
 }
 
+/** A readable headline for a permission prompt from any channel (Codex, ACP, Claude host). */
+export function permissionSummary(request: { method: string; params?: any }): { title: string; detail: string; canAllow: boolean } {
+  const p = request.params ?? {};
+  if (request.method === "acp/request_permission") {
+    const call = p.toolCall ?? {};
+    const raw = call.rawInput ?? {};
+    const command = Array.isArray(raw.command) ? raw.command.join(" ") : typeof raw.command === "string" ? raw.command : "";
+    const paths = (Array.isArray(call.locations) ? call.locations : []).map((l: any) => l?.path).filter(Boolean).join(", ");
+    const options: any[] = Array.isArray(p.options) ? p.options : [];
+    return { title: [call.kind, call.title].filter(Boolean).join(" · ") || request.method, detail: command || paths, canAllow: options.some((o) => String(o?.kind ?? "").startsWith("allow")) };
+  }
+  if (request.method === "claude/can_use_tool") {
+    const input = p.input ?? {};
+    return { title: p.title || p.display_name || p.tool_name || request.method, detail: String(input.command ?? input.file_path ?? input.notebook_path ?? input.url ?? p.description ?? ""), canAllow: true };
+  }
+  return { title: request.method, detail: "", canAllow: true };
+}
 export function PermissionDialog({
   request,
   t,
@@ -953,14 +990,19 @@ export function PermissionDialog({
       setBusy(false);
     }
   };
-  const approval = [
-    "item/commandExecution/requestApproval",
-    "item/fileChange/requestApproval",
-  ].includes(request.method);
+  const summary = permissionSummary(request);
+  const approval =
+    [
+      "item/commandExecution/requestApproval",
+      "item/fileChange/requestApproval",
+      "claude/can_use_tool",
+    ].includes(request.method) ||
+    (request.method === "acp/request_permission" && summary.canAllow);
   return (
     <Modal title={t("permission")} onClose={onClose}>
       <div className="modal-body">
-        <strong>{request.method}</strong>
+        <strong>{summary.title}</strong>
+        {summary.detail && <code className="permission-subject">{summary.detail}</code>}
         {questions.length ? (
           questions.map((q: any) => (
             <label className="field" key={q.id}>
@@ -1198,7 +1240,7 @@ export function HandoffDialog({
               setThread("");
             }}
           >
-            {CLIENTS.map((c) => (
+            {CLIENTS_BY_NAME.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>

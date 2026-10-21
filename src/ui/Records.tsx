@@ -1,6 +1,6 @@
 import { ActivitySummary, ActivityTasks, ActivityPeople } from "./Activity";
 import { useEffect, useState } from "react";
-import { CLIENTS, clientName } from "../shared/clients";
+import { CLIENTS_BY_NAME, clientName } from "../shared/clients";
 import type { Audit, ProposalRecord, Workspace } from "../shared/domain";
 import { useApi, useTab, useDirty } from "./api";
 import { Avatar, Badge, Empty, Modal } from "./components";
@@ -93,7 +93,7 @@ export function Records({
             onChange={(e) => set("harnessId", e.target.value)}
           >
             <option value="all">{t("allClients")}</option>
-            {CLIENTS.map((c) => (
+            {CLIENTS_BY_NAME.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>

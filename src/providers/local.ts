@@ -15,8 +15,9 @@ import {
   type RunEvent,
 } from "../shared/domain";
 import { APP_VERSION } from "../shared/version";
-import type { BackgroundHarnessId } from "../shared/clients";
+import { clientName, type BackgroundHarnessId } from "../shared/clients";
 import {
+  ACP_LAUNCHES,
   adapterFor,
   helpChoices,
   newJsonlState,
@@ -180,6 +181,21 @@ export type RunOptions = {
    * burst that acknowledges the start.
    */
   runId?: string;
+  /** The detected channel; "acp" and "host" let HAICoMo answer the client's permission prompts. */
+  channel?: "acp" | "host" | "cli";
+  /** ACP server arguments from the detection (one of ACP_LAUNCHES). */
+  acpArgs?: string[];
+  /** The headless path exists, so an ACP session that cannot honour a request falls back to it. */
+  cliReady?: boolean;
+  /** The client's unattended mode, used only if a consented autonomous ACP run falls back to the CLI path. */
+  fallbackMode?: string;
+  /** Extra writable roots (the main project's `.haicomo` while a relay step works in a git worktree). */
+  extraDirs?: string[];
+  /**
+   * Where the agent works when it is not the project directory itself (a relay
+   * step's git worktree inside `.haicomo/worktrees`). Bookkeeping stays keyed by `directory`.
+   */
+  cwd?: string;
 };
 export type PermissionRequest = {
   runId: string;
@@ -209,14 +225,22 @@ type Run = {
   serverRequests: Map<number | string, { method: string; params: any }>;
   output: string;
   lastEventAt: number;
-  protocol: "codex-app-server" | "claude-stream" | "jsonl" | "text";
+  protocol: "codex-app-server" | "claude-stream" | "jsonl" | "text" | "acp";
   jsonl?: JsonlState;
+  /** ACP session state; `loading` suppresses the history a `session/load` replays. */
+  acp?: { sessionId?: string; text: string; loading: boolean; cancelRequested: boolean; activity: number };
+  /** Claude's stream-json control channel: HAICoMo answers `can_use_tool`. */
+  host?: { cancelRequested: boolean; nextId: number };
+  /** Negotiating an ACP session; nothing is reported until the prompt is sent. */
+  provisional?: boolean;
   /** Private temporary folder for a per-run overlay; removed when the run finishes. */
   tempDir?: string;
   /** The client's own stderr, kept apart from HAICoMo's status lines for failure messages. */
   stderr: string[];
 };
 
+/** An ACP turn that ended without a reply or any tool call delivered nothing; the wording lets relays ask the human. */
+export const ACP_EMPTY_TURN = "ACP_EMPTY_TURN: the agent ended its turn without replying or using a tool. Its sign-in may have expired or its usage limit may have been reached; check the client itself.";
 export function findExecutable(provider: string, configured = "") {
   if (configured) {
     if (!path.isAbsolute(configured) || !fs.existsSync(configured)) return "";
@@ -268,6 +292,19 @@ export async function detect(provider: string, configured = ""): Promise<Capabil
     const { stdout: helpOut, stderr: helpErr } = await exec(helpLaunch.command, helpLaunch.args, { timeout: 15000, env: helpLaunch.env });
     const help = `${helpOut}\n${helpErr}`;
     const headless = adapter.requiredHelp.every((flag) => help.includes(flag));
+    let acpArgs: string[] | null = null;
+    if (adapter.acp) {
+      let acpHelp = help;
+      if (adapter.acp.helpArgs && adapter.acp.helpArgs.join("\0") !== adapter.helpArgs.join("\0"))
+        try {
+          const l = launchArgs(executable, adapter.acp.helpArgs);
+          const r = await exec(l.command, l.args, { timeout: 15000, env: l.env });
+          acpHelp = `${r.stdout}\n${r.stderr}`;
+        } catch {}
+      acpArgs = adapter.acp.args(acpHelp);
+    }
+    const host = headless && Boolean(adapter.hostPermissions?.(help));
+    const ready = headless || Boolean(acpArgs);
     let models: Capabilities["models"];
     let discoveryError = "";
     if (provider === "codex" && headless)
@@ -279,22 +316,27 @@ export async function detect(provider: string, configured = ""): Promise<Capabil
     else models = adapter.models?.();
     const modes = adapter.modes(help).filter((m) => !FORBIDDEN_MODES.includes(m));
     const efforts = provider === "claude" && help.includes("--effort") ? helpChoices(help, "--effort") : [];
-    const autonomous = headless ? adapter.autonomousMode(help) : null;
+    // With the host channel Claude asks HAICoMo, which answers unattended prompts itself (see shared/autonomy.ts).
+    const autonomous = host ? "default" : headless ? adapter.autonomousMode(help) : null;
     return {
       ...base,
       installed: true,
       version: stdout.trim().split(/\r?\n/)[0] ?? "",
-      background: headless && !discoveryError && !adapter.autonomyOnly,
+      background: ready && !discoveryError && !adapter.autonomyOnly,
       autonomousMode: autonomous ?? undefined,
       autonomyOnly: Boolean(adapter.autonomyOnly) || undefined,
-      relayReady: headless && !discoveryError,
-      resume: adapter.resume(help),
-      model: adapter.model(help),
+      relayReady: ready && !discoveryError,
+      resume: adapter.resume(help) || Boolean(acpArgs),
+      model: adapter.model(help) || Boolean(acpArgs),
       effort: Boolean(models?.some((m) => m.efforts.length)) || efforts.length > 0,
       models,
       efforts,
       modes,
-      reason: discoveryError || (headless ? "" : "HEADLESS_FLAGS_NOT_FOUND"),
+      channel: acpArgs ? "acp" : host ? "host" : "cli",
+      acpArgs: acpArgs ?? undefined,
+      cliReady: headless,
+      addDir: Boolean(acpArgs) || Boolean(adapter.addDir?.(help)),
+      reason: discoveryError || (ready ? "" : "HEADLESS_FLAGS_NOT_FOUND"),
     };
   } catch (e) {
     // Found but it would not run (permissions, damaged install, a launcher that needs set-up first).
@@ -361,6 +403,7 @@ export class LocalRunners {
     endReason?: RunEvent["endReason"],
   ) {
     message = message.slice(-12000);
+    if (run.provisional) return;
     if (
       status === "running" &&
       run.status === "running" &&
@@ -412,7 +455,7 @@ export class LocalRunners {
   private send(run: Run, message: any) {
     if (run.process.stdin.destroyed || run.process.stdin.writableEnded)
       fail("AGENT_DISCONNECTED");
-    run.process.stdin.write(JSON.stringify(message) + "\n");
+    run.process.stdin.write(JSON.stringify(run.protocol === "acp" ? { jsonrpc: "2.0", ...message } : message) + "\n");
   }
   private request(
     run: Run,
@@ -422,10 +465,11 @@ export class LocalRunners {
   ): Promise<any> {
     const id = ++run.nextId;
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
+      // A zero timeout waits for the reply as long as the run lives (an ACP prompt turn).
+      const timer = timeout > 0 ? setTimeout(() => {
         run.pending.delete(id);
         reject(new Error(`RPC_TIMEOUT ${method}; outcome may be unknown`));
-      }, timeout);
+      }, timeout) : undefined;
       run.pending.set(id, {
         resolve: (v) => {
           clearTimeout(timer);
@@ -468,39 +512,27 @@ export class LocalRunners {
       fail("SESSION_ALREADY_RUNNING");
     const adapter = adapterFor(options.provider);
     if (!adapter) fail("BACKGROUND_UNSUPPORTED", options.provider);
-    let mode: ModeLaunch;
-    try {
-      mode = adapter.mode(options.mode);
-    } catch (error) {
-      fail("MODE_UNSUPPORTED", String((error as Error).message).replace(/^MODE_UNSUPPORTED:\s*/, ""));
+    if (options.extraDirs?.some((dir) => !path.isAbsolute(dir))) fail("DIRECTORY_INVALID");
+    if (options.cwd && (!path.isAbsolute(options.cwd) || !fs.existsSync(options.cwd))) fail("DIRECTORY_INVALID");
+    if (options.channel === "acp") {
+      if (!adapter.acp || !options.acpArgs || !ACP_LAUNCHES.some((a) => a.join(" ") === options.acpArgs!.join(" "))) fail("ACP_UNSUPPORTED", clientName(options.provider));
+      const started = await this.startAcp(options);
+      if (started) return started;
+      // The ACP session could not honour a requested model, mode, effort or session; nothing was sent yet.
+      if (!options.cliReady) fail("ACP_OPTION_UNSUPPORTED", clientName(options.provider));
+      options = { ...options, channel: "cli", mode: options.mode || (options.autonomous ? options.fallbackMode : undefined) };
     }
-    // Unattended flags are honoured only for relays whose owner consented to them.
-    if ((mode.autonomous || adapter.autonomyOnly) && !options.autonomous) fail("AUTONOMY_CONSENT_REQUIRED", options.mode ?? "");
-    if (adapter.promptVia === "arg" && process.platform === "win32" && options.prompt.length > WINDOWS_ARGV_PROMPT_LIMIT)
-      fail("PROMPT_TOO_LONG_FOR_ARGV");
-    const request = { prompt: options.prompt, model: options.model, effort: options.effort, mode: options.mode, threadId: options.threadId, directory: options.directory } as Parameters<typeof adapter.args>[0];
-    let tempDir: string | undefined;
-    let patch: ReturnType<NonNullable<typeof adapter.patch>> = null;
-    try {
-      patch = adapter.patch?.(request) ?? null;
-    } catch (error) {
-      fail("MODEL_UNSUPPORTED", String((error as Error).message).replace(/^MODEL_UNSUPPORTED:\s*/, ""));
-    }
-    if (patch) {
-      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-run-"));
-      request.patchFile = path.join(tempDir, "patch.yml");
-      fs.writeFileSync(request.patchFile, patch.yaml, { mode: 0o600 });
-      if (!options.model) options = { ...options, model: patch.model };
-    }
-    const args = adapter.args(request, mode);
-    const protocol = adapter.protocol;
+    return this.startCli(options, adapter);
+  }
+  /** Creates the run record and wires the process streams; a provisional run reports nothing. */
+  private spawnRun(options: RunOptions, args: string[], protocol: Run["protocol"], env: NodeJS.ProcessEnv | undefined, tempDir?: string, provisional = false): Run {
     const launch = launchArgs(options.executable, args);
     const proc = spawn(launch.command, launch.args, {
-      cwd: options.directory,
+      cwd: options.cwd ?? options.directory,
       stdio: "pipe",
       shell: false,
       windowsHide: true,
-      env: mode.env ? { ...launch.env, ...mode.env } : launch.env,
+      env: env ? { ...launch.env, ...env } : launch.env,
     });
     this.processes.set(proc, options);
     const run: Run = {
@@ -528,9 +560,12 @@ export class LocalRunners {
       jsonl: protocol === "jsonl" ? newJsonlState() : undefined,
       tempDir,
       stderr: [],
+      provisional,
     };
-    this.runs.set(run.id, run);
-    this.emit(run, "unknown", "Starting local agent; execution not confirmed");
+    if (!provisional) {
+      this.runs.set(run.id, run);
+      this.emit(run, "unknown", "Starting local agent; execution not confirmed");
+    }
     proc.stdin.on("error", (error) => {
       if (!run.finished) {
         this.emit(run, "error", String(error));
@@ -598,6 +633,47 @@ export class LocalRunners {
         );
       this.finish(run);
     });
+    return run;
+  }
+  private async startCli(options: RunOptions, adapter: NonNullable<ReturnType<typeof adapterFor>>) {
+    let mode: ModeLaunch;
+    try {
+      mode = adapter.mode(options.mode);
+    } catch (error) {
+      fail("MODE_UNSUPPORTED", String((error as Error).message).replace(/^MODE_UNSUPPORTED:\s*/, ""));
+    }
+    // Unattended flags are honoured only for relays whose owner consented to them.
+    if ((mode.autonomous || adapter.autonomyOnly) && !options.autonomous) fail("AUTONOMY_CONSENT_REQUIRED", options.mode ?? "");
+    if (adapter.promptVia === "arg" && process.platform === "win32" && options.prompt.length > WINDOWS_ARGV_PROMPT_LIMIT)
+      fail("PROMPT_TOO_LONG_FOR_ARGV");
+    const host = options.channel === "host" && Boolean(adapter.hostPermissions);
+    const request = {
+      prompt: options.prompt,
+      model: options.model,
+      effort: options.effort,
+      mode: options.mode,
+      threadId: options.threadId,
+      directory: options.cwd ?? options.directory,
+      hostPermissions: host || undefined,
+      extraDirs: adapter.addDir ? options.extraDirs : undefined,
+    } as Parameters<typeof adapter.args>[0];
+    let tempDir: string | undefined;
+    let patch: ReturnType<NonNullable<typeof adapter.patch>> = null;
+    try {
+      patch = adapter.patch?.(request) ?? null;
+    } catch (error) {
+      fail("MODEL_UNSUPPORTED", String((error as Error).message).replace(/^MODEL_UNSUPPORTED:\s*/, ""));
+    }
+    if (patch) {
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "haicomo-run-"));
+      request.patchFile = path.join(tempDir, "patch.yml");
+      fs.writeFileSync(request.patchFile, patch.yaml, { mode: 0o600 });
+      if (!options.model) options = { ...options, model: patch.model };
+    }
+    const args = adapter.args(request, mode);
+    const run = this.spawnRun(options, args, adapter.protocol, mode.env, tempDir);
+    const proc = run.process;
+    if (host) run.host = { cancelRequested: false, nextId: 0 };
     let turnSent = false;
     try {
       if (options.provider === "codex") {
@@ -610,7 +686,7 @@ export class LocalRunners {
           options.threadId ? "thread/resume" : "thread/start",
           {
             ...(options.threadId ? { threadId: options.threadId } : {}),
-            cwd: options.directory,
+            cwd: options.cwd ?? options.directory,
             ...(options.model ? { model: options.model } : {}),
             approvalPolicy: options.mode || "on-request",
             sandbox: "workspace-write",
@@ -632,10 +708,14 @@ export class LocalRunners {
           proc.once("error", reject);
         });
         turnSent = true;
-        if (adapter.promptVia === "stdin") proc.stdin.end(options.prompt);
+        if (run.host) {
+          // Claude's stream-json input: the prompt is one user message; stdin stays open for permission answers.
+          this.send(run, { type: "control_request", request_id: `haicomo-${++run.host.nextId}`, request: { subtype: "initialize" } });
+          this.send(run, { type: "user", message: { role: "user", content: options.prompt }, parent_tool_use_id: null });
+        } else if (adapter.promptVia === "stdin") proc.stdin.end(options.prompt);
         else proc.stdin.end();
       }
-      return { runId: run.id, threadId: run.threadId, status: "started" };
+      return { runId: run.id, threadId: run.threadId, status: "started" as const };
     } catch (e) {
       if (!run.finished)
         this.emit(
@@ -652,8 +732,112 @@ export class LocalRunners {
       throw e;
     }
   }
+  /**
+   * Agent Client Protocol: initialize → session/new (or session/load) → session/prompt.
+   * Returns null, with nothing sent, when the session cannot honour a requested
+   * model, effort, mode or session; the caller then uses the headless path.
+   */
+  private async startAcp(options: RunOptions) {
+    const run = this.spawnRun(options, options.acpArgs!, "acp", undefined, undefined, true);
+    run.acp = { text: "", loading: false, cancelRequested: false, activity: 0 };
+    const abandon = () => {
+      if (!run.finished) this.finish(run);
+      try { run.process.stdin.end(); } catch {}
+      run.process.kill();
+    };
+    try {
+      await new Promise<void>((resolve, reject) => {
+        run.process.once("spawn", resolve);
+        run.process.once("error", reject);
+      });
+      const init = await this.request(run, "initialize", {
+        protocolVersion: 1,
+        clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
+        clientInfo: { name: "haicomo", title: "HAICoMo", version: APP_VERSION },
+      });
+      const capabilities = init?.agentCapabilities ?? {};
+      const extra = options.extraDirs?.length ? { additionalDirectories: options.extraDirs } : {};
+      let session: any;
+      if (options.threadId) {
+        if (!capabilities.loadSession) {
+          abandon();
+          return null;
+        }
+        run.acp.loading = true;
+        session = await this.request(run, "session/load", { sessionId: options.threadId, cwd: options.cwd ?? options.directory, mcpServers: [], ...extra }, 60000);
+        run.acp.loading = false;
+        run.acp.sessionId = options.threadId;
+      } else {
+        session = await this.request(run, "session/new", { cwd: options.cwd ?? options.directory, mcpServers: [], ...extra }, 60000);
+        run.acp.sessionId = typeof session?.sessionId === "string" ? session.sessionId : "";
+        if (!run.acp.sessionId) throw new Error("ACP_SESSION_MISSING");
+      }
+      const sessionId = run.acp.sessionId;
+      const configs: any[] = Array.isArray(session?.configOptions) ? session.configOptions : [];
+      const choose = async (category: string, value: string) => {
+        const option = configs.find((c) => c?.category === category || c?.id === category);
+        const values = (Array.isArray(option?.options) ? option.options : []).flatMap((o: any) => (Array.isArray(o?.options) ? o.options : [o])).map((o: any) => String(o?.value ?? ""));
+        if (!option || !values.includes(value)) return false;
+        if (option.currentValue !== value) await this.request(run, "session/set_config_option", { sessionId, configId: option.id, value });
+        return true;
+      };
+      if (options.model && !(await choose("model", options.model))) {
+        abandon();
+        return null;
+      }
+      if (options.effort && !(await choose("thought_level", options.effort))) {
+        abandon();
+        return null;
+      }
+      // In consented unattended relays HAICoMo answers the prompts; the client's own unattended flag is not used.
+      const mode = options.mode && !(options.autonomous && options.mode === options.fallbackMode) ? options.mode : "";
+      if (mode) {
+        const modes: any[] = Array.isArray(session?.modes?.availableModes) ? session.modes.availableModes : [];
+        if (modes.some((m) => m?.id === mode)) await this.request(run, "session/set_mode", { sessionId, modeId: mode });
+        else if (!(await choose("mode", mode))) {
+          abandon();
+          return null;
+        }
+      }
+      run.provisional = false;
+      this.runs.set(run.id, run);
+      run.threadId = sessionId;
+      run.turnStarted = true;
+      this.emit(run, "unknown", "Starting local agent; execution not confirmed");
+      this.emit(run, "running");
+      void this.request(run, "session/prompt", { sessionId, prompt: [{ type: "text", text: options.prompt }] }, 0).then(
+        (result) => this.acpEnded(run, String(result?.stopReason ?? "")),
+        (error) => this.acpEnded(run, "", error),
+      );
+      return { runId: run.id, threadId: run.threadId, status: "started" as const };
+    } catch (error) {
+      if (run.provisional) {
+        abandon();
+        // A broken or unauthenticated ACP server falls back to the headless path when there is one.
+        if (options.cliReady && !/auth/i.test(String(error))) return null;
+        const detail = String((error as Error)?.message ?? error).slice(0, 300);
+        fail(/auth/i.test(detail) ? "ACP_AUTH_REQUIRED" : "ACP_START_FAILED", `${clientName(options.provider)} — ${detail}`);
+      }
+      throw error;
+    }
+  }
+  private acpEnded(run: Run, stopReason: string, error?: unknown) {
+    if (run.finished || !run.acp) return;
+    const text = run.acp.text;
+    if (error) this.emit(run, "error", [text, String((error as Error)?.message ?? error)].filter(Boolean).join("\n"), "history", run.acp.cancelRequested ? "cancelled" : "failed");
+    else if (stopReason === "end_turn" && !text.trim() && !run.acp.activity)
+      // Seen with Kimi 2.2.0 over ACP: an exhausted plan ends the turn at once, with no reply and no error.
+      this.emit(run, "error", [run.stderr.join("").trim().slice(-1000), ACP_EMPTY_TURN].filter(Boolean).join("\n"), "history", "failed");
+    else if (stopReason === "end_turn") this.emit(run, "idle", text || "Turn completed", "history", "completed");
+    else if (stopReason === "cancelled") this.emit(run, "idle", text || "Cancelled", "history", "cancelled");
+    else this.emit(run, "error", [text, `Stopped: ${stopReason || "unknown"}`].filter(Boolean).join("\n"), "history", "failed");
+    this.finish(run);
+    try { run.process.stdin.end(); } catch {}
+    setTimeout(() => run.process.kill(), 1500).unref();
+  }
   private message(run: Run, m: any) {
     if (run.finished) return;
+    if (run.protocol === "acp") return this.acpMessage(run, m);
     if (run.options.provider === "codex") {
       if (m.id !== undefined && !m.method) {
         const pending = run.pending.get(m.id);
@@ -720,10 +904,19 @@ export class LocalRunners {
       else if (run.status === "unknown") this.emit(run, "running");
     } else {
       if (m.session_id) run.threadId = m.session_id;
+      if (run.host && this.hostControl(run, m)) return;
       if (m.type === "result") {
+        // On the host channel every denial was a decision made in HAICoMo, not a prompt nobody could answer.
         const denied =
+          !run.host &&
           Array.isArray(m.permission_denials) &&
           m.permission_denials.length > 0;
+        if (run.host?.cancelRequested) {
+          this.emit(run, "idle", String(m.result ?? "") || "Cancelled", "history", "cancelled");
+          this.finish(run);
+          try { run.process.stdin.end(); } catch {}
+          return;
+        }
         this.emit(
           run,
           denied ? "waiting" : m.is_error ? "error" : "idle",
@@ -736,6 +929,7 @@ export class LocalRunners {
           denied ? "permission" : m.is_error ? "failed" : "completed",
         );
         this.finish(run);
+        if (run.host) try { run.process.stdin.end(); } catch {}
       } else if (m.type === "system" && m.subtype === "init") {
         if (typeof m.model === "string") run.options.model = m.model;
         this.emit(run, "running");
@@ -749,6 +943,86 @@ export class LocalRunners {
             .join("\n") ?? "",
         );
     }
+  }
+  /** ACP: replies to HAICoMo's requests, the agent's own requests, and session/update notifications. */
+  private acpMessage(run: Run, m: any) {
+    if (m.id !== undefined && m.id !== null && !m.method) {
+      const pending = run.pending.get(m.id);
+      if (pending) {
+        run.pending.delete(m.id);
+        if (m.error) pending.reject(new Error(JSON.stringify(m.error)));
+        else pending.resolve(m.result);
+      }
+      return;
+    }
+    if (m.id !== undefined && m.id !== null && m.method) {
+      if (m.method === "session/request_permission") {
+        run.serverRequests.set(m.id, { method: "acp/request_permission", params: m.params });
+        this.emit(run, "waiting", JSON.stringify(m.params?.toolCall ?? m.params).slice(0, 12000));
+        this.onPermission({
+          runId: run.id,
+          directory: run.options.directory,
+          projectId: run.options.projectId,
+          epoch: run.options.epoch,
+          id: m.id,
+          method: "acp/request_permission",
+          params: m.params,
+        });
+      } else
+        // HAICoMo advertises no file-system or terminal capability; the agent uses its own tools.
+        this.send(run, { id: m.id, error: { code: -32601, message: "Method not supported by HAICoMo" } });
+      return;
+    }
+    if (m.method !== "session/update" || !run.acp || run.acp.loading) return;
+    const update = m.params?.update;
+    if (update?.sessionUpdate === "agent_message_chunk" && update.content?.type === "text") {
+      run.acp.text = (run.acp.text + String(update.content.text ?? "")).slice(-12000);
+      if (!run.serverRequests.size) this.emit(run, "running", run.acp.text);
+    } else if (["tool_call", "tool_call_update", "plan"].includes(update?.sessionUpdate)) {
+      if (update.sessionUpdate !== "plan") run.acp.activity++;
+      const title = update.title ?? update.toolCallId ?? update.sessionUpdate;
+      run.log = [...run.log, `${update.sessionUpdate}: ${String(title).slice(0, 300)}${update.status ? ` (${update.status})` : ""}`].slice(-100);
+      if (!run.serverRequests.size && run.status !== "running") this.emit(run, "running");
+    }
+  }
+  /** Claude's control channel; returns true when the line was a control message. */
+  private hostControl(run: Run, m: any): boolean {
+    if (m.type === "control_request" && m.request?.subtype === "can_use_tool") {
+      run.serverRequests.set(m.request_id, { method: "claude/can_use_tool", params: m.request });
+      this.emit(run, "waiting", JSON.stringify({ tool: m.request.tool_name, input: m.request.input }).slice(0, 12000));
+      this.onPermission({
+        runId: run.id,
+        directory: run.options.directory,
+        projectId: run.options.projectId,
+        epoch: run.options.epoch,
+        id: m.request_id,
+        method: "claude/can_use_tool",
+        params: m.request,
+      });
+      return true;
+    }
+    if (m.type === "control_request") {
+      this.send(run, { type: "control_response", response: { subtype: "error", request_id: m.request_id, error: "Not supported by HAICoMo" } });
+      return true;
+    }
+    if (m.type === "control_cancel_request") {
+      // Claude withdrew a prompt (for example after an interrupt).
+      if (run.serverRequests.delete(m.request_id)) {
+        this.onResolved(run.options.directory, run.id, m.request_id);
+        this.emit(run, run.serverRequests.size ? "waiting" : "running");
+      }
+      return true;
+    }
+    if (m.type === "control_response") {
+      const pending = run.pending.get(m.response?.request_id);
+      if (pending) {
+        run.pending.delete(m.response.request_id);
+        if (m.response.subtype === "error") pending.reject(new Error(String(m.response.error)));
+        else pending.resolve(m.response.response);
+      }
+      return true;
+    }
+    return false;
   }
   respond(
     runId: string,
@@ -783,6 +1057,24 @@ export class LocalRunners {
       )
         fail("ANSWERS_REQUIRED");
       this.send(run, { id, result: { answers: allow ? answers : {} } });
+    } else if (method === "acp/request_permission") {
+      const options: any[] = Array.isArray(request.params?.options) ? request.params.options : [];
+      const kind = (o: any) => String(o?.kind ?? "");
+      const chosen =
+        (answers?.optionId && options.find((o) => o.optionId === answers.optionId && kind(o).startsWith(allow ? "allow" : "reject"))) ||
+        (allow
+          ? options.find((o) => kind(o) === "allow_once") ?? options.find((o) => kind(o).startsWith("allow"))
+          : options.find((o) => kind(o) === "reject_once") ?? options.find((o) => kind(o).startsWith("reject")));
+      this.send(run, { id, result: { outcome: chosen ? { outcome: "selected", optionId: chosen.optionId } : { outcome: "cancelled" } } });
+    } else if (method === "claude/can_use_tool") {
+      this.send(run, {
+        type: "control_response",
+        response: {
+          subtype: "success",
+          request_id: id,
+          response: allow ? { behavior: "allow", updatedInput: request.params?.input ?? {} } : { behavior: "deny", message: "Declined in HAICoMo" },
+        },
+      });
     } else
       this.send(run, {
         id,
@@ -798,6 +1090,34 @@ export class LocalRunners {
   async cancel(runId: string) {
     const run = this.runs.get(runId);
     if (!run || run.finished) return;
+    const settle = async () => {
+      const deadline = Date.now() + 3000;
+      while (!run.finished && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 20));
+    };
+    if (run.acp?.sessionId) {
+      try {
+        run.acp.cancelRequested = true;
+        // ACP: every pending permission prompt is answered "cancelled", then the turn ends with stopReason "cancelled".
+        for (const [id, r] of run.serverRequests)
+          if (r.method === "acp/request_permission") this.send(run, { id, result: { outcome: { outcome: "cancelled" } } });
+        run.serverRequests.clear();
+        this.onResolved(run.options.directory, run.id);
+        this.send(run, { method: "session/cancel", params: { sessionId: run.acp.sessionId } });
+        await settle();
+      } catch {}
+    } else if (run.host) {
+      try {
+        run.host.cancelRequested = true;
+        for (const [id, r] of run.serverRequests)
+          if (r.method === "claude/can_use_tool")
+            this.send(run, { type: "control_response", response: { subtype: "success", request_id: id, response: { behavior: "deny", message: "Cancelled in HAICoMo", interrupt: true } } });
+        run.serverRequests.clear();
+        this.onResolved(run.options.directory, run.id);
+        this.send(run, { type: "control_request", request_id: `haicomo-${++run.host.nextId}`, request: { subtype: "interrupt" } });
+        await settle();
+      } catch {}
+    }
+    if (run.finished) return;
     if (run.options.provider === "codex" && run.threadId && run.turnId) {
       try {
         // turn/start can acknowledge a queued turn before it becomes active.

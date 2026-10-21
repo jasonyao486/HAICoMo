@@ -95,3 +95,25 @@ Entry v2 and proposal protocol v2 are unchanged. Before migrating database v4, t
 `audit.delete({ auditId })` is a human desktop command scoped to the existing project identity and transaction guards. It removes exactly one UUID-addressed audit entry, returns `AUDIT_NOT_FOUND` for a different fresh request after deletion, and retains normal same-command-ID idempotency. It cannot be submitted through proposal changes, CLI or MCP. It does not roll back tasks or approvals, alter receipts or change historical return counts. Publication rebuilds receipts from proposal state without recreating deleted audit rows. Old ZIP backups remain unchanged and may restore their historical audit entries.
 
 New deliverable references use `/` separators. Legacy Windows `\` separators are normalised when locating a file or composing manual/relay handoffs. Relative paths refer to the project directory. Absolute or parent-directory references are external; a foreign-platform absolute path requires relinking rather than being interpreted as a relative local file.
+
+## Desktop 0.6.0: delivery records and relay working copies
+
+Entry v2, proposal protocol v2 and database schema v6 are unchanged.
+
+**Delivery record.** Every prompt composed for a task asks the agent to end its final reply with a block that HAICoMo reads from the run's final message:
+
+```text
+HAICOMO-HANDOFF-BEGIN
+goal: what the task set out to do
+artifacts: docs/install.md; src/api.ts
+evidence: how the work was checked (tests, commands, screenshot paths)
+next: what the next agent or the reviewer should do
+open: open questions, or none
+HAICOMO-HANDOFF-END
+```
+
+The keys can also be written in Chinese (`目标`, `产物`/`產物`, `证据`/`證據`, `下一步`, `未决问题`/`未決問題`). Artifacts are project-relative paths separated by `;`. "None" in either language is not a path. The record is self-reported and unverified, and nothing about it is stored separately. The desktop shows it on the task's acceptance panel, in run history and on relay steps, with each path marked as found or missing. A later relay stage receives the record plus a shorter background excerpt, with the block itself removed from the excerpt. Adding a reported path to a task's deliverables is an ordinary human task edit; agents still change management records only through proposals.
+
+**Return with comments.** `task.return` takes the reviewer's comments as its audit reason. A prompt sent to an agent after a return carries a "Returned at acceptance review" section with the comments and the previous delivery record.
+
+**Relay working copies.** A relay may set `worktrees: true`. In a git project, each step of a stage with two or more steps then works in `.haicomo/worktrees/<relay>/<step>` on the branch `haicomo/<relay>/<step>`, and the step stores `worktree { path, branch, cwd, mergedAt, commit?, removed? }`. The store accepts only paths inside the project's `.haicomo/worktrees`. The agent's prompt names both the project directory (the protocol lives there) and its working copy. Agents keep submitting proposals to the project's `.haicomo`. When the stage completes, the scheduler commits each copy, excluding `.haicomo`, and merges it into the current branch with `--no-ff` (the system command `relay.stepMerged`). A conflict is aborted and blocks the relay with `WORKTREE_MERGE_CONFLICT`. `.haicomo/.gitignore` lists `worktrees/`. Relays and their working copies remain read-only for agents.

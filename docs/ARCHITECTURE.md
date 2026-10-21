@@ -111,3 +111,11 @@ Dependency checks for a relay step exempt only tasks of earlier stages of the sa
 
 Unattended mode is a per-relay, audited consent. The main process maps relay runs to their relay; Codex server requests from such runs are answered by `autoDecide()` (recommended option, approvals except destructive commands) and recorded with the system command `relay.decision`, an append-only log that does not bump the relay revision. Requests needing free text are left for the human and raise a system notification. The Markdown decision record is regenerated from the database into `.haicomo/relay-decisions/` when a relay completes or stops.
 
+
+## ADR-010: channels, delivery records and relay working copies (0.6.0, schema v6 unchanged)
+
+A capability now carries a `channel`: `acp`, `host` (Claude) or `cli`. The runner chooses the path from `RunOptions.channel`. An ACP run is *provisional* until its prompt is sent: it reports nothing, and if the session cannot honour a requested model, effort, mode or session, or the handshake fails, it is closed and the headless path starts instead, so a task is never sent twice. ACP and Claude host permission prompts are normalised to `PermissionRequest` methods `acp/request_permission` and `claude/can_use_tool`. They reuse the binding-scoped permission routing and, in consented relays, `autoDecide()`. The run's working directory (`cwd`) is separate from the project `directory` that keys bookkeeping, events and permission routing.
+
+Delivery records are parsed on demand from a session's final message (`structuredHandoff`), so nothing new is stored and older runs show records too.
+
+Relay working copies are a property of the relay (`worktrees`) and of each step (`worktree`). The scheduler gains two injected hooks: `worktree` prepares a step's copy before its prompt is composed, and `merge` commits and merges a completed step. `relayNext()` returns a `merge` action while any step of a completed stage is unmerged, so policy stays pure and testable. Merges are recorded by the system command `relay.stepMerged`; failures block the relay with a `WORKTREE_*` reason and the git detail in `lastError`. Git runs only as argument arrays with prompts disabled; nothing is forced, reset or cleaned, and a conflicting merge is aborted before the relay stops.

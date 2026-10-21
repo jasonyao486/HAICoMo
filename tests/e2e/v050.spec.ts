@@ -8,6 +8,7 @@ import { ProjectStore } from "../../src/core/store";
 import { readSnapshot } from "../../src/core/files";
 import { defaultSettings } from "../../src/shared/settings";
 import { dictionaries } from "../../src/ui/i18n";
+import { CLIENTS } from "../../src/shared/clients";
 import { removeTestDirectory } from "./cleanup";
 
 const zh = dictionaries["zh-CN"];
@@ -160,14 +161,14 @@ test("0.5.0 relay: three stages × three tasks, unattended answers recorded, des
     // Settings → Local agents: one table; detection results fill each client's row, buttons share one aligned row.
     await frame.getByRole("button", { name: "设置", exact: true }).click();
     const agents = frame.locator(".client-list");
-    await expect(agents.locator(".client-config")).toHaveCount(15);
+    await expect(agents.locator(".client-config")).toHaveCount(CLIENTS.length);
     // The relay editor already re-checked the agents in this session, so Settings shows those results at once.
-    await expect(agents.locator(".client-detect .client-status")).toHaveCount(15);
+    await expect(agents.locator(".client-detect .client-status")).toHaveCount(CLIENTS.length);
     await expect(frame.locator(".detect-summary")).toContainText(zh.detectTriggerRecheck);
     await agents.scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(screens, "settings-agents-before.png") });
     await frame.getByRole("button", { name: zh.detect }).click();
-    await expect(agents.locator(".client-detect .client-status")).toHaveCount(15, { timeout: 30000 });
+    await expect(agents.locator(".client-detect .client-status")).toHaveCount(CLIENTS.length, { timeout: 30000 });
     await expect(frame.locator(".capability")).toHaveCount(0);
     const buttons = await frame.locator(".settings-actions .button").evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.height), Math.round(r.left), Math.round(r.right)]; }));
     expect(buttons).toHaveLength(2);
@@ -186,7 +187,7 @@ test("0.5.0 relay: three stages × three tasks, unattended answers recorded, des
     // The detection belongs to the app session: leaving Settings and coming back keeps it.
     await frame.locator(".sidebar nav").getByRole("button", { name: zh.taskList, exact: true }).click();
     await frame.getByRole("button", { name: "设置", exact: true }).click();
-    await expect(agents.locator(".client-detect .client-status")).toHaveCount(15);
+    await expect(agents.locator(".client-detect .client-status")).toHaveCount(CLIENTS.length);
     await expect(frame.locator(".detect-summary")).toContainText(zh.detectTriggerManual);
     // Editing a path after detection marks only that row as outdated.
     const codexPath = agents.locator('.client-config[data-client="codex"] input');
@@ -258,7 +259,7 @@ test("0.5.0 optional detection at launch fills Settings without a click and stay
     await expect.poll(() => page.evaluate(async () => (await window.haicomo.request("providers.detection")).detection?.trigger ?? null), { timeout: 30000 }).toBe("startup");
     await frame.getByRole("button", { name: "设置", exact: true }).click();
     const agents = frame.locator(".client-list");
-    await expect(agents.locator(".client-detect .client-status")).toHaveCount(15);
+    await expect(agents.locator(".client-detect .client-status")).toHaveCount(CLIENTS.length);
     await expect(frame.locator(".detect-summary")).toContainText(zh.detectTriggerStartup);
     await expect(frame.getByRole("switch", { name: zh.autoDetectAgents })).toBeChecked();
     await frame.getByRole("switch", { name: zh.autoDetectAgents }).scrollIntoViewIfNeeded();
@@ -266,7 +267,7 @@ test("0.5.0 optional detection at launch fills Settings without a click and stay
     // Turning the switch off is saved at once and does not clear this session's results.
     await frame.getByRole("switch", { name: zh.autoDetectAgents }).uncheck();
     await expect.poll(() => page.evaluate(async () => (await window.haicomo.request("bootstrap")).settings.autoDetectAgents)).toBe(false);
-    await expect(agents.locator(".client-detect .client-status")).toHaveCount(15);
+    await expect(agents.locator(".client-detect .client-status")).toHaveCount(CLIENTS.length);
   } finally {
     await app.close();
     await removeTestDirectory(root);

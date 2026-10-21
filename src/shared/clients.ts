@@ -99,7 +99,16 @@ export const CLIENTS = [
     apps: [],
     site: "https://github.com/QwenLM/qwen-code",
   },
+  {
+    id: "hermes",
+    name: "Hermes",
+    commands: ["hermes"],
+    apps: [],
+    site: "https://hermes-agent.nousresearch.com/",
+  },
 ] as const;
+/** The same clients in the order people look them up: English name, A–Z. */
+export const CLIENTS_BY_NAME = [...CLIENTS].sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
 export type HarnessId = (typeof CLIENTS)[number]["id"] | "external";
 export const HARNESS_IDS = [
   "codex",
@@ -117,6 +126,7 @@ export const HARNESS_IDS = [
   "deepseek-harness",
   "gemini-cli",
   "qwen-code",
+  "hermes",
   "external",
 ] as const;
 /**
@@ -141,6 +151,7 @@ export const BACKGROUND_EVIDENCE = {
   opencode: "documented",
   "github-copilot": "documented",
   pi: "documented",
+  hermes: "documented",
 } as const satisfies Partial<Record<string, "verified" | "local" | "documented">>;
 export type BackgroundHarnessId = keyof typeof BACKGROUND_EVIDENCE;
 export const BACKGROUND_HARNESS_IDS = Object.keys(BACKGROUND_EVIDENCE) as BackgroundHarnessId[];

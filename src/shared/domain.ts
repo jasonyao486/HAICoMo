@@ -337,6 +337,18 @@ export type Capabilities = {
   autonomyOnly?: boolean;
   /** Headless flags were found, so relays may use it (possibly only autonomously). */
   relayReady?: boolean;
+  /**
+   * How background runs are driven: "acp" (Agent Client Protocol, questions and
+   * permissions answered in HAICoMo), "host" (Claude's own stream-json control
+   * channel, permissions answered in HAICoMo) or "cli" (the client's headless flags).
+   */
+  channel?: "acp" | "host" | "cli";
+  /** Arguments that start the client's ACP server, from its own help text. */
+  acpArgs?: string[];
+  /** The headless (non-ACP) path is also available, used when an ACP session cannot honour a request. */
+  cliReady?: boolean;
+  /** The client accepts extra writable roots (`--add-dir` or ACP additional directories). */
+  addDir?: boolean;
   reason: string;
 };
 

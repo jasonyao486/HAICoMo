@@ -11,6 +11,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { CLIENTS } from "../../src/shared/clients";
 import { ProjectStore } from "../../src/core/store";
 import {
   readSnapshot,
@@ -173,10 +174,10 @@ test("single window tabs retain drafts, route background permissions and keep cl
     await current(page).getByRole("button", { name: "检测智能体" }).click();
     await expect(
       current(page).locator(".client-config .client-name img"),
-    ).toHaveCount(15);
+    ).toHaveCount(CLIENTS.length);
     await expect(
       current(page).locator(".client-config .client-detect .client-status"),
-    ).toHaveCount(15, { timeout: 30000 });
+    ).toHaveCount(CLIENTS.length, { timeout: 30000 });
     await expect(
       current(page).getByText("打开客户端后粘贴已复制的提示词；尚未确认发送。"),
     ).toHaveCount(0);

@@ -130,7 +130,11 @@ test("0.3.0 lock left by another computer is explained and can be taken over aft
     await expect(dialog).toContainText("4242");
     await page.screenshot({ path: path.join(screens, "lock-takeover.png") });
     await dialog.getByRole("button", { name: "接管锁", exact: true }).click();
-    await expect(frame.getByRole("heading", { name: "Locked project", exact: true })).toBeVisible();
+    // A failed takeover keeps the dialog open and shows an error toast, so
+    // report its text. Windows PR run 39085971130 saw no project after 5 s,
+    // although this test usually finishes in under 2 s; the cause was not captured.
+    const failure = page.locator(".toast.error"), opened = frame.getByRole("heading", { name: "Locked project", exact: true });
+    await expect.poll(async () => (await failure.count()) ? failure.first().innerText() : opened.isVisible(), { timeout: 15000 }).toBe(true);
     const audit = await page.evaluate(async () => { const b = await window.haicomo.request("bootstrap"); return window.haicomo.request("project.audit", { binding: b.projects[0].binding, page: 0, pageSize: 30 }); });
     expect(audit.items.some((a: any) => a.action === "project.lock.takeover" && a.before.hostname === "other-laptop")).toBe(true);
     const lock = JSON.parse(fs.readFileSync(path.join(dir, ".haicomo/writer.lock"), "utf8"));

@@ -1,21 +1,41 @@
-# Local agent adapters — 0.5.0
+# Local agent adapters — 0.6.0
 
-HAICoMo uses installed local clients and their existing login state. It does not acquire API keys, change accounts or silently switch billing. This document describes implemented capabilities; current test evidence is in [TESTING-0.5.0.md](TESTING-0.5.0.md), not a blanket promise about every upstream version.
+HAICoMo uses installed local clients and their existing login state. It does not acquire API keys, change accounts or silently switch billing. This document describes implemented capabilities; current test evidence is in [TESTING-0.6.0.md](TESTING-0.6.0.md), not a blanket promise about every upstream version.
 
-Background launch is data-driven (`src/providers/adapters.ts`). An adapter is enabled only when the installed CLI's own help output names every flag it relies on (`requiredHelp`); otherwise the client falls back to manual handoff with `HEADLESS_FLAGS_NOT_FOUND`. Each client carries an evidence level shown in Settings and the relay editor.
+Background launch is data-driven (`src/providers/adapters.ts`). An adapter is enabled only when the installed CLI's own help output names every flag it relies on (`requiredHelp`) or an ACP entry point; otherwise the client falls back to manual handoff with `HEADLESS_FLAGS_NOT_FOUND`. Each client carries an evidence level shown in Settings and the relay editor.
 
-| Client | Background path (arguments as arrays) | Unattended flag (consented relays only) | Evidence |
+## Channels (0.6.0)
+
+Detection also decides how a client is driven; Settings shows the channel on each row.
+
+- **ACP** (Agent Client Protocol, JSON-RPC 2.0 over stdio). Used automatically when the installed CLI's help names an ACP entry: an `acp` subcommand, `--acp` or `--experimental-acp`. HAICoMo sends `initialize` (no file-system or terminal capability: the agent uses its own tools), `session/new` (or `session/load` to continue a session the agent can load), optionally `session/set_config_option` for model and thought level, and `session/set_mode`, then `session/prompt`.
+  - `session/update` message chunks form the final message; tool calls are logged.
+  - `session/request_permission` reaches the same permission dialog as Codex. HAICoMo answers with a one-time option, never "always" automatically.
+  - `session/cancel` ends the turn with `stopReason: cancelled`.
+  - If the session cannot honour a requested model, effort, mode or session, or the handshake fails, HAICoMo closes it before sending anything and uses the client's headless path. A sign-in the agent asks for is reported as `ACP_AUTH_REQUIRED`.
+  - A turn that ends with no reply and no tool call is reported as failed (`ACP_EMPTY_TURN`). Kimi 2.2.0 behaves this way when its plan is exhausted.
+- **Claude host channel.** When the installed Claude Code lists `--permission-prompts`, `--permission-prompt-tool` and `--input-format`, HAICoMo runs `-p --input-format stream-json --output-format stream-json --permission-prompt-tool=stdio --permission-prompts host`. Without `--permission-prompt-tool=stdio`, Claude Code 2.1.290 never asks the host and denies the tool by itself.
+  - It writes the prompt as one stream-json user message and keeps stdin open.
+  - It answers `control_request` `can_use_tool` with `control_response` (allow with the original input, or deny).
+  - It cancels with an `interrupt` control request.
+  - The message shapes follow the Agent SDK 0.3.304 type definitions.
+- **Command line.** Everything else, as in 0.5.0.
+
+In consented unattended relays, ACP and host-channel prompts are answered by `autoDecide()` instead of passing the client's own "allow everything" flag. Commands go through the same destructive-command check as Codex. Deletions or writes outside the project are declined. Prompts forced by the user's own ask rules, or with no one-time option, stay with the human.
+
+| Client | Background path (arguments as arrays) | Unattended handling (consented relays only) | Evidence |
 |---|---|---|---|
 | Codex | App Server stdio; models, effort, mode, permission questions, cancel, resume | `on-request` + workspace sandbox; HAICoMo answers requests | verified (earlier releases) |
-| Claude Code | `-p --output-format stream-json`, stdin prompt; model, effort, mode, resume | `--permission-mode auto` (never `bypassPermissions`) | verified (earlier releases) |
+| Claude Code | Host channel when listed (see above), else `-p --output-format stream-json`, stdin prompt; model, effort, mode, resume; `--add-dir` for relay working copies | Host channel: `--permission-mode default`, HAICoMo answers; otherwise `--permission-mode auto` (never `bypassPermissions`) | verified (earlier releases, command line). Host channel verified live with 2.1.290 on 2026-10-20: approve, deny and cancel through HAICoMo (see TESTING-0.6.0) |
 | Cursor Agent | `cursor-agent -p --output-format stream-json … --workspace <dir> <prompt>`; modes default/plan/ask; resume | `--force --approve-mcps` | verified 2026-10-16: a real run through HAICoMo completed (model "Auto", session id recorded) |
-| Kimi (Kimi Code CLI) | `kimi --prompt <p> --output-format stream-json`; modes default/plan/ask-when-needed (`--yolo`); `--session`, `--model`; searched in `~/.kimi-code/bin` | `--auto` (never ask) | local: help and quota-exhausted error path; success path unverified |
+| Kimi (Kimi Code CLI) | ACP via `kimi acp` when listed; otherwise `kimi --prompt <p> --output-format stream-json`; modes default/plan/ask-when-needed (`--yolo`); `--session`, `--model`, `--add-dir`; searched in `~/.kimi-code/bin` | ACP: HAICoMo answers; command line: `--auto` (never ask) | local: ACP `initialize`/`session/new` live with 2.2.0 (model options offered); turn content unverified because the monthly quota is exhausted |
 | DeepSeek Harness | `dsh --profile headless --patch <private overlay> --json [--session-id] -`, stdin prompt; bundled shim inside `DeepSeek Harness.app`; `DSH_PERMISSION_MODE` = workspace-write (default) / read-only. The overlay selects the account route (the desktop app's provider, normally `deepseek-account`) and the model: the step's model, or the desktop app's current default when empty | workspace-write kept (sandboxed) | verified 2026-10-16 on the account route with `deepseek-flash`; the account accepts `deepseek-flash` and `deepseek-v4-pro` |
-| CodeBuddy | Claude-compatible stream-json | `auto` if listed, else `acceptEdits` | documented |
-| Qoder CLI | `qodercli --print <p> --output-format stream-json` | `--yolo` if listed | documented |
-| Gemini CLI / Qwen Code | `--prompt <p> --output-format stream-json --approval-mode default/auto_edit` | `--approval-mode yolo` | documented |
-| OpenCode | `opencode run --format json [--session] <p>` | none (follows OpenCode's own permission config) | documented |
-| GitHub Copilot CLI | `copilot --prompt <p>` (plain text) | `--allow-all-tools` | documented |
+| CodeBuddy | ACP via `--acp` when listed; else Claude-compatible stream-json | ACP: HAICoMo answers; else `auto` if listed, otherwise `acceptEdits` | documented |
+| Qoder CLI | ACP via `--acp` when listed; else `qodercli --print <p> --output-format stream-json` | ACP: HAICoMo answers; else `--yolo` if listed | documented |
+| Gemini CLI / Qwen Code | ACP via `--acp` / `--experimental-acp` when listed; else `--prompt <p> --output-format stream-json --approval-mode default/auto_edit` | ACP: HAICoMo answers; else `--approval-mode yolo` | documented |
+| OpenCode | ACP via `opencode acp` when listed; else `opencode run --format json [--session] <p>` | ACP: HAICoMo answers; else none (OpenCode's own permission config) | documented |
+| GitHub Copilot CLI | ACP via `--acp` when listed; else `copilot --prompt <p>` (plain text) | ACP: HAICoMo answers; else `--allow-all-tools` | documented |
+| Hermes (Nous Research) | ACP via `hermes acp` when listed; else `hermes chat --quiet [--model] --query <p>` (plain text) | ACP: HAICoMo answers; command line: none | documented (not installed on the development Mac) |
 | Pi | `pi --print --mode json <p>` | Pi has no permission system: only usable in consented unattended relays | documented |
 | Grok Bot, WorkBuddy, TRAE, Kimi desktop | No headless interface: detection, opening the app and copying the prompt | — | — |
 
@@ -39,6 +59,6 @@ All clients with filesystem access can read snapshots and submit immutable propo
 
 ## Verification scope
 
-The release suites use local fixtures (Codex app-server, Claude stream-json, Kimi role lines, DeepSeek session/status/final events, Gemini message deltas, Copilot plain text) to exercise parsing, permissions, lifecycle, cancellation, path resolution and scheduling without sending paid work. Real account login expiry, third-party service changes, installed-version capability catalogues and Windows behaviour of the new adapters require separate native acceptance.
+The release suites use local fixtures (Codex app-server, Claude stream-json and its host control channel, an ACP server with permissions, cancellation, session loading, model options and an empty turn, Kimi role lines, DeepSeek session/status/final events, Gemini message deltas, Copilot and Hermes plain text) to exercise parsing, permissions, lifecycle, cancellation, path resolution and scheduling without sending paid work. Real account login expiry, third-party service changes, installed-version capability catalogues and Windows behaviour of the new adapters require separate native acceptance.
 
-Upstream interfaces: [Codex App Server](https://learn.chatgpt.com/docs/app-server), [Claude CLI](https://code.claude.com/docs/en/headless). Capability discovery remains the authority at runtime when a particular field is unsupported.
+Upstream interfaces: [Codex App Server](https://learn.chatgpt.com/docs/app-server), [Claude CLI](https://code.claude.com/docs/en/headless), [Agent Client Protocol](https://agentclientprotocol.com) (schema v1, release schema-v1.26.0), [Hermes Agent](https://hermes-agent.nousresearch.com/docs/user-guide/features/acp). Capability discovery remains the authority at runtime when a particular field is unsupported.

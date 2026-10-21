@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { fileHash, isSubmissionId, requireEnvironment, saveState, submitNotarization, validateState, verifyArtifact, waitForAcceptance, withCleanup } from './mac-release-state.mjs';
+import { fileHash, isSafeReleaseError, isSubmissionId, releaseSecretNames, requireEnvironment, saveState, shownPath, submitNotarization, toolFailure, validateState, verifyArtifact, waitForAcceptance, withCleanup } from './mac-release-state.mjs';
 import { assertApplicationSource } from './check-release-source.mjs';
 
 const command = process.argv[2];
@@ -18,6 +18,28 @@ const zipName = `HAICoMo-${pkg.version}-arm64-mac.zip`;
 const cleanupFile = path.join(process.env.RUNNER_TEMP || os.tmpdir(), 'haicomo-signing-cleanup.json');
 const run = (cmd, args, timeout = 300_000) => execFileSync(cmd, args, { encoding: 'utf8', stdio: 'pipe', timeout });
 const git = args => run('git', args).trim();
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+// Captured before signed() removes the certificate variables.
+const secrets = releaseSecretNames.map(name => process.env[name]);
+// For codesign, spctl, ditto and stapler only; a failure names the command
+// (see toolFailure). notarytool goes through apple() and security through run().
+function check(cmd, args) {
+  const result = spawnSync(cmd, args, { encoding: 'utf8', timeout: 300_000 });
+  if (result.status !== 0) throw toolFailure(cmd, args, result, secrets);
+  return result;
+}
+// stapler validate and spctl --assess rely on Apple's ticket service and the
+// Gatekeeper daemon. In 0.5.0, finalize and package each failed once on CI,
+// on files that then passed locally and in a resumed run. These two checks get
+// one more attempt after 10 s; the first failure is still logged.
+async function assess(cmd, args) {
+  try { return check(cmd, args); }
+  catch (error) {
+    console.warn(`${error.message} Retrying once in 10 s.`);
+    await wait(10_000);
+    return check(cmd, args);
+  }
+}
 let state;
 const save = () => saveState(stateFile, state);
 const artifact = file => ({ file: path.basename(file), sha256: fileHash(file), status: 'Prepared' });
@@ -55,15 +77,20 @@ async function signed(work) {
 }
 function signature(file, deep = false) {
   requireEnvironment(['APPLE_TEAM_ID']);
-  run('codesign', ['--verify', '--strict', ...(deep ? ['--deep'] : []), file]);
-  const result = spawnSync('codesign', ['-dvv', file], { encoding: 'utf8' });
-  if (result.status !== 0 || !result.stderr.includes('Authority=Developer ID Application:') || !result.stderr.includes(`TeamIdentifier=${process.env.APPLE_TEAM_ID}`) || (deep && !result.stderr.includes('runtime'))) throw new Error('Developer ID or hardened runtime verification failed');
+  check('codesign', ['--verify', '--strict', ...(deep ? ['--deep'] : []), file]);
+  const details = check('codesign', ['-dvv', file]).stderr;
+  const missing = [
+    !details.includes('Authority=Developer ID Application:') && 'Developer ID Application authority',
+    !details.includes(`TeamIdentifier=${process.env.APPLE_TEAM_ID}`) && 'expected TeamIdentifier',
+    deep && !details.includes('runtime') && 'hardened runtime',
+  ].filter(Boolean);
+  if (missing.length) throw new Error(`Developer ID or hardened runtime verification failed for ${shownPath(file)}: missing ${missing.join(', ')}`);
 }
 function restoreApp() {
   const source = verifyArtifact(checkpoint, state.app);
   fs.rmSync(path.dirname(app), { recursive: true, force: true });
   fs.mkdirSync(path.dirname(app), { recursive: true });
-  run('ditto', ['-x', '-k', source, path.dirname(app)]);
+  check('ditto', ['-x', '-k', source, path.dirname(app)]);
   signature(app, true);
 }
 function apple(action, args) {
@@ -100,18 +127,21 @@ async function submit(kind) {
 }
 async function staple(file) {
   for (let attempt = 0; ; attempt++) {
-    try { run('xcrun', ['stapler', 'staple', file]); return; }
-    catch { if (attempt === 2) throw new Error('Apple ticket could not be attached; resume the saved candidate'); }
-    await new Promise(resolve => setTimeout(resolve, 20_000));
+    try { check('xcrun', ['stapler', 'staple', file]); return; }
+    catch (error) {
+      if (attempt === 2) throw new Error(`Apple ticket could not be attached; resume the saved candidate. ${error.message}`);
+      console.warn(error.message);
+    }
+    await wait(20_000);
   }
 }
 async function acceptedApp() {
   if (state.app.status !== 'Accepted') throw new Error('App notarization has not been accepted');
   restoreApp();
   await staple(app);
-  run('xcrun', ['stapler', 'validate', app]);
+  await assess('xcrun', ['stapler', 'validate', app]);
   signature(app, true);
-  run('spctl', ['--assess', '--type', 'execute', '--verbose=2', app]);
+  await assess('spctl', ['--assess', '--type', 'execute', '--verbose=2', app]);
 }
 async function main() {
   if (process.platform !== 'darwin') throw new Error('Mac release requires macOS');
@@ -129,7 +159,7 @@ async function main() {
       signature(app, true);
     });
     const candidate = path.join(checkpoint, 'HAICoMo-app.zip');
-    run('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, candidate]);
+    check('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, candidate]);
     state.app = artifact(candidate);
     state.archiveSha256 = fileHash(path.join(app, 'Contents/Resources/app.asar'));
     save();
@@ -156,11 +186,11 @@ async function main() {
       await build({ publish: 'never', prepackaged: app, targets: Platform.MAC.createTarget(['dmg'], Arch.arm64), config: { ...pkg.build, extends: null, forceCodeSigning: true, mac: { ...pkg.build.mac, identity: process.env.APPLE_TEAM_ID, notarize: false }, dmg: { sign: true } } });
       signature(path.join(root, dmgName));
       signature(app, true);
-      run('xcrun', ['stapler', 'validate', app]);
+      await assess('xcrun', ['stapler', 'validate', app]);
     });
     fs.copyFileSync(path.join(root, dmgName), path.join(checkpoint, dmgName));
     state.dmg = artifact(path.join(checkpoint, dmgName));
-    run('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, path.join(checkpoint, zipName)]);
+    check('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, path.join(checkpoint, zipName)]);
     state.zip = artifact(path.join(checkpoint, zipName));
     save();
     return;
@@ -172,16 +202,16 @@ async function main() {
     fs.copyFileSync(verifyArtifact(checkpoint, state.zip), path.join(root, zipName));
     const dmg = path.join(root, dmgName);
     await staple(dmg);
-    run('xcrun', ['stapler', 'validate', dmg]);
+    await assess('xcrun', ['stapler', 'validate', dmg]);
     signature(dmg);
-    run('spctl', ['--assess', '--type', 'open', '--context', 'context:primary-signature', '--verbose=2', dmg]);
+    await assess('spctl', ['--assess', '--type', 'open', '--context', 'context:primary-signature', '--verbose=2', dmg]);
     const unpack = fs.mkdtempSync(path.join(os.tmpdir(), 'haicomo-zip-check-'));
     try {
-      run('ditto', ['-x', '-k', path.join(root, zipName), unpack]);
+      check('ditto', ['-x', '-k', path.join(root, zipName), unpack]);
       const copy = path.join(unpack, 'HAICoMo.app');
       signature(copy, true);
-      run('xcrun', ['stapler', 'validate', copy]);
-      run('spctl', ['--assess', '--type', 'execute', '--verbose=2', copy]);
+      await assess('xcrun', ['stapler', 'validate', copy]);
+      await assess('spctl', ['--assess', '--type', 'execute', '--verbose=2', copy]);
       if (fileHash(path.join(copy, 'Contents/Resources/app.asar')) !== state.archiveSha256) throw new Error('ZIP application differs from verified app');
     } finally { fs.rmSync(unpack, { recursive: true, force: true }); }
     for (const name of fs.readdirSync(root)) if (name.endsWith('.blockmap') || /^latest.*\.ya?ml$/.test(name)) fs.unlinkSync(path.join(root, name));
@@ -201,7 +231,6 @@ try { await main(); }
 catch (error) {
   failed = true;
   // Only errors created by our own validation code may be displayed.
-  const safe = /^(?:Missing release secrets:|Apple |Checkpoint |App notarization|DMG notarization|Application inputs changed|Submission ID required|Invalid |Unexpected Apple|Unknown Mac release|Mac release requires)/.test(error.message);
-  console.error(`Mac release stage ${command} failed.${safe ? ' ' + error.message : ' Tool output suppressed to protect credentials.'}`);
+  console.error(`Mac release stage ${command} failed.${isSafeReleaseError(error?.message) ? ' ' + error.message : ' Tool output suppressed to protect credentials.'}`);
 } finally { cleanup(); }
 process.exit(failed ? 1 : 0);

@@ -82,12 +82,19 @@ test("Public demo: 60 tasks, graphs, assets, audit deletion and four locales", a
     expect(readSnapshot(directory).relays).toHaveLength(0);
     await nav("history"); const before = readSnapshot(directory);
     const rows = frame.locator(".history-panel details"); await expect(rows).toHaveCount(30); const beforeRows = await rows.count();
+    // A failed delete keeps the dialog open beside its error, so report that
+    // error. The commit may also take longer than 5 s on a slow runner: Windows
+    // PR run 39085080570 kept the dialog open past 5 s, cause not captured.
+    const confirmDelete = async () => {
+      await frame.locator("dialog.modal").getByRole("button", { name: "Delete activity record", exact: true }).click();
+      const failure = frame.locator(".error-box");
+      await expect.poll(async () => (await failure.count()) ? failure.first().innerText() : frame.locator("dialog.modal").count(), { timeout: 15000 }).toBe(0);
+    };
     await rows.first().getByRole("button", { name: "Delete activity record" }).click();
     await expect(frame.locator("dialog.modal")).toContainText("does not undo");
     await frame.locator("dialog.modal").getByRole("button", { name: "Cancel", exact: true }).click(); await expect(rows).toHaveCount(beforeRows);
     await rows.first().getByRole("button", { name: "Delete activity record" }).click();
-    await frame.locator("dialog.modal").getByRole("button", { name: "Delete activity record", exact: true }).click();
-    await expect(frame.locator("dialog.modal")).toHaveCount(0);
+    await confirmDelete();
     await expect.poll(() => readSnapshot(directory).revision).toBe(before.revision + 1);
     expect(readSnapshot(directory).tasks).toEqual(before.tasks); expect(readSnapshot(directory).historyStats).toEqual(before.historyStats);
     await shot("activity-delete");
@@ -101,7 +108,7 @@ test("Public demo: 60 tasks, graphs, assets, audit deletion and four locales", a
     await frame.getByRole("button", { name: dictionaries["en-GB"].nextPage, exact: true }).click();
     await expect(rows).toHaveCount(1);
     await rows.first().getByRole("button", { name: "Delete activity record" }).click();
-    await frame.locator("dialog.modal").getByRole("button", { name: "Delete activity record", exact: true }).click();
+    await confirmDelete();
     await expect(frame.locator(".pagination span")).toHaveText("1 / 1 · 30");
     await expect(rows).toHaveCount(30);
     await page.evaluate(async () => {

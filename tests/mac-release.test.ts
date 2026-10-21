@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 // @ts-expect-error JavaScript release script without type declarations.
 import { writeUpdateMetadata } from '../scripts/update-metadata.mjs';
 // @ts-expect-error Native ESM release helpers are exercised by subprocess-free runtime tests.
-import { fileHash, isSubmissionId, submitNotarization, verifyArtifact, validateState, waitForAcceptance, requireEnvironment, withCleanup, isReleaseMaintenance, verifyPublishedMacBaseline } from '../scripts/mac-release-state.mjs';
+import { fileHash, isSubmissionId, submitNotarization, verifyArtifact, validateState, waitForAcceptance, requireEnvironment, withCleanup, isReleaseMaintenance, verifyPublishedMacBaseline, toolFailure, isSafeReleaseError } from '../scripts/mac-release-state.mjs';
 const id = '12345678-1234-1234-1234-123456789abc';
 test('formal baseline works without interim assets and rejects missing or modified evidence', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'haicomo-formal-baseline-'));
@@ -68,6 +68,23 @@ test('missing credentials and failed operations preserve cleanup and do not expo
   await assert.rejects(withCleanup(async()=>{throw new Error('signing failed');},async()=>{cleaned=true;}),/signing failed/);
   assert.equal(cleaned,true);
   cleaned=false; await withCleanup(async()=>{},async()=>{cleaned=true;}); assert.equal(cleaned,true);
+});
+test('failed signing checks name the command and output, never credentials', () => {
+  const cwd = path.join(os.tmpdir(), 'haicomo-release-cwd'), password = 'abcd-efgh-ijkl-mnop', team = 'TEAM123456';
+  const dmg = path.join(cwd, 'release', '0.5.0', 'HAICoMo-0.5.0-arm64.dmg'), outside = path.join(os.tmpdir(), 'elsewhere', 'HAICoMo.app');
+  const failure = toolFailure('xcrun', ['stapler', 'validate', dmg], { status: 65, stdout: `Processing: ${dmg}\n`, stderr: `CloudKit query failed for ${team} using ${password}\n` }, [password, team, undefined], cwd);
+  assert.equal(failure.message, `Apple tool check failed: xcrun stapler validate ${path.join('release', '0.5.0', 'HAICoMo-0.5.0-arm64.dmg')} exited 65: CloudKit query failed for [redacted] using [redacted] Processing: ${dmg}`);
+  assert.ok(isSafeReleaseError(failure.message));
+  const long = toolFailure('spctl', ['--assess', outside], { status: 3, stderr: 'x'.repeat(1000) }, [], cwd);
+  assert.equal(long.message, `Apple tool check failed: spctl --assess ${outside} exited 3: ${'x'.repeat(400)}`);
+  assert.match(toolFailure('ditto', ['-x', '-k', 'a.zip', 'out'], { status: null, error: { code: 'ETIMEDOUT' }, signal: 'SIGTERM' }).message, /ditto -x -k a\.zip out stopped \(ETIMEDOUT\): no output$/);
+  assert.match(toolFailure('codesign', ['-dvv', 'a.app'], { status: 1, stderr: '' }).message, /exited 1: no output$/);
+  for (const [cmd, args] of [['xcrun', ['notarytool', 'submit', 'a.zip', '--password', password]], ['security', ['import', 'p.p12', '-P', password]]] as const)
+    assert.throws(() => toolFailure(cmd, args, { status: 1, stderr: password }), (error: Error) => /^Unknown Mac release tool/.test(error.message) && !error.message.includes(password));
+  for (const message of ['Developer ID or hardened runtime verification failed for HAICoMo.app: missing hardened runtime', 'ZIP application differs from verified app', 'Update metadata latest-mac.yml does not match HAICoMo-0.5.0-arm64-mac.zip', 'Apple ticket could not be attached; resume the saved candidate. Apple tool check failed: xcrun stapler staple a.dmg exited 65: x'])
+    assert.ok(isSafeReleaseError(message), message);
+  for (const message of [`Command failed: security import p.p12 -P ${password}`, `Command failed: xcrun notarytool info id --password ${password}`, 'ENOENT: no such file', undefined])
+    assert.equal(isSafeReleaseError(message), false);
 });
 test('supplements allow release infrastructure, but never application changes', () => {
   for (const name of ['AGENTS.md','scripts/local-mac-update.py','scripts/release-mac.mjs','scripts/update-metadata.mjs','.github/workflows/verify.yml','tests/e2e/tabs.spec.ts','docs/TESTING-0.3.3.md']) assert.equal(isReleaseMaintenance(name),true);

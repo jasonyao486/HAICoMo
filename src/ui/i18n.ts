@@ -1,6 +1,7 @@
 import { en031, zh031, tw031 } from "./messages031";
 import { en040, zh040, tw040 } from "./messages040";
 import { en050, zh050, tw050 } from "./messages050";
+import { en060, gb060, zh060, tw060 } from "./messages060";
 import { en022, zh022, tw022, gb022 } from "./messages022";
 import type { Settings } from "../shared/domain";
 export const en = {
@@ -8,6 +9,7 @@ export const en = {
   ...en031,
   ...en040,
   ...en050,
+  ...en060,
   newTab: "New tab",
   addTab: "New tab",
   closeTab: "Close current tab",
@@ -425,6 +427,7 @@ const zh: Record<Key, string> = {
   ...zh031,
   ...zh040,
   ...zh050,
+  ...zh060,
   newTab: "新标签页",
   addTab: "新建标签页",
   closeTab: "关闭当前标签",
@@ -818,6 +821,7 @@ const tw: Record<Key, string> = {
   ...tw031,
   ...tw040,
   ...tw050,
+  ...tw060,
   newTab: "新標籤頁",
   addTab: "新增標籤頁",
   closeTab: "關閉目前標籤",
@@ -1225,7 +1229,7 @@ export function formatDuration(ms: number, t: (key: Key) => string) {
 }
 export const dictionaries = {
   "en-US": en,
-  "en-GB": { ...en, ...gb022 },
+  "en-GB": { ...en, ...gb022, ...gb060 },
   "zh-CN": zh,
   "zh-TW": tw,
 };

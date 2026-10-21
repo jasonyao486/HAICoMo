@@ -10,6 +10,32 @@ export function requireEnvironment(names, env = process.env) {
 export function fileHash(file) {
   return createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
+export const releaseSecretNames = ['APPLE_ID', 'APPLE_TEAM_ID', 'APPLE_APP_SPECIFIC_PASSWORD', 'CSC_LINK', 'CSC_KEY_PASSWORD'];
+// Only messages written by the release scripts themselves may be printed.
+export const isSafeReleaseError = message => /^(?:Missing release secrets:|Apple tool check failed:|Apple |Checkpoint |App notarization|DMG notarization|Developer ID |ZIP application|Update metadata |Unsupported update platform|Source commit required|Application inputs changed|Submission ID required|Invalid |Unexpected Apple|Unknown Mac release|Mac release requires)/.test(message ?? '');
+export function shownPath(arg, cwd = process.cwd()) {
+  if (!path.isAbsolute(arg)) return arg;
+  const relative = path.relative(cwd, arg);
+  return relative && !relative.startsWith('..') && !path.isAbsolute(relative) ? relative : arg;
+}
+const verificationTool = (cmd, args) => ['codesign', 'spctl', 'ditto'].includes(cmd) || (cmd === 'xcrun' && args[0] === 'stapler');
+/**
+ * Describes a failed local signing check. codesign, spctl, ditto and stapler
+ * take no credentials, so the command, exit status and the start of the output
+ * are shown. notarytool and security are refused: their arguments carry
+ * secrets. Any release secret value that still appears is replaced.
+ */
+export function toolFailure(cmd, args, result, secrets = [], cwd = process.cwd()) {
+  if (!verificationTool(cmd, args)) throw new Error('Unknown Mac release tool; output not shown');
+  const outcome = result.status !== null && result.status !== undefined ? `exited ${result.status}` : `stopped (${result.error?.code ?? result.signal ?? 'unknown'})`;
+  let command = [cmd, ...args.map(arg => shownPath(arg, cwd))].join(' ');
+  let output = [result.stderr, result.stdout].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+  for (const value of secrets.filter(value => value && value.length >= 4)) {
+    command = command.split(value).join('[redacted]');
+    output = output.split(value).join('[redacted]');
+  }
+  return new Error(`Apple tool check failed: ${command} ${outcome}: ${output.slice(0, 400) || 'no output'}`);
+}
 // An existing formal release is the source of truth after interim files retire.
 // The caller downloads both files from the same public release into a separate directory.
 export function verifyPublishedMacBaseline(directory, candidate, version, reference) {

@@ -768,6 +768,15 @@
       "changes": "Unmodified colour vector icon (codebuddy-color.svg)."
     },
     {
+      "file": "local-assets/hermes-app.svg",
+      "bytes": 19786,
+      "sha256": "4dc3c7cdf13d2f0bdf16b872d76293f048010a00f580df68a85e1f9c4e500e5d",
+      "source": "https://www.npmjs.com/package/@lobehub/icons-static-svg/v/1.95.1",
+      "creator": "LobeHub; trademarks belong to their owners",
+      "license": "MIT",
+      "changes": "Unmodified vector icon (nousresearch.svg), used to identify the Hermes Agent client by Nous Research."
+    },
+    {
       "file": "local-assets/workbuddy-app.png",
       "bytes": 41088,
       "sha256": "3d8401bc6b37cc114e7ec6b0c2cfc1a74f486341fa0b869e2d8c9d65d2bc6993",
