@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 // @ts-expect-error JavaScript release script without type declarations.
 import { writeUpdateMetadata } from '../scripts/update-metadata.mjs';
 // @ts-expect-error Native ESM release helpers are exercised by subprocess-free runtime tests.
-import { fileHash, isSubmissionId, submitNotarization, verifyArtifact, validateState, waitForAcceptance, requireEnvironment, withCleanup, isReleaseMaintenance, verifyPublishedMacBaseline, toolFailure, isSafeReleaseError } from '../scripts/mac-release-state.mjs';
+import { fileHash, isSubmissionId, submitNotarization, verifyArtifact, validateState, waitForAcceptance, requireEnvironment, withCleanup, isReleaseMaintenance, verifyPublishedMacBaseline, toolFailure, isSafeReleaseError, isNetworkFailure, retryAppleCheck } from '../scripts/mac-release-state.mjs';
 const id = '12345678-1234-1234-1234-123456789abc';
 test('formal baseline works without interim assets and rejects missing or modified evidence', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'haicomo-formal-baseline-'));
@@ -85,6 +85,49 @@ test('failed signing checks name the command and output, never credentials', () 
     assert.ok(isSafeReleaseError(message), message);
   for (const message of [`Command failed: security import p.p12 -P ${password}`, `Command failed: xcrun notarytool info id --password ${password}`, 'ENOENT: no such file', undefined])
     assert.equal(isSafeReleaseError(message), false);
+});
+// Output of main run 39532604397 (0.6.0 package), shortened.
+const lostConnection = { status: 68, stdout: 'Processing: /Users/runner/work/HAICoMo/HAICoMo/release/0.6.0/mac-arm64/HAICoMo.app\nerror is Error Domain=NSURLErrorDomain Code=-1005 "The network connection was lost." UserInfo={_kCFStreamErrorCodeKey=-4}' };
+const stapler = ['stapler', 'validate', 'release/0.6.0/mac-arm64/HAICoMo.app'];
+const retryHooks = () => {
+  const delays: number[] = [], warnings: string[] = [];
+  return { delays, warnings, hooks: { sleep: async (ms: number) => { delays.push(ms); }, warn: (message: string) => { warnings.push(message); } } };
+};
+test('Apple network failures are told apart from other check failures', () => {
+  assert.ok(isNetworkFailure(toolFailure('xcrun', stapler, lostConnection).message));
+  for (const message of ['Error Domain=NSURLErrorDomain Code=-1001 "The request timed out."', 'Error Domain=NSURLErrorDomain Code=-1009 "The Internet connection appears to be offline."', 'The network connection was lost.'])
+    assert.ok(isNetworkFailure(message), message);
+  for (const message of ['CloudKit query for HAICoMo.app failed due to "Record not found".', 'HAICoMo.app: rejected source=Unnotarized Developer ID', 'Error Domain=NSURLErrorDomain Code=-1100', undefined])
+    assert.equal(isNetworkFailure(message), false);
+});
+test('a lost Apple connection is retried with growing pauses until the check passes', async () => {
+  const { delays, warnings, hooks } = retryHooks();
+  let calls = 0;
+  const result = await retryAppleCheck(() => { if (++calls < 3) throw toolFailure('xcrun', stapler, lostConnection); return 'validated'; }, hooks);
+  assert.equal(result, 'validated'); assert.equal(calls, 3);
+  assert.deepEqual(delays, [15_000, 45_000]);
+  assert.equal(warnings.length, 2);
+  assert.ok(warnings.every(message => message.startsWith('Apple tool check failed: xcrun stapler validate release/0.6.0/mac-arm64/HAICoMo.app exited 68:') && message.includes('Network failure')));
+});
+test('a lasting Apple network outage stops after four attempts and still names the tool', async () => {
+  const { delays, warnings, hooks } = retryHooks();
+  let calls = 0;
+  await assert.rejects(retryAppleCheck(() => { calls++; throw toolFailure('xcrun', stapler, lostConnection); }, hooks), (error: Error) =>
+    error.message.startsWith('Apple tool check failed: xcrun stapler validate release/0.6.0/mac-arm64/HAICoMo.app exited 68:') && error.message.includes('Code=-1005') && isSafeReleaseError(error.message));
+  assert.equal(calls, 4); assert.equal(warnings.length, 3);
+  assert.deepEqual(delays, [15_000, 45_000, 90_000]);
+});
+test('other Apple check failures are retried only once', async () => {
+  const { delays, hooks } = retryHooks();
+  const rejected = toolFailure('spctl', ['--assess', '--type', 'execute', 'HAICoMo.app'], { status: 3, stderr: 'HAICoMo.app: rejected source=Unnotarized Developer ID' });
+  let calls = 0;
+  await assert.rejects(retryAppleCheck(() => { calls++; throw rejected; }, hooks), (error: Error) => error === rejected);
+  assert.equal(calls, 2); assert.deepEqual(delays, [10_000]);
+  // After a network failure, a different failure still gets only its one retry.
+  const mixed = retryHooks();
+  calls = 0;
+  await assert.rejects(retryAppleCheck(() => { throw ++calls === 1 ? toolFailure('xcrun', stapler, lostConnection) : rejected; }, mixed.hooks), (error: Error) => error === rejected);
+  assert.equal(calls, 3); assert.deepEqual(mixed.delays, [15_000, 10_000]);
 });
 test('supplements allow release infrastructure, but never application changes', () => {
   for (const name of ['AGENTS.md','scripts/local-mac-update.py','scripts/release-mac.mjs','scripts/update-metadata.mjs','.github/workflows/verify.yml','tests/e2e/tabs.spec.ts','docs/TESTING-0.3.3.md']) assert.equal(isReleaseMaintenance(name),true);
