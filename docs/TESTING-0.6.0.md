@@ -1,6 +1,6 @@
 # 0.6.0 verification status
 
-Status: **local candidate, not published.** 0.6.0 was implemented and verified on the development Mac (Apple Silicon) on 2026-10-20. A Developer ID–signed, not notarised candidate is installed for the maintainer's acceptance. Nothing here is claimed for Windows from a Mac run; Windows evidence will come from native GitHub runners and the maintainer's Windows PC. Tests used synthetic projects, fixture agents and isolated profiles. The live checks below ran in dedicated temporary folders, in a clean environment that did not inherit the development session's `ANTHROPIC_*` or `CLAUDE_CODE_*` variables.
+Status: **published.** [v0.6.0](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.6.0) has been a public pre-release on both platforms since 2026-10-21 16:22 UTC. The tag points to `bfb43f3`, the GitHub-signed merge of [pull request #7](https://github.com/jasonyao486/HAICoMo/pull/7), which GitHub shows as "Verified". The application code is that of [pull request #5](https://github.com/jasonyao486/HAICoMo/pull/5) (`18a779d`). Pull requests [#6](https://github.com/jasonyao486/HAICoMo/pull/6) and #7 changed only release scripts and tests. 0.6.0 was implemented and verified on the development Mac (Apple Silicon) on 2026-10-20, and the maintainer accepted the installed candidate. Nothing here is claimed for Windows from a Mac run; Windows evidence comes from native GitHub runners and the maintainer's Windows PC. Tests used synthetic projects, fixture agents and isolated profiles. The live checks below ran in dedicated temporary folders, in a clean environment that did not inherit the development session's `ANTHROPIC_*` or `CLAUDE_CODE_*` variables.
 
 ## Changes
 
@@ -49,8 +49,46 @@ Gemini CLI, Qwen Code, OpenCode, GitHub Copilot CLI, CodeBuddy and Qoder CLI are
 | [39524605987](https://github.com/jasonyao486/HAICoMo/actions/runs/39524605987) (`ed95114`) | macOS passed. Windows: the unit-test step timed out after 5 minutes (0.5.0 needed 39–72 s) while `tests/v060.test.ts` was running. Two causes:<br>- **Test cleanup order.** The new tests removed their temporary folder before closing the project store. Windows cannot delete open files, so the store and its watchers stayed open and kept the test process alive. The tests now use the existing `temporaryDirectory`/`beforeRemove` helpers.<br>- **A real worktree bug.** Git reports canonical paths, so a project opened through a Windows 8.3 short name, another letter case or a symlink computed a wrong relative path and could not find its folder. `src/core/worktree.ts` now compares real paths, refuses a project outside its repository, and has a regression test (a project opened through a symlink or junction) that fails without the fix |
 | [39526869697](https://github.com/jasonyao486/HAICoMo/actions/runs/39526869697) (`79bb4da`) | The Windows hang is gone: 145 passed, 1 failed. The worktree test compared merged file bytes, and the runner's default `core.autocrlf=true` checked them out with CRLF. The test repository now pins `core.autocrlf=false`. Line-ending conversion in a user's repository follows the user's own git configuration |
 
-## Outstanding before publication
+| [39527912510](https://github.com/jasonyao486/HAICoMo/actions/runs/39527912510) (`bd697a9`) | macOS and Windows passed. The maintainer installed this run's Windows installer on their Windows PC and reported that the test passed |
 
-1. Maintainer acceptance of the installed Mac candidate.
-2. Native Windows runners (verify.yml) and the maintainer's Windows PC with the 0.6.0 installer from the pull request's CI.
-3. Merge on GitHub (Verified tag), main-branch signing and notarisation, the maintainer's fresh-account DMG first open, then `publish.yml`.
+## Main-branch CI
+
+| Run | Result |
+|---|---|
+| [39532604397](https://github.com/jasonyao486/HAICoMo/actions/runs/39532604397) (`18a779d`, merge of #5) | Windows passed. Mac failed in the **package** stage: `stapler validate` of the app lost its network connection (`NSURLErrorDomain -1005`), on the first try and on the one retry |
+| [39535745786](https://github.com/jasonyao486/HAICoMo/actions/runs/39535745786) (`18a779d`, `platform=mac`, resuming 39532604397) | Mac passed. Not published: #6 and #7 followed first |
+| [39549876563](https://github.com/jasonyao486/HAICoMo/actions/runs/39549876563) (`fabfd8c`, merge of #6: Apple network failures are retried in the ticket and Gatekeeper checks) | Mac passed. Windows failed in **Test packaged Windows application**: on a cold packaged start, the project given on the command line had not opened within Playwright's default 5 s. #7 allows 30 s for that first wait, as `readme-relay.spec.ts` already did |
+| [39583434891](https://github.com/jasonyao486/HAICoMo/actions/runs/39583434891) (`bfb43f3`, merge of #7) | **Both platforms passed.** Mac: Developer ID signing, notarisation, stapled tickets, Gatekeeper, final packaged-app suite. Windows: per-user install, upgrade, in-app update, uninstall. This run was published |
+
+## Publication
+
+**First-open acceptance.**
+- Signing in to GitHub failed in the fresh account. The maintainer therefore downloaded run 39583434891's Mac artifact in Safari in their main account, and put the DMG in a folder under `/Users/Shared`.
+- In a fresh macOS account, they opened that DMG and installed HAICoMo. The DMG still carries Safari's quarantine attribute, and so does the app it installed in `/Applications`, so the first open went through Gatekeeper.
+- The DMG's SHA-256 was `5d788bfe22e769b13f6c377bbcf125234b96e543ff1179cfe0abb4432e3314a6`. Only the maintainer supplied it. The publication gate checked it against the verification report, and the shared copy hashes to the same value.
+
+**Publish run [39633938175](https://github.com/jasonyao486/HAICoMo/actions/runs/39633938175)** (input `verification_run=39583434891`; Windows came from the same run). It passed four stages:
+- Mac provenance checks;
+- the first-open evidence and the Windows files;
+- creation of the `v0.6.0` pre-release, with update metadata uploaded last;
+- anonymous public downloads checked against their hashes.
+
+Published assets. Each SHA-256 comes from the release's own checksum files, downloaded anonymously afterwards; each matches the digest GitHub reports:
+
+| Asset | SHA-256 |
+|---|---|
+| `HAICoMo-0.6.0-arm64.dmg` | `5d788bfe22e769b13f6c377bbcf125234b96e543ff1179cfe0abb4432e3314a6` |
+| `HAICoMo-0.6.0-arm64-mac.zip` | `28607d09f531b8de61f07f39d10e32753b0f5f65f2490a91f000e0e177025c84` |
+| `latest-mac.yml` | `e7ceb2d57deefb5d2187c5b448efd49944f776fbf4e8b3480414c3acab66e3c7` |
+| `HAICoMo-0.6.0-windows-x64-setup.exe` | `35f671df5bc3e493e1ea289c597904c51e2e03e19f74503a9e39b8afc5556831` |
+| `latest.yml` | `db7e7434bbb90c5f0310fe66c8ad2404abc263dbd3a97a4e9361056f0a800b9d` |
+
+`mac-release-verification.json` records:
+- `notarized`, `stapled` and `gatekeeper` as true;
+- source and build commit `bfb43f3`;
+- the app archive hash `bb10f29a…`;
+- the first-open method and hash.
+
+`windows-user-verification.json` records that the per-user install passed with `admin: false`, together with the upgrade from 0.3.5, a differential in-app update, reinstall and uninstall.
+
+Both `latest*.yml` files name version 0.6.0 and the SHA-512 of the published ZIP and installer. Users of 0.4.0 and later therefore get 0.6.0 through **Check for updates**.

@@ -1,24 +1,24 @@
 # HAICoMo
 
-> [0.5.0 preview](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.5.0) for Apple Silicon Mac and Windows x64: every agent with a headless command line can now work in the background, relays run up to three stages of three parallel tasks with an optional unattended mode, and agent detection is kept for the session. See [release notes](docs/RELEASE-NOTES-0.5.0.md).
+> [0.6.0 preview](https://github.com/jasonyao486/HAICoMo/releases/tag/v0.6.0) for Apple Silicon Mac and Windows x64: permission requests from clients on the Agent Client Protocol (ACP) and from Claude Code are answered inside HAICoMo, agents finish with a delivery record, returned work carries your comments, parallel relay tasks in a git project each get their own working copy, and Hermes joins the supported agents. See [release notes](docs/RELEASE-NOTES-0.6.0.md).
 
 **English** · [简体中文](README.zh-CN.md)
 
 A local desktop app for project management, human review, and collaboration with multiple AI agents. Agents propose changes; human users approve proposals and accept deliveries. Project data stays in the selected working directory.
 
-The recommended preview is **0.5.0 for both platforms**: signed and notarised on Mac, installed per user on Windows. See [native verification](docs/TESTING-0.5.0.md). Historical versions and downloads remain available.
+The recommended preview is **0.6.0 for both platforms**: signed and notarised on Mac, installed per user on Windows. See [native verification](docs/TESTING-0.6.0.md). Historical versions and downloads remain available.
 
 ## Install and start
 
 Task management requires no Node.js, Git or model subscription.
 
-1. Open [Downloads and releases](https://github.com/jasonyao486/HAICoMo/releases). Select **v0.5.0 for either platform**, then expand **Assets**.
+1. Open [Downloads and releases](https://github.com/jasonyao486/HAICoMo/releases). Select **v0.6.0 for either platform**, then expand **Assets**.
 2. Choose the installer below. The “Source code” archives are for developers, not installers.
 
 | Computer system | Download |
 |---|---|
-| Mac with an Apple M-series chip | [HAICoMo-0.5.0-arm64.dmg](https://github.com/jasonyao486/HAICoMo/releases/download/v0.5.0/HAICoMo-0.5.0-arm64.dmg) |
-| Windows PC, System type “x64-based processor” | [HAICoMo-0.5.0-windows-x64-setup.exe](https://github.com/jasonyao486/HAICoMo/releases/download/v0.5.0/HAICoMo-0.5.0-windows-x64-setup.exe) |
+| Mac with an Apple M-series chip | [HAICoMo-0.6.0-arm64.dmg](https://github.com/jasonyao486/HAICoMo/releases/download/v0.6.0/HAICoMo-0.6.0-arm64.dmg) |
+| Windows PC, System type “x64-based processor” | [HAICoMo-0.6.0-windows-x64-setup.exe](https://github.com/jasonyao486/HAICoMo/releases/download/v0.6.0/HAICoMo-0.6.0-windows-x64-setup.exe) |
 | Intel Mac, Windows ARM64 or Linux | No verified installer in this release |
 
 On a Mac, find the chip under **Apple menu → About This Mac**. On Windows, open **Settings → System → About → System type**.
@@ -36,26 +36,26 @@ Download the matching `SHA256SUMS-darwin-arm64.txt` or `SHA256SUMS-win32-x64.txt
 Mac — open Terminal:
 
 ```sh
-shasum -a 256 ~/Downloads/HAICoMo-0.5.0-arm64.dmg
+shasum -a 256 ~/Downloads/HAICoMo-0.6.0-arm64.dmg
 ```
 
 Windows — open PowerShell:
 
 ```powershell
-Get-FileHash "$HOME\Downloads\HAICoMo-0.5.0-windows-x64-setup.exe" -Algorithm SHA256
+Get-FileHash "$HOME\Downloads\HAICoMo-0.6.0-windows-x64-setup.exe" -Algorithm SHA256
 ```
 
 The hash checks the download's integrity; it is not a publisher signature.
 
 </details>
 
-For AI collaboration, install and sign into a supported client. **Settings → Local agents → Detect** checks 15 clients, including Kimi, Grok Bot, DeepSeek Harness, Gemini CLI and Qwen Code. Results stay until you quit, and an optional switch detects once in the background at launch. Every client with a headless command line can take work in the background: Codex, Claude Code, Cursor Agent, Kimi, DeepSeek Harness, CodeBuddy, Qoder CLI, Gemini CLI, Qwen Code, OpenCode, GitHub Copilot CLI and Pi. Each is enabled only when its installed version lists the required options, and is labelled with its evidence. Codex, Claude Code, Cursor and DeepSeek Harness (on your DeepSeek account, no API key) were tested end to end; Kimi's options were checked on a real installation; the rest follow vendor documentation. Grok Bot, WorkBuddy and TRAE have no command line, so HAICoMo opens them and copies the prompt. Only Codex questions and approvals can be answered inside HAICoMo. Claude cannot approve interactive write permissions inside HAICoMo or reliably confirm cancellation; see the [Windows functional evidence](docs/TESTING-WINDOWS-2026-10-07.md). Before every start HAICoMo re-checks that the program is still there, and it refuses with a reason rather than sending a task. HAICoMo does not provide subscriptions or switch to paid APIs.
+For AI collaboration, install and sign into a supported client. **Settings → Local agents → Detect** checks 16 clients, including Hermes (new in 0.6.0), Kimi, Grok Bot, DeepSeek Harness, Gemini CLI and Qwen Code. Results stay until you quit, and an optional switch detects once in the background at launch. Every client with a headless command line can take work in the background: Codex, Claude Code, Cursor Agent, Kimi, Hermes, DeepSeek Harness, CodeBuddy, Qoder CLI, Gemini CLI, Qwen Code, OpenCode, GitHub Copilot CLI and Pi. Each is enabled only when its installed version lists the required options, and is labelled with its evidence. Codex, Claude Code, Cursor and DeepSeek Harness (on your DeepSeek account, no API key) were tested end to end; Kimi's options and ACP handshake were checked on a real installation; Hermes and the rest follow vendor documentation. Grok Bot, WorkBuddy and TRAE have no command line, so HAICoMo opens them and copies the prompt. HAICoMo answers three kinds of request itself: Codex questions and approvals, permission requests from clients whose installed version supports the Agent Client Protocol (ACP), and Claude Code's permission requests (on versions with its host permission channel). Cancelling such a run confirms that it has ended. Claude Code's permission channel was tested end to end on a Mac; see the [0.6.0 verification](docs/TESTING-0.6.0.md). Before every start HAICoMo re-checks that the program is still there, and it refuses with a reason rather than sending a task. HAICoMo does not provide subscriptions or switch to paid APIs.
 
-From 0.4.0, HAICoMo updates itself: **Settings → HAICoMo → Check for updates**, then **Update now** (progress, speed and cancel), then **Restart and install** when you choose. Automatic checks only notify and can be turned off. Version 0.3.5 and earlier update once by download, or by entering `https://github.com/jasonyao486/HAICoMo/releases/download/v0.5.0` as their update source. Use **Search** on the project overview (⌘F / Ctrl+F) to find tasks, revisions, meetings and notes. Version 0.5.0 backs a project up as `pre-v6` and migrates it to schema v6 the first time it opens it. Version 0.4.1 and earlier cannot reopen a migrated project, so update every computer that shares it. To revert, restore the pre-migration backup to an empty folder.
+From 0.4.0, HAICoMo updates itself: **Settings → HAICoMo → Check for updates**, then **Update now** (progress, speed and cancel), then **Restart and install** when you choose. Automatic checks only notify and can be turned off. Version 0.3.5 and earlier update once by download, or by entering `https://github.com/jasonyao486/HAICoMo/releases/download/v0.6.0` as their update source. Use **Search** on the project overview (⌘F / Ctrl+F) to find tasks, revisions, meetings and notes. Version 0.5.0 backs a project up as `pre-v6` and migrates it to schema v6 the first time it opens it. Version 0.4.1 and earlier cannot reopen a migrated project, so update every computer that shares it. To revert, restore the pre-migration backup to an empty folder. Version 0.6.0 keeps schema v6 and needs no migration. However, 0.5.0 does not recognise Hermes or relay working-copy settings, so update every computer that shares a project to 0.6.0.
 
 Clicking the logo returns home without adding a tab. Project pages and drafts stay open. The collapsed sidebar keeps folder and terminal controls at their normal size. Activity summaries show short roles; expanded details retain full attribution.
 
-Full manuals: [UK English](docs/USER-MANUAL-0.5.0.en-GB.md) · [US English](docs/USER-MANUAL-0.5.0.en-US.md) · [简体中文](docs/USER-MANUAL-0.5.0.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.5.0.zh-TW.md).
+Full manuals: [UK English](docs/USER-MANUAL-0.6.0.en-GB.md) · [US English](docs/USER-MANUAL-0.6.0.en-US.md) · [简体中文](docs/USER-MANUAL-0.6.0.zh-CN.md) · [繁體中文](docs/USER-MANUAL-0.6.0.zh-TW.md).
 
 ## Connect an agent
 
@@ -63,7 +63,7 @@ Use a task's **Handoff** to copy the prompt or send it to a supported background
 
 Version **0.3.5** adds **Connect an agent → Copy connection instructions** at the top of an open project. Leave the task empty to read and summarise the project first, or select a task for its context and deliverable references. Paste the instructions into an existing conversation opened in the same project directory. Task handoff and relay also retain the automatic guide instructions alongside custom content.
 
-The agent needs local access to that project directory. Installation does not register a global `hcm` command, configure MCP or start an agent. [Manual: both routes, copyable instructions and complete walkthrough](docs/USER-MANUAL-0.5.0.en-GB.md#agent-onboarding).
+The agent needs local access to that project directory. Installation does not register a global `hcm` command, configure MCP or start an agent. [Manual: both routes, copyable instructions and complete walkthrough](docs/USER-MANUAL-0.6.0.en-GB.md#agent-onboarding).
 
 ## Features
 
@@ -111,7 +111,7 @@ Inspect task participation, proposals, handoffs and observable execution time. D
 
 ### Three-stage relays (experimental)
 
-A relay starts after a run or at a time, then hands work through up to three stages, A → B → C, each with up to three agents working in parallel. When every task of a stage has delivered, the next stage starts on its own, with earlier results in its prompt and no review in between. Acceptance of every delivery stays with you. If a task stops, the relay halts at that stage until you retry it or mark it handled; HAICoMo never retries by itself. Relays need the app running with the project loaded.
+A relay starts after a run or at a time, then hands work through up to three stages, A → B → C, each with up to three agents working in parallel. When every task of a stage has delivered, the next stage starts on its own, with no review in between. Its prompt carries the earlier stages' delivery records, or an excerpt of their results where an agent left no record. Acceptance of every delivery stays with you. If a task stops, the relay halts at that stage until you retry it or mark it handled; HAICoMo never retries by itself. In a git project, the parallel tasks of a stage each work in their own git working copy by default. When the stage completes, HAICoMo merges them into your branch; a merge conflict pauses the relay for you to resolve. Relays need the app running with the project loaded.
 
 In the visual view, only the stage that is working sits at the desk. Each waiting stage has its own three-seat sofa. Text view shows the same relay as a flowchart.
 
@@ -121,7 +121,7 @@ In the visual view, only the stage that is working sits at the desk. Each waitin
 
 Synthetic demonstration: Claude Code, Codex and Gemini CLI work on stage A; DeepSeek Harness, Kimi and Qwen Code wait for stage B; Claude Code and Codex wait for stage C. Every agent is a test stand-in.
 
-**Unattended mode** is consented to per relay. Agents run with their own unattended options. HAICoMo answers Codex questions with the recommended option and approves its tools, but always declines destructive commands. Sign-in, verification codes, exhausted quotas and other things only you can do pause the relay and notify you. Each relay keeps a decision record of what was answered for you.
+**Unattended mode** is consented to per relay. Agents run with their own unattended options, except clients on ACP, whose requests HAICoMo answers itself. HAICoMo answers Codex questions with the recommended option and approves its tools. It answers permission requests from ACP clients and Claude Code one at a time: each is allowed once, never “always allow”. Destructive commands are always declined. Sign-in, verification codes, exhausted quotas and other things only you can do pause the relay and notify you. Each relay keeps a decision record of what was answered for you.
 
 ### Relay preview
 
@@ -160,4 +160,4 @@ npm run dev
 
 `npm test` runs unit tests; `npm run test:e2e` runs Electron tests with disposable data. `npm run dist` builds the current platform; `npm run dist:win` builds Windows x64. `npm run demo -- /absolute/empty/directory` creates synthetic demonstration data. See [contributing](CONTRIBUTING.md), [architecture](docs/ARCHITECTURE.md) and [file/CLI/MCP protocol](docs/PROTOCOL.md).
 
-[Report an issue](https://github.com/jasonyao486/HAICoMo/issues/new/choose). Remove personal paths, prompts and credentials before attaching diagnostics or screenshots. Current evidence: [0.5.0 verification](docs/TESTING-0.5.0.md), [remaining gaps](docs/GAP-ANALYSIS.md).
+[Report an issue](https://github.com/jasonyao486/HAICoMo/issues/new/choose). Remove personal paths, prompts and credentials before attaching diagnostics or screenshots. Current evidence: [0.6.0 verification](docs/TESTING-0.6.0.md), [remaining gaps](docs/GAP-ANALYSIS.md).
