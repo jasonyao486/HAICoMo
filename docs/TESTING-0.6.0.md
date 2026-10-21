@@ -42,6 +42,12 @@ Gemini CLI, Qwen Code, OpenCode, GitHub Copilot CLI, CodeBuddy and Qoder CLI are
 | Installed-app checks | Isolated synthetic profiles: `tests/e2e/v060.spec.ts` (four locales) and `tests/e2e/v050.spec.ts` against the installed executable, 6/6 passed |
 | Reinstall after the host-channel fix | Candidate rebuilt from `44ea229` and installed the same way; the bundle contains `--permission-prompt-tool=stdio`; one registration; installed-app checks 6/6 passed again. The 0.5.0 rollback archive is unchanged |
 
+## Pull request CI
+
+| Run | Result |
+|---|---|
+| [39524605987](https://github.com/jasonyao486/HAICoMo/actions/runs/39524605987) (`ed95114`) | macOS passed. Windows: the unit-test step timed out after 5 minutes (0.5.0 needed 39–72 s) while `tests/v060.test.ts` was running. Two causes:<br>- **Test cleanup order.** The new tests removed their temporary folder before closing the project store. Windows cannot delete open files, so the store and its watchers stayed open and kept the test process alive. The tests now use the existing `temporaryDirectory`/`beforeRemove` helpers.<br>- **A real worktree bug.** Git reports canonical paths, so a project opened through a Windows 8.3 short name, another letter case or a symlink computed a wrong relative path and could not find its folder. `src/core/worktree.ts` now compares real paths, refuses a project outside its repository, and has a regression test (a project opened through a symlink or junction) that fails without the fix |
+
 ## Outstanding before publication
 
 1. Maintainer acceptance of the installed Mac candidate.

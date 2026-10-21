@@ -1,11 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { fixtureAgent } from "./fixture-agent";
+import { beforeRemove, temporaryDirectory } from "./temp-directory";
 import { LocalRunners, detect, type PermissionRequest, type RunOptions } from "../src/providers/local";
 import { acpCommand, acpFlag, adapterFor } from "../src/providers/adapters";
 import { BACKGROUND_EVIDENCE, CLIENTS, CLIENTS_BY_NAME, clientIcon } from "../src/shared/clients";
@@ -24,18 +24,16 @@ const until = async (check: () => boolean, ms = 8000) => {
     await new Promise((r) => setTimeout(r, 15));
   }
 };
-const temp = (t: any, prefix: string) => {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
-  t.after(async () => fs.promises.rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }));
-  return dir;
-};
+// Stores and runners close before their folder is removed: Windows cannot delete open files,
+// and a store left open keeps its watchers (and so the test process) alive.
+const temp = (t: any, prefix: string) => temporaryDirectory(t, prefix);
 function runner(t: any, dialect: string) {
   const directory = temp(t, `haicomo 0.6.0 ${dialect} `);
   const executable = fixtureAgent(directory, dialect);
   const events: RunEvent[] = [];
   const permissions: PermissionRequest[] = [];
   const runners = new LocalRunners((_d, e) => events.push(e), (p) => permissions.push(p));
-  t.after(() => runners.dispose());
+  beforeRemove(t, () => runners.dispose());
   const requests = () =>
     fs.existsSync(path.join(directory, "requests.jsonl"))
       ? fs.readFileSync(path.join(directory, "requests.jsonl"), "utf8").trim().split(/\r?\n/).map((l) => JSON.parse(l))
@@ -255,7 +253,7 @@ test("delivery records: parsed in either language and passed on to the next stag
 
   const dir = temp(t, "haicomo record ");
   const store = new ProjectStore(dir, "Records");
-  t.after(() => store.close());
+  beforeRemove(t, () => store.close());
   const mk = (title: string) => {
     const id = randomUUID();
     store.command({ id: randomUUID(), type: "change", payload: { entity: "task", operation: "create", id, expectedRevision: null, values: { title } } });
@@ -281,7 +279,7 @@ test("delivery records: parsed in either language and passed on to the next stag
 test("return with comments: the prompt carries the review and the last record; the return is audited and counted", (t) => {
   const dir = temp(t, "haicomo return ");
   const store = new ProjectStore(dir, "Return");
-  t.after(() => store.close());
+  beforeRemove(t, () => store.close());
   const id = randomUUID();
   store.command({ id: randomUUID(), type: "change", payload: { entity: "task", operation: "create", id, expectedRevision: null, values: { title: "Write docs", status: "delivered" } } });
   const prompt = composeAgentPrompt(dir, store.state(), "en-GB", id, "", undefined, undefined, { review: { comment: "Add the Windows steps.", previous: { goal: "Docs", artifacts: ["docs/a.md"], evidence: "", next: "", open: "" } } });
@@ -359,10 +357,25 @@ test("worktrees: one branch per step, HAICoMo's own files ignored, merged with -
   await assert.rejects(mergeWorktree(root, c, "msg"), (e: any) => e.code === "WORKTREE_IDENTITY");
 });
 
+test("worktrees: a project reached through a link or another spelling of its path still finds its folder", { skip: !gitAvailable }, async (t) => {
+  const { root } = repo(t);
+  // Git reports the real path; the project may be opened through a symlink (macOS /var → /private/var)
+  // or, on Windows, a junction or an 8.3 short name.
+  const parent = temp(t, "haicomo wt link ");
+  const link = path.join(parent, "project-link");
+  fs.symlinkSync(root, link, process.platform === "win32" ? "junction" : "dir");
+  const info = await prepareWorktree(link, "relay-abcdefgh", "A1");
+  assert.ok(fs.existsSync(path.join(info.cwd, "app.txt")));
+  fs.writeFileSync(path.join(info.cwd, "linked.txt"), "via link\n");
+  const merged = await mergeWorktree(link, info, "HAICoMo relay A1: linked");
+  assert.equal(merged.removed, true);
+  assert.ok(fs.existsSync(path.join(root, "linked.txt")));
+});
+
 test("relays with worktrees: each parallel step gets a working copy in its prompt; the stage merges before the next starts", async (t) => {
   const dir = temp(t, "haicomo wt relay ");
   const store = new ProjectStore(dir, "WT");
-  t.after(() => store.close());
+  beforeRemove(t, () => store.close());
   const mk = (title: string) => {
     const id = randomUUID();
     store.command({ id: randomUUID(), type: "change", payload: { entity: "task", operation: "create", id, expectedRevision: null, values: { title } } });

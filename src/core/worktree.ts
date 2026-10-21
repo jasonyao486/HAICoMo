@@ -30,18 +30,29 @@ async function gitOk(cwd: string, args: string[]) {
     return false;
   }
 }
+/**
+ * Git reports canonical paths; a project path may use a Windows 8.3 short name,
+ * another letter case or a symlink (/var → /private/var). Compare real paths only.
+ */
+const real = (p: string) => {
+  try {
+    return fs.realpathSync.native(p);
+  } catch {
+    return path.resolve(p);
+  }
+};
 const detail = (error: unknown) => String((error as any)?.stderr || (error as Error)?.message || error).trim().split(/\r?\n/).slice(-3).join(" ").slice(0, 400);
 
 /** The top level of the git working tree that contains `directory`, or null. */
 export async function gitTopLevel(directory: string): Promise<string | null> {
   try {
     const top = await git(directory, ["rev-parse", "--show-toplevel"], 15000);
-    return top ? path.resolve(top) : null;
+    return top ? real(path.resolve(top)) : null;
   } catch {
     return null;
   }
 }
-const relative = (root: string, directory: string) => path.relative(root, directory).split(path.sep).join("/");
+const relative = (root: string, directory: string) => path.relative(real(root), real(directory)).split(path.sep).join("/");
 /** HAICoMo's own files never count as the user's changes and are never committed from a working copy. */
 function ownFiles(root: string, projectDir: string) {
   const rel = relative(root, projectDir);
@@ -81,7 +92,8 @@ export async function prepareWorktree(projectDir: string, relayId: string, label
   const root = await gitTopLevel(projectDir);
   if (!root) throw new WorktreeError("WORKTREE_GIT");
   const { path: location, branch } = worktreeLocation(projectDir, relayId, label);
-  const rel = path.relative(root, projectDir);
+  const rel = path.relative(root, real(projectDir));
+  if (rel.startsWith("..") || path.isAbsolute(rel)) throw new WorktreeError("WORKTREE_FAILED", "the project folder is outside the repository");
   const cwd = rel ? path.join(location, rel) : location;
   if (fs.existsSync(path.join(location, ".git"))) {
     if (!fs.existsSync(cwd)) throw new WorktreeError("WORKTREE_FAILED", "the project folder is not tracked in git");
@@ -109,7 +121,7 @@ export async function mergeWorktree(projectDir: string, info: Pick<WorktreeInfo,
   if (!root) throw new WorktreeError("WORKTREE_GIT");
   if (fs.existsSync(path.join(info.path, ".git"))) {
     try {
-      await git(info.path, ["add", "-A", "--", ".", ...ownFiles(info.path, path.join(info.path, path.relative(root, projectDir)))]);
+      await git(info.path, ["add", "-A", "--", ".", ...ownFiles(info.path, path.join(info.path, path.relative(root, real(projectDir))))]);
     } catch (error) {
       throw new WorktreeError("WORKTREE_FAILED", detail(error));
     }
